@@ -3,7 +3,7 @@
 This setup runs your `generate_dashboard.py` script every minute using a `launchd` LaunchAgent. Your current layout:
 
 - Shell wrapper script (Git checkout):  
-  `/Users/tonythem/GitHub/ᵉShare DevOps Dashboard/update_ᵉShare_DevOps_Dashboard.sh`
+  `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
 - Dashboard project (in OneDrive):  
   `/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard`
 
@@ -13,7 +13,7 @@ This setup runs your `generate_dashboard.py` script every minute using a `launch
 
 File:
 
-`/Users/tonythem/GitHub/ᵉShare DevOps Dashboard/update_ᵉShare_DevOps_Dashboard.sh`
+`/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
 
 Contents:
 
@@ -64,7 +64,7 @@ with:
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/tonythem/GitHub/ᵉShare DevOps Dashboard/update_ᵉShare_DevOps_Dashboard.sh</string>
+        <string>/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
     </array>
 
     <!-- Run every 60 seconds (1 minute) -->
