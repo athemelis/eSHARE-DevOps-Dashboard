@@ -1,0 +1,54 @@
+# ===========================================
+# eShare DevOps Dashboard - Git Ignore
+# ===========================================
+
+# Data files (managed by Power Automate, not code)
+ALL_Items.csv
+Org_Chart.csv
+
+# Generated output (regenerated locally from templates + data)
+ᵉShare DevOps Dashboard.html
+
+# Zip packages (generated artifacts)
+eShare_DevOps_Dashboard.zip
+
+# ===========================================
+# macOS
+# ===========================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# ===========================================
+# Python
+# ===========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# ===========================================
+# IDEs and Editors
+# ===========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================================
+# Logs and temp files
+# ===========================================
+*.log
+tmp/
+temp/

@@ -1,0 +1,810 @@
+<script>
+    // Executive View filter helper
+    function getFilteredExecItems() {
+        const teamFilter = document.getElementById('exec-team-filter')?.value || 'all';
+        const typeFilter = document.getElementById('exec-type-filter')?.value || 'all';
+        
+        let items = workItems;
+        
+        if (teamFilter !== 'all') {
+            items = items.filter(w => w.team === teamFilter);
+        }
+        
+        if (typeFilter !== 'all') {
+            items = items.filter(w => w.type === typeFilter);
+        }
+        
+        return items;
+    }
+    
+    function applyExecFilters() {
+        renderExecutiveView();
+    }
+    
+    // Executive View
+    function renderExecutiveView() {
+        const stats = document.getElementById('exec-stats');
+        const insights = document.getElementById('exec-insights');
+        const charts = document.getElementById('exec-charts');
+        
+        const filteredItems = getFilteredExecItems();
+        const teamFilter = document.getElementById('exec-team-filter')?.value || 'all';
+        const typeFilter = document.getElementById('exec-type-filter')?.value || 'all';
+        const isFiltered = teamFilter !== 'all' || typeFilter !== 'all';
+        
+        // Calculate metrics
+        const total = filteredItems.length;
+        const done = filteredItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+        const inProgress = filteredItems.filter(w => w.state === 'In Progress').length;
+        const bugs = filteredItems.filter(w => w.type === 'Bug');
+        const openBugs = bugs.filter(b => b.state !== 'Done' && b.state !== 'Closed' && b.state !== 'Removed');
+        const blocked = filteredItems.filter(w => (w.tags || '').toLowerCase().includes('blocked'));
+        const unassigned = filteredItems.filter(w => !w.assignedTo && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+        
+        const filterNote = isFiltered ? ' (filtered)' : '';
+        
+        stats.innerHTML = `
+            <div class="stat-card clickable" onclick="drilldownStat('total')">
+                <div class="stat-label">Total Work Items${filterNote}</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${total}</div>
+                <div class="stat-subtitle">${done} completed (${total > 0 ? Math.round(done/total*100) : 0}%)</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('inProgress')">
+                <div class="stat-label">In Progress</div>
+                <div class="stat-value" style="color: var(--accent-blue)">${inProgress}</div>
+                <div class="stat-subtitle">Active work items</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('openBugs')">
+                <div class="stat-label">Open Bugs</div>
+                <div class="stat-value" style="color: var(--accent-red)">${openBugs.length}</div>
+                <div class="stat-subtitle">${bugs.length} total bugs</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('blocked')">
+                <div class="stat-label">Blocked Items</div>
+                <div class="stat-value" style="color: var(--accent-orange)">${blocked.length}</div>
+                <div class="stat-subtitle">Need attention</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('unassigned')">
+                <div class="stat-label">Unassigned</div>
+                <div class="stat-value" style="color: var(--text-muted)">${unassigned.length}</div>
+                <div class="stat-subtitle">Active items without owner</div>
+            </div>
+        `;
+        
+        // Key insights
+        const novemberItems = filteredItems.filter(w => (w.iterationPath || '').includes('CY2025Q4-Nov'));
+        const novemberDone = novemberItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+        const novemberPct = novemberItems.length > 0 ? Math.round(novemberDone / novemberItems.length * 100) : 0;
+        const novemberRemaining = novemberItems.length - novemberDone;
+        
+        // Find most loaded person
+        const assigneeCounts = countBy(filteredItems.filter(w => w.assignedTo && w.state !== 'Done' && w.state !== 'Closed'), 'assignedTo');
+        const topAssignee = Object.entries(assigneeCounts).sort((a, b) => b[1] - a[1])[0];
+        
+        insights.innerHTML = `
+            <div class="insights-title">⚡ Key Insights${filterNote}</div>
+            ${novemberItems.length > 0 ? `
+            <div class="insight-item ${novemberPct < 60 ? 'warning' : ''}">
+                <span class="insight-icon">${novemberPct < 60 ? '⚠️' : '📊'}</span> 
+                November completion at ${novemberPct}% (${novemberRemaining} items remaining of ${novemberItems.length})
+            </div>
+            ` : ''}
+            <div class="insight-item critical"><span class="insight-icon">🔴</span> ${openBugs.length} open bugs need resolution</div>
+            <div class="insight-item warning"><span class="insight-icon">👤</span> ${unassigned.length} active items without owners</div>
+            <div class="insight-item warning"><span class="insight-icon">🚫</span> ${blocked.length} items are blocked</div>
+            ${topAssignee ? `<div class="insight-item info"><span class="insight-icon">📋</span> ${topAssignee[0]} has ${topAssignee[1]} active items assigned</div>` : ''}
+        `;
+        
+        // Charts - sorted by value
+        const byType = sortObjectByValue(countBy(filteredItems, 'type'));
+        const byState = sortObjectByValue(countBy(filteredItems, 'state'));
+        const byTeam = sortObjectByValue(countBy(filteredItems.filter(w => w.team && w.team !== 'eShare'), 'team'));
+        
+        // Get all unique values for filters
+        const allTypes = Object.keys(byType);
+        const allStates = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allTeams = Object.keys(byTeam);
+        
+        // Apply chart filters
+        const chartFilteredItems = getExecChartFilteredItems(filteredItems);
+        const filteredByType = sortObjectByValue(countBy(chartFilteredItems, 'type'));
+        const filteredByState = sortObjectByValue(countBy(chartFilteredItems, 'state'));
+        const filteredByTeam = sortObjectByValue(countBy(chartFilteredItems.filter(w => w.team && w.team !== 'eShare'), 'team'));
+        
+        charts.innerHTML = `
+            <div class="chart-card">
+                <div class="chart-title">Work Items by Type</div>
+                <div class="chart-container"><canvas id="exec-type-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="exec-chart-type-dropdown">
+                        <div class="multi-select-display" onclick="toggleExecFilter('type')">
+                            <span id="exec-chart-type-display">All Types</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="exec-chart-type-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="exec-chart-type-select-all" onchange="toggleAllExecFilter('type', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allTypes.map(t => `<label class="checkbox-option"><input type="checkbox" value="${t}" onchange="updateExecFilter('type')"> ${t}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Work Items by State</div>
+                <div class="chart-container"><canvas id="exec-state-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="exec-chart-state-dropdown">
+                        <div class="multi-select-display" onclick="toggleExecFilter('state')">
+                            <span id="exec-chart-state-display">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="exec-chart-state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="exec-chart-state-select-all" onchange="toggleAllExecFilter('state', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allStates.map(s => `<label class="checkbox-option"><input type="checkbox" value="${s}" onchange="updateExecFilter('state')"> ${s}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Work Items by Team</div>
+                <div class="chart-container"><canvas id="exec-team-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="exec-chart-team-dropdown">
+                        <div class="multi-select-display" onclick="toggleExecFilter('team')">
+                            <span id="exec-chart-team-display">All Teams</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="exec-chart-team-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="exec-chart-team-select-all" onchange="toggleAllExecFilter('team', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allTeams.map(t => `<label class="checkbox-option"><input type="checkbox" value="${t}" onchange="updateExecFilter('team')"> ${t}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Restore filter states after HTML rebuild
+        restoreExecFilterStates();
+        
+        setTimeout(() => {
+            createClickableChart('exec-type-chart', 'doughnut', filteredByType, 'type', null, chartFilteredItems);
+            createClickableChart('exec-state-chart', 'doughnut', filteredByState, 'state', colors.states, chartFilteredItems);
+            createClickableChart('exec-team-chart', 'bar', filteredByTeam, 'team', colors.teams, chartFilteredItems);
+        }, 50);
+    }
+    
+    function drilldownStat(statType) {
+        const filteredItems = getFilteredExecItems();
+        let items, title;
+        
+        switch(statType) {
+            case 'total':
+                items = filteredItems;
+                title = 'All Work Items';
+                break;
+            case 'inProgress':
+                items = filteredItems.filter(w => w.state === 'In Progress');
+                title = 'In Progress Items';
+                break;
+            case 'openBugs':
+                items = filteredItems.filter(w => w.type === 'Bug' && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+                title = 'Open Bugs';
+                break;
+            case 'blocked':
+                items = filteredItems.filter(w => (w.tags || '').toLowerCase().includes('blocked'));
+                title = 'Blocked Items';
+                break;
+            case 'unassigned':
+                items = filteredItems.filter(w => !w.assignedTo && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+                title = 'Unassigned Active Items';
+                break;
+            default:
+                return;
+        }
+        
+        showDrilldown(title, items, getSliceFields(items));
+    }
+    
+    // Team Lead View
+    function renderTeamLeadView() {
+        const stats = document.getElementById('team-stats');
+        const insights = document.getElementById('team-insights');
+        const charts = document.getElementById('team-charts');
+        
+        const teams = ['Frontend', 'Backend', 'QA', 'DevOps', 'Analytics', 'Govern', 'SCG', 'Staff'];
+        
+        // Team leads mapping (based on Org Chart)
+        const teamLeads = {
+            'Frontend': 'Andreas Davros',
+            'Backend': 'Thanos Terzis',
+            'QA': 'Kostas Tzoulas',
+            'DevOps': 'Christos Sidiropoulos',
+            'Analytics': 'Maya Dahan',
+            'Govern': 'Maya Dahan',
+            'SCG': 'Alexandros Papadakis',
+            'Staff': 'John Paglierani',
+            'Security & Compliance': 'Chakra Bokissam',
+            'Customer Success': ''
+        };
+        
+        // Get time-filtered items, then apply dropdown filters
+        const timeFilteredItems = getActiveWorkItemsForPeriod(workItems, selectedTimePeriod);
+        const filteredItems = getTeamLeadChartFilteredItems(timeFilteredItems);
+        
+        // Calculate stats based on fully filtered items
+        const teamStats = teams.map(team => {
+            const teamItems = filteredItems.filter(w => w.team === team);
+            
+            // Completed = items in Done/Closed state
+            const completed = teamItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+            const active = teamItems.filter(w => w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed').length;
+            const total = teamItems.length;
+            const pct = total > 0 ? Math.round(completed / total * 100) : 0;
+            
+            // Calculate effort from filtered items
+            const effort = teamItems.reduce((sum, w) => sum + (w.effort || 0), 0);
+            
+            // Count by type from filtered items
+            const byType = {};
+            teamItems.forEach(w => {
+                byType[w.type] = (byType[w.type] || 0) + 1;
+            });
+            
+            return { team, total, completed, active, pct, effort, byType, lead: teamLeads[team] };
+        });
+        
+        const periodLabel = {
+            'all': 'All Time',
+            'quarter': 'This Quarter',
+            'lastmonth': 'Last Month',
+            'month': 'This Month',
+            'lastweek': 'Last Week',
+            'week': 'This Week'
+        }[selectedTimePeriod];
+        
+        // Calculate "All Teams" totals
+        const allTeamsTotal = teamStats.reduce((sum, t) => sum + t.total, 0);
+        const allTeamsCompleted = teamStats.reduce((sum, t) => sum + t.completed, 0);
+        const allTeamsActive = teamStats.reduce((sum, t) => sum + t.active, 0);
+        const allTeamsEffort = teamStats.reduce((sum, t) => sum + t.effort, 0);
+        const allTeamsPct = allTeamsTotal > 0 ? Math.round(allTeamsCompleted / allTeamsTotal * 100) : 0;
+        
+        // Aggregate type breakdown for All Teams
+        const allTeamsByType = {};
+        teamStats.forEach(t => {
+            Object.entries(t.byType).forEach(([type, count]) => {
+                allTeamsByType[type] = (allTeamsByType[type] || 0) + count;
+            });
+        });
+        const allTeamsTypeBreakdown = Object.entries(allTeamsByType)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+            .join(', ');
+        
+        // Get lead photos from leadPhotos object (defined in part4)
+        const allTeamsCard = `
+            <div class="stat-card team-stat-card clickable all-teams-card" onclick="expandTeamDetails('All Teams')">
+                <div class="stat-label">All Teams</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${allTeamsTotal}</div>
+                <div class="stat-subtitle">${allTeamsCompleted} done • ${allTeamsActive} active</div>
+                <div class="stat-subtitle" style="font-size: 0.65rem; color: var(--text-muted);">${allTeamsTypeBreakdown}</div>
+            </div>
+        `;
+        
+        stats.innerHTML = allTeamsCard + teamStats.map(t => {
+            const leadPhoto = typeof leadPhotos !== 'undefined' && leadPhotos[t.lead] ? 
+                `<img src="data:image/jpeg;base64,${leadPhotos[t.lead]}" class="team-lead-photo" alt="${t.lead}">` : 
+                '';
+            const typeBreakdown = Object.entries(t.byType)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+                .join(', ');
+            
+            return `
+                <div class="stat-card team-stat-card clickable" onclick="expandTeamDetails('${t.team}')">
+                    <div class="stat-label">${t.team}</div>
+                    <div class="stat-value" style="color: ${colors.teams[t.team] || 'var(--accent-cyan)'}">${t.total}</div>
+                    <div class="stat-subtitle">${t.completed} done • ${t.active} active</div>
+                    <div class="stat-subtitle" style="font-size: 0.65rem; color: var(--text-muted);">${typeBreakdown}</div>
+                    ${t.lead ? `
+                        <div class="team-lead-info">
+                            ${leadPhoto}
+                            <span class="team-lead-name">${t.lead}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        // Key insights for Team Lead (use filtered items)
+        const mostLoadedTeam = teamStats.sort((a, b) => b.active - a.active)[0];
+        const lowestCompletion = [...teamStats].sort((a, b) => a.pct - b.pct)[0];
+        
+        // Find individual with most items (from filtered items)
+        const activeFilteredItems = filteredItems.filter(w => w.assignedTo && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+        const byAssignee = countBy(activeFilteredItems, 'assignedTo');
+        const sortedAssignees = Object.entries(byAssignee).sort((a, b) => b[1] - a[1]);
+        const topAssignees = sortedAssignees.slice(0, 3);
+        
+        // Items completed this week (from filtered items based on period)
+        const completedInPeriod = filteredItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+        
+        insights.innerHTML = `
+            <div class="insights-title">⚡ Team Insights (${periodLabel})</div>
+            <div class="insights-content">
+                <div class="insight-item info"><span class="insight-icon">📈</span> ${completedInPeriod} items completed in ${periodLabel.toLowerCase()}</div>
+                <div class="insight-item warning"><span class="insight-icon">⚠️</span> ${mostLoadedTeam.team} has the most active work (${mostLoadedTeam.active} items)</div>
+                <div class="insight-item ${lowestCompletion.pct < 50 ? 'critical' : 'warning'}">
+                    <span class="insight-icon">${lowestCompletion.pct < 50 ? '🔴' : '📊'}</span> 
+                    ${lowestCompletion.team} has lowest completion rate (${lowestCompletion.pct}%)
+                </div>
+                ${topAssignees.map((a, i) => `
+                    <div class="insight-item ${a[1] > 100 ? 'critical' : a[1] > 50 ? 'warning' : 'info'}">
+                        <span class="insight-icon">${a[1] > 100 ? '🚨' : '👤'}</span> 
+                        ${a[0]} has ${a[1]} active items ${a[1] > 100 ? '(overloaded!)' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        charts.innerHTML = `
+            <div class="chart-card">
+                <div class="chart-title">Team Completion Rates (${periodLabel})</div>
+                <div class="chart-container"><canvas id="team-completion-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Active Work by Team (${periodLabel})</div>
+                <div class="chart-container"><canvas id="team-active-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Effort by Team (${periodLabel})</div>
+                <div class="chart-container"><canvas id="team-effort-chart"></canvas></div>
+            </div>
+        `;
+        
+        // Get unique values for distribution chart filters (from all items for filter options)
+        const allTypes = [...new Set(workItems.map(w => w.type))].sort();
+        const allStatesForTeam = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allAssignees = [...new Set(workItems.map(w => w.assignedTo || '(Unassigned)'))].sort();
+        const allPriorities = [...new Set(workItems.map(w => String(w.priority || '(Not Set)')))].sort();
+        const allIterations = [...new Set(workItems.map(w => w.iterationPath || '(Not Set)'))].sort();
+        
+        // Use the same filtered items for distribution charts
+        const chartFilteredItems = filteredItems;
+        
+        // Add distribution charts section
+        const iterationOptionsHtml = allIterations.slice(0, 15).map(function(i) { const label = i.includes("\\") ? i.split("\\").pop() : i; return '<label class="checkbox-option"><input type="checkbox" value="' + i + '" onchange="updateTeamLeadChartFilter(\'iteration\')"> ' + label + '</label>'; }).join("");
+        const distributionChartsHtml = `
+            <div class="section-divider" style="margin-top: 2rem;">
+                <h3>Work Item Distribution</h3>
+            </div>
+            <div class="charts-grid" id="team-distribution-charts">
+                <div class="chart-card">
+                    <div class="chart-title">Items by Type</div>
+                    <div class="chart-container"><canvas id="teamlead-type-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-type-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('type')">
+                                <span id="teamlead-chart-type-display">All Types</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-type-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-type-select-all" onchange="toggleAllTeamLeadChartFilter('type', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allTypes.map(t => `<label class="checkbox-option"><input type="checkbox" value="${t}" onchange="updateTeamLeadChartFilter('type')"> ${t}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by State</div>
+                    <div class="chart-container"><canvas id="teamlead-state-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-state-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('state')">
+                                <span id="teamlead-chart-state-display">All States</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-state-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-state-select-all" onchange="toggleAllTeamLeadChartFilter('state', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allStatesForTeam.map(s => `<label class="checkbox-option"><input type="checkbox" value="${s}" onchange="updateTeamLeadChartFilter('state')"> ${s}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by Assignee</div>
+                    <div class="chart-container"><canvas id="teamlead-assignee-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-assignee-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('assignee')">
+                                <span id="teamlead-chart-assignee-display">All Assignees</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-assignee-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-assignee-select-all" onchange="toggleAllTeamLeadChartFilter('assignee', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allAssignees.slice(0, 20).map(a => `<label class="checkbox-option"><input type="checkbox" value="${a}" onchange="updateTeamLeadChartFilter('assignee')"> ${a}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by Priority</div>
+                    <div class="chart-container"><canvas id="teamlead-priority-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-priority-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('priority')">
+                                <span id="teamlead-chart-priority-display">All Priorities</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-priority-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-priority-select-all" onchange="toggleAllTeamLeadChartFilter('priority', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allPriorities.map(p => `<label class="checkbox-option"><input type="checkbox" value="${p}" onchange="updateTeamLeadChartFilter('priority')"> ${p}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by Iteration</div>
+                    <div class="chart-container"><canvas id="teamlead-iteration-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-iteration-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('iteration')">
+                                <span id="teamlead-chart-iteration-display">All Iterations</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-iteration-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-iteration-select-all" onchange="toggleAllTeamLeadChartFilter('iteration', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${iterationOptionsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('team-distribution-section').innerHTML = distributionChartsHtml;
+        
+        // Restore filter states
+        restoreTeamLeadChartFilterStates();
+        
+        setTimeout(() => {
+            // Sort by completion rate for display
+            const sortedByCompletion = [...teamStats].sort((a, b) => b.pct - a.pct);
+            
+            createChart('team-completion-chart', 'bar', {
+                labels: sortedByCompletion.map(t => t.team),
+                datasets: [{
+                    label: 'Completion %',
+                    data: sortedByCompletion.map(t => t.pct),
+                    backgroundColor: sortedByCompletion.map(t => colors.teams[t.team] || colors.primary[0])
+                }]
+            }, {
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: '#334155' }, 
+                        max: 100,
+                        title: { display: true, text: 'Completion %', color: '#94a3b8' }
+                    }
+                }
+            });
+            
+            const sortedByActive = [...teamStats].sort((a, b) => b.active - a.active);
+            createChart('team-active-chart', 'bar', {
+                labels: sortedByActive.map(t => t.team),
+                datasets: [{
+                    label: 'Active Items',
+                    data: sortedByActive.map(t => t.active),
+                    backgroundColor: sortedByActive.map(t => colors.teams[t.team] || colors.primary[0])
+                }]
+            }, {
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: '#334155' },
+                        title: { display: true, text: 'Count', color: '#94a3b8' }
+                    }
+                }
+            });
+            
+            const sortedByEffort = [...teamStats].sort((a, b) => b.effort - a.effort);
+            createChart('team-effort-chart', 'bar', {
+                labels: sortedByEffort.map(t => t.team),
+                datasets: [{
+                    label: 'Effort (days)',
+                    data: sortedByEffort.map(t => t.effort.toFixed(1)),
+                    backgroundColor: sortedByEffort.map(t => colors.teams[t.team] || colors.primary[0])
+                }]
+            }, {
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: '#334155' },
+                        title: { display: true, text: 'Days', color: '#94a3b8' }
+                    }
+                }
+            });
+            
+            // Distribution charts
+            const byType = sortObjectByValue(countBy(chartFilteredItems, 'type'));
+            createChart('teamlead-type-chart', 'doughnut', {
+                labels: Object.keys(byType),
+                datasets: [{ data: Object.values(byType), backgroundColor: colors.primary }]
+            });
+            
+            const byState = sortObjectByValue(countBy(chartFilteredItems, 'state'));
+            createChart('teamlead-state-chart', 'doughnut', {
+                labels: Object.keys(byState),
+                datasets: [{ data: Object.values(byState), backgroundColor: Object.keys(byState).map(s => colors.states[s] || colors.primary[0]) }]
+            });
+            
+            const byAssignee = sortObjectByValue(countBy(chartFilteredItems.filter(w => w.assignedTo), 'assignedTo'));
+            const topAssigneesChart = Object.fromEntries(Object.entries(byAssignee).slice(0, 10));
+            createChart('teamlead-assignee-chart', 'doughnut', {
+                labels: Object.keys(topAssigneesChart),
+                datasets: [{ data: Object.values(topAssigneesChart), backgroundColor: colors.primary }]
+            });
+            
+            const byPriority = sortObjectByValue(countBy(chartFilteredItems, 'priority'));
+            createChart('teamlead-priority-chart', 'doughnut', {
+                labels: Object.keys(byPriority).map(p => p ? `Priority ${p}` : '(Not Set)'),
+                datasets: [{ data: Object.values(byPriority), backgroundColor: [colors.priority['1'], colors.priority['2'], colors.priority['3'], colors.priority['4'], '#64748b'] }]
+            });
+            
+            const byIteration = sortObjectByValue(countBy(chartFilteredItems, 'iterationPath'));
+            const topIterations = Object.fromEntries(Object.entries(byIteration).slice(0, 8));
+            const iterationLabels = Object.keys(topIterations).map(i => {
+                if (!i) return '(Not Set)';
+                const parts = i.split('\\');
+                return parts[parts.length - 1] || i;
+            });
+            createChart('teamlead-iteration-chart', 'doughnut', {
+                labels: iterationLabels,
+                datasets: [{ data: Object.values(topIterations), backgroundColor: colors.primary }]
+            });
+        }, 50);
+    }
+    
+    function drilldownTeam(team) {
+        const items = workItems.filter(w => w.team === team);
+        showDrilldown(`Team: ${team}`, items, getSliceFields(items));
+    }
+    
+    // Customers View filter helper
+    function getFilteredCustomerItems() {
+        const teamFilter = document.getElementById('customer-team-filter')?.value || 'all';
+        const selectedStates = getSelectedCustomerStates();
+        
+        let items = workItems;
+        
+        if (teamFilter !== 'all') {
+            items = items.filter(w => w.team === teamFilter);
+        }
+        
+        if (selectedStates.length > 0) {
+            items = items.filter(w => selectedStates.includes(w.state));
+        }
+        
+        return items;
+    }
+    
+    function applyCustomerFilters() {
+        renderCustomersView();
+    }
+    
+    // Customers View
+    function renderCustomersView() {
+        const stats = document.getElementById('customer-stats');
+        const insights = document.getElementById('customer-insights');
+        const charts = document.getElementById('customer-charts');
+        
+        const allItems = getFilteredCustomerItems();
+        const teamFilter = document.getElementById('customer-team-filter')?.value || 'all';
+        const selectedStates = getSelectedCustomerStates();
+        const isFiltered = teamFilter !== 'all' || selectedStates.length > 0;
+        const filterNote = isFiltered ? ' (filtered)' : '';
+        
+        const customerItems = allItems.filter(w => w.customers);
+        const issues = allItems.filter(w => w.type === 'Issue');
+        const customerCounts = countBy(customerItems, 'customers');
+        const topCustomers = Object.entries(customerCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+        
+        const triaged = issues.filter(i => i.state === 'Triaged').length;
+        const issuesDone = issues.filter(i => i.state === 'Done' || i.state === 'Closed').length;
+        
+        stats.innerHTML = `
+            <div class="stat-card clickable" onclick="drilldownCustomerStat('all')">
+                <div class="stat-label">Customer-Linked Items${filterNote}</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${customerItems.length}</div>
+                <div class="stat-subtitle">${allItems.length > 0 ? Math.round(customerItems.length / allItems.length * 100) : 0}% of work</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownCustomerStat('issues')">
+                <div class="stat-label">Customer Issues</div>
+                <div class="stat-value" style="color: var(--accent-orange)">${issues.length}</div>
+                <div class="stat-subtitle">${triaged} triaged, ${issuesDone} resolved</div>
+            </div>
+            ${topCustomers.slice(0, 4).map(([customer, count]) => `
+                <div class="stat-card clickable" onclick="drilldownCustomer('${customer.replace(/'/g, "\\'")}')">
+                    <div class="stat-label">${customer}</div>
+                    <div class="stat-value" style="color: var(--accent-purple)">${count}</div>
+                    <div class="stat-subtitle">work items</div>
+                </div>
+            `).join('')}
+        `;
+        
+        // Customer insights
+        const issuesByCustomer = {};
+        issues.forEach(i => {
+            const c = i.customers || '(No Customer)';
+            if (!issuesByCustomer[c]) issuesByCustomer[c] = { total: 0, open: 0 };
+            issuesByCustomer[c].total++;
+            if (i.state !== 'Done' && i.state !== 'Closed') issuesByCustomer[c].open++;
+        });
+        const topIssueCustomers = Object.entries(issuesByCustomer)
+            .sort((a, b) => b[1].open - a[1].open)
+            .slice(0, 3);
+        
+        insights.innerHTML = `
+            <div class="insights-title">⚡ Customer Insights${filterNote}</div>
+            <div class="insight-item info"><span class="insight-icon">📊</span> ${customerItems.length} work items linked to customers</div>
+            <div class="insight-item warning"><span class="insight-icon">⚠️</span> ${triaged} customer issues awaiting triage decisions</div>
+            ${topIssueCustomers.map(([customer, data]) => `
+                <div class="insight-item ${data.open > 20 ? 'critical' : 'info'}">
+                    <span class="insight-icon">🏢</span> ${customer}: ${data.open} open issues (${data.total} total)
+                </div>
+            `).join('')}
+        `;
+        
+        // Get unique values for filters
+        const allCategories = [...new Set(issues.map(i => i.ticketCategory || '(Not Set)'))].sort();
+        const allStatesForFilter = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allCustomersSet = new Set();
+        customerItems.forEach(w => {
+            if (w.customers) {
+                w.customers.split(';').forEach(c => {
+                    const trimmed = c.trim();
+                    if (trimmed) allCustomersSet.add(trimmed);
+                });
+            }
+        });
+        const allCustomersForFilter = [...allCustomersSet].sort();
+        
+        // Apply chart filters
+        const chartFilteredIssues = getCustomerChartFilteredItems(issues);
+        const chartFilteredCustomerItems = getCustomerChartFilteredItems(customerItems);
+        
+        // Recalculate top customers with filters
+        const filteredCustomerCounts = {};
+        const selectedCustomers = customerChartFilters.customer || [];
+        chartFilteredCustomerItems.forEach(w => {
+            if (w.customers) {
+                w.customers.split(';').forEach(c => {
+                    const trimmed = c.trim();
+                    if (trimmed) {
+                        // Only count if no customers selected, or this customer is selected
+                        if (selectedCustomers.length === 0 || selectedCustomers.includes(trimmed)) {
+                            filteredCustomerCounts[trimmed] = (filteredCustomerCounts[trimmed] || 0) + 1;
+                        }
+                    }
+                });
+            }
+        });
+        const filteredTopCustomers = Object.entries(filteredCustomerCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+        
+        charts.innerHTML = `
+            <div class="chart-card">
+                <div class="chart-title">Top Customers by Work Items</div>
+                <div class="chart-container"><canvas id="customer-top-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="customer-chart-customer-dropdown">
+                        <div class="multi-select-display" onclick="toggleCustomerChartFilter('customer')">
+                            <span id="customer-chart-customer-display">All Customers</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="customer-chart-customer-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-chart-customer-select-all" onchange="toggleAllCustomerChartFilter('customer', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allCustomersForFilter.map(c => `<label class="checkbox-option"><input type="checkbox" value="${c}" onchange="updateCustomerChartFilter('customer')"> ${c}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Issues by Category</div>
+                <div class="chart-container"><canvas id="customer-category-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="customer-chart-category-dropdown">
+                        <div class="multi-select-display" onclick="toggleCustomerChartFilter('category')">
+                            <span id="customer-chart-category-display">All Categories</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="customer-chart-category-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-chart-category-select-all" onchange="toggleAllCustomerChartFilter('category', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allCategories.map(c => `<label class="checkbox-option"><input type="checkbox" value="${c}" onchange="updateCustomerChartFilter('category')"> ${c}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Issues Pipeline</div>
+                <div class="chart-container"><canvas id="customer-pipeline-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="customer-chart-state-dropdown">
+                        <div class="multi-select-display" onclick="toggleCustomerChartFilter('state')">
+                            <span id="customer-chart-state-display">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="customer-chart-state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-chart-state-select-all" onchange="toggleAllCustomerChartFilter('state', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allStatesForFilter.map(s => `<label class="checkbox-option"><input type="checkbox" value="${s}" onchange="updateCustomerChartFilter('state')"> ${s}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Restore filter states
+        restoreCustomerChartFilterStates();
+        
+        setTimeout(() => {
+            const sortedCustomers = sortObjectByValue(Object.fromEntries(filteredTopCustomers));
+            createChart('customer-top-chart', 'bar', {
+                labels: Object.keys(sortedCustomers),
+                datasets: [{
+                    data: Object.values(sortedCustomers),
+                    backgroundColor: colors.primary
+                }]
+            }, {
+                onClick: (evt, elements) => {
+                    if (elements.length > 0) {
+                        drilldownCustomer(Object.keys(sortedCustomers)[elements[0].index]);
+                    }
+                },
+                indexAxis: 'y',
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                }
+            });
+            
+            const byCategory = sortObjectByValue(countBy(chartFilteredIssues, 'ticketCategory'));
+            createClickableChart('customer-category-chart', 'doughnut', byCategory, 'ticketCategory', null, chartFilteredIssues);
+            
+            const byState = sortObjectByValue(countBy(chartFilteredIssues, 'state'));
+            createClickableChart('customer-pipeline-chart', 'doughnut', byState, 'state', colors.states, chartFilteredIssues);
+        }, 50);
+    }
+    
+    function drilldownCustomerStat(type) {
+        const allItems = getFilteredCustomerItems();
+        let items, title;
+        if (type === 'all') {
+            items = allItems.filter(w => w.customers);
+            title = 'Customer-Linked Items';
+        } else {
+            items = allItems.filter(w => w.type === 'Issue');
+            title = 'Customer Issues';
+        }
+        showDrilldown(title, items, getSliceFields(items));
+    }
+    
+    function drilldownCustomer(customer) {
+        const allItems = getFilteredCustomerItems();
+        const items = allItems.filter(w => w.customers === customer);
+        showDrilldown(`Customer: ${customer}`, items, getSliceFields(items));
+    }
+</script>
