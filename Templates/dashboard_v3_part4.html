@@ -3630,17 +3630,25 @@
         const teamMenu = document.getElementById('release-team-header-menu');
         if (teamMenu) {
             const byTeam = countBy(teamFilteredItems, 'team');
+            const sortedTeams = Object.keys(sortObjectByValue(byTeam));
             let teamHtml = '';
-            Object.keys(sortObjectByValue(byTeam)).forEach(team => {
-                const isChecked = releaseHeaderFilters.team.includes(team);
+            if (sortedTeams.length > 0) {
                 teamHtml += `
-                    <div class="filter-dropdown-option" onclick="event.stopPropagation();">
-                        <input type="checkbox" data-filter="team" value="${team}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('team', event)">
-                        <span class="option-label">${team}</span>
+                    <div class="filter-dropdown-search">
+                        <input type="text" placeholder="Search teams..." oninput="filterDropdownOptions('team', this.value)" onclick="event.stopPropagation();">
                     </div>
+                    <div class="filter-dropdown-options" id="release-team-options">
                 `;
-            });
-            if (teamHtml) {
+                sortedTeams.forEach(team => {
+                    const isChecked = releaseHeaderFilters.team.includes(team);
+                    teamHtml += `
+                        <div class="filter-dropdown-option" data-search-value="${team.toLowerCase()}" onclick="event.stopPropagation();">
+                            <input type="checkbox" data-filter="team" value="${team}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('team', event)">
+                            <span class="option-label">${team}</span>
+                        </div>
+                    `;
+                });
+                teamHtml += `</div>`;
                 teamHtml += `
                     <div class="filter-dropdown-actions">
                         <button class="filter-btn-primary" onclick="selectAllHeaderFilter('team', event)">Select All</button>
@@ -3667,21 +3675,29 @@
                     });
                 }
             });
-            
+
             // Sort customers alphabetically
             const sortedCustomers = [...availableCustomers].sort();
-            
+
             let customerHtml = '';
-            sortedCustomers.forEach(customer => {
-                const isChecked = releaseHeaderFilters.customer.includes(customer);
+            if (sortedCustomers.length > 0) {
+                // Add search box for customer filter
                 customerHtml += `
-                    <div class="filter-dropdown-option" onclick="event.stopPropagation();">
-                        <input type="checkbox" data-filter="customer" value="${customer}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('customer', event)">
-                        <span class="option-label">${customer}</span>
+                    <div class="filter-dropdown-search">
+                        <input type="text" placeholder="Search customers..." oninput="filterDropdownOptions('customer', this.value)" onclick="event.stopPropagation();">
                     </div>
+                    <div class="filter-dropdown-options" id="release-customer-options">
                 `;
-            });
-            if (customerHtml) {
+                sortedCustomers.forEach(customer => {
+                    const isChecked = releaseHeaderFilters.customer.includes(customer);
+                    customerHtml += `
+                        <div class="filter-dropdown-option" data-search-value="${customer.toLowerCase()}" onclick="event.stopPropagation();">
+                            <input type="checkbox" data-filter="customer" value="${customer}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('customer', event)">
+                            <span class="option-label">${customer}</span>
+                        </div>
+                    `;
+                });
+                customerHtml += `</div>`;
                 customerHtml += `
                     <div class="filter-dropdown-actions">
                         <button class="filter-btn-primary" onclick="selectAllHeaderFilter('customer', event)">Select All</button>

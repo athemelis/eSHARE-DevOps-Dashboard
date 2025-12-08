@@ -203,6 +203,24 @@
         customer: []
     };
     
+    // Filter dropdown options by search text
+    function filterDropdownOptions(filterType, searchText) {
+        const searchLower = searchText.toLowerCase().trim();
+        const optionsContainer = document.getElementById(`release-${filterType}-options`);
+        if (!optionsContainer) return;
+
+        const options = optionsContainer.querySelectorAll('.filter-dropdown-option');
+        options.forEach(option => {
+            const searchValue = option.getAttribute('data-search-value') || '';
+            if (searchLower === '' || searchValue.includes(searchLower)) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    }
+
+    // Filter Release dropdown options (special case with different structure)
     function filterReleaseDropdownOptions(searchText) {
         const searchLower = searchText.toLowerCase().trim();
         const optionsContainer = document.getElementById('release-dropdown-options');
