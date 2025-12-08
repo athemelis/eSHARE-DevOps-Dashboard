@@ -11,25 +11,32 @@ Usage:
     python3 generate_dashboard.py [options]
 
 Options:
-    -c, --csv PATH        Path to ALL_Items.csv (default: ./ALL_Items.csv)
-    -g, --org PATH        Path to Org_Chart.csv (default: ./Org_Chart.csv)
+    -c, --csv PATH        Path to ALL_Items.csv
+    -g, --org PATH        Path to Org_Chart.csv
     -t, --templates PATH  Folder containing template part files (default: ./Templates)
-    -o, --output PATH     Output HTML file path (default: ./ᵉShare DevOps Dashboard.html)
+    -o, --output PATH     Output HTML file path (default: local directory)
+    -p, --publish         Publish to SharePoint instead of local directory
     -h, --help            Show this help message
 
+Workflow:
+    1. Generate to local directory for testing:
+       python3 generate_dashboard.py
+
+    2. Open local file in browser and validate changes
+
+    3. If good, publish to SharePoint:
+       python3 generate_dashboard.py --publish
+
 Examples:
-    # Simple run with defaults (all files in current directory)
+    # Generate to local directory (default - for testing)
     python3 generate_dashboard.py
 
-    # Specify input CSV and output location
-    python3 generate_dashboard.py -c ~/Downloads/ALL_Items.csv -o ~/Documents/dashboard.html
+    # Publish to SharePoint (after validation)
+    python3 generate_dashboard.py --publish
+    python3 generate_dashboard.py -p
 
-    # Full run with all paths specified
-    python3 generate_dashboard.py \\
-        -c "/path/to/ALL_Items.csv" \\
-        -g "/path/to/Org_Chart.csv" \\
-        -t "/path/to/Templates" \\
-        -o "/path/to/ᵉShare DevOps Dashboard.html"
+    # Custom output path
+    python3 generate_dashboard.py -o ~/Documents/test-dashboard.html
 
 Requirements:
     - pandas
@@ -42,6 +49,7 @@ import re
 import os
 import sys
 import argparse
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -51,16 +59,22 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo
 
 # Configuration - Default paths (can be overridden via command line)
-DEFAULT_CSV_PATH = './ALL_Items.csv'
-DEFAULT_ORG_CHART_PATH = './Org_Chart.csv'
+DEFAULT_CSV_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ALL Items.csv'
+DEFAULT_ORG_CHART_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/Org Chart.csv'
 DEFAULT_TEMPLATE_DIR = './Templates'
-CURRENT_VERSION = 69  # Increment this with each code change
+
+# Output paths
+LOCAL_OUTPUT_PATH = '/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html'
+PUBLISH_OUTPUT_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html'
+
+CURRENT_VERSION = 70  # Increment this with each code change
 
 # Placeholders that MUST be replaced
 PLACEHOLDERS = {
     'WORK_ITEMS_PLACEHOLDER': 'Work items data array',
     'REFRESH_TIMESTAMP_PLACEHOLDER': 'Refresh timestamp string',
-    'ORG_CHART_DATA_PLACEHOLDER': 'Org chart data array'
+    'ORG_CHART_DATA_PLACEHOLDER': 'Org chart data array',
+    'CSV_VALIDATION_DATA_PLACEHOLDER': 'CSV validation metadata'
 }
 
 
@@ -292,10 +306,30 @@ def get_iteration_name(iteration_path):
     return parts[-1] if parts else None
 
 
-def process_csv(csv_path):
-    """Process the CSV and return list of work item records matching v45 schema."""
+def process_csv(csv_path, max_retries=5, retry_delay=5):
+    """Process the CSV and return list of work item records matching v45 schema.
+
+    Includes retry logic to handle file locks from OneDrive/SharePoint sync.
+    """
     print(f"Reading CSV: {csv_path}")
-    df = pd.read_csv(csv_path, encoding='utf-8-sig')
+
+    # Retry logic for handling file locks (OneDrive/SharePoint sync)
+    df = None
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            df = pd.read_csv(csv_path, encoding='utf-8-sig')
+            break  # Success, exit retry loop
+        except OSError as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (attempt + 1)  # Increasing delay
+                print(f"  File locked (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                print(f"ERROR: Could not read CSV after {max_retries} attempts")
+                raise last_error
+
     print(f"Found {len(df)} rows, {len(df.columns)} columns")
     
     # Detect which column naming convention is used
@@ -346,8 +380,53 @@ def process_csv(csv_path):
             'url': f"https://dev.azure.com/ncryptedcloud/eShare/_workitems/edit/{clean_int(get_col(row, 'System.Id', 'ID'))}"
         }
         records.append(record)
-    
+
     return records
+
+
+def generate_csv_validation_data(records):
+    """Generate validation metadata from processed records for comparison in dashboard."""
+    from collections import Counter
+
+    # Total count
+    total = len(records)
+
+    # Count by type
+    type_counts = Counter(r['type'] for r in records if r.get('type'))
+
+    # Count by state
+    state_counts = Counter(r['state'] for r in records if r.get('state'))
+
+    # Count by team
+    team_counts = Counter(r['team'] for r in records if r.get('team'))
+
+    # Date range (created dates)
+    created_dates = [r['createdDate'] for r in records if r.get('createdDate')]
+    if created_dates:
+        # Dates are in ISO format, so string comparison works
+        min_date = min(created_dates)[:10]  # Just the date part
+        max_date = max(created_dates)[:10]
+    else:
+        min_date = None
+        max_date = None
+
+    # Unique IDs check
+    ids = [r['id'] for r in records if r.get('id')]
+    unique_ids = len(set(ids))
+    duplicate_ids = total - unique_ids
+
+    return {
+        'total': total,
+        'byType': dict(type_counts),
+        'byState': dict(state_counts),
+        'byTeam': dict(team_counts),
+        'dateRange': {
+            'earliest': min_date,
+            'latest': max_date
+        },
+        'uniqueIds': unique_ids,
+        'duplicateIds': duplicate_ids
+    }
 
 
 def build_template(template_dir):
@@ -447,30 +526,41 @@ Examples:
                         help=f'Folder containing template part files (default: {DEFAULT_TEMPLATE_DIR})')
     
     parser.add_argument('-o', '--output',
-                        default='./ᵉShare DevOps Dashboard.html',
-                        help="Output HTML file path (default: ./ᵉShare DevOps Dashboard.html)")
-    
+                        default=LOCAL_OUTPUT_PATH,
+                        help=f"Output HTML file path (default: local directory)")
+
+    parser.add_argument('-p', '--publish',
+                        action='store_true',
+                        help=f"Publish to SharePoint instead of local directory")
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    
+
+    # Determine output path based on --publish flag
+    if args.publish:
+        output_path = PUBLISH_OUTPUT_PATH
+        mode = "PUBLISH"
+    else:
+        output_path = os.path.expanduser(args.output)
+        mode = "LOCAL" if output_path == LOCAL_OUTPUT_PATH else "CUSTOM"
+
     print("=" * 60)
-    print(f"eShare Dashboard Generator v{CURRENT_VERSION}")
+    print(f"eShare Dashboard Generator v{CURRENT_VERSION} [{mode}]")
     print("=" * 60)
-    
+
     # Resolve paths
     csv_path = os.path.expanduser(args.csv)
     org_chart_path = os.path.expanduser(args.org)
     template_dir = os.path.expanduser(args.templates)
-    output_path = os.path.expanduser(args.output)
-    
+
     # Check CSV exists
     if not os.path.exists(csv_path):
         print(f"ERROR: CSV file not found: {csv_path}")
         sys.exit(1)
-    
+
     # Print configuration
     print(f"CSV file:      {csv_path}")
     print(f"Org Chart:     {org_chart_path}")
@@ -485,28 +575,34 @@ def main():
     # Process CSV
     records = process_csv(csv_path)
     print(f"Processed {len(records)} work items")
-    
+
+    # Generate CSV validation data
+    csv_validation_data = generate_csv_validation_data(records)
+    print(f"Generated validation metadata (total: {csv_validation_data['total']}, types: {len(csv_validation_data['byType'])}, states: {len(csv_validation_data['byState'])}, teams: {len(csv_validation_data['byTeam'])})")
+
     # Process Org Chart
     org_chart_data = process_org_chart(org_chart_path)
     print(f"Processed {len(org_chart_data)} org chart entries")
-    
+
     # Validate schema
     validate_schema(records)
-    
+
     # Build template
     print("Building template from part files...")
     template = build_template(template_dir)
     print(f"Template size: {len(template):,} chars")
-    
+
     # Replace placeholders
     print("Replacing placeholders...")
     json_data = json.dumps(records, indent=None)
     org_chart_json = json.dumps(org_chart_data, indent=None)
+    csv_validation_json = json.dumps(csv_validation_data, indent=None)
     print(f"JSON data size: {len(json_data):,} chars")
-    
+
     output = template.replace('WORK_ITEMS_PLACEHOLDER', json_data)
     output = output.replace('REFRESH_TIMESTAMP_PLACEHOLDER', refresh_timestamp)
     output = output.replace('ORG_CHART_DATA_PLACEHOLDER', org_chart_json)
+    output = output.replace('CSV_VALIDATION_DATA_PLACEHOLDER', csv_validation_json)
     
     # Validate placeholders replaced
     validate_output(output)

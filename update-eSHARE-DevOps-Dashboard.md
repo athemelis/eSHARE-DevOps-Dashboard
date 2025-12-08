@@ -1,59 +1,61 @@
 # eShare DevOps Dashboard – Automatic Refresh (macOS launchd)
 
-This setup runs your `generate_dashboard.py` script every minute using a `launchd` LaunchAgent. Your current layout:
+This setup runs your `generate_dashboard.py` script every minute using a `launchd` LaunchAgent.
 
-- Shell wrapper script (Git checkout):  
-  `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
-- Dashboard project (in OneDrive):  
-  `/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard`
+**Key files:**
+- Shell wrapper script: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
+- Reload helper script: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/reload-launchd-agent.sh`
+- LaunchAgent plist: `~/Library/LaunchAgents/com.eshare.devops.dashboard.plist`
+
+**Output locations:**
+- Local (for testing): `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
+- Published (production): `/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html`
 
 ---
 
-## 1. Create/update the runner shell script
+## 1. The runner shell script
 
-File:
+File: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
 
-`/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
+This is a simple wrapper that passes arguments through to the Python script:
 
-Contents:
-
-```
+```bash
 #!/bin/bash
-
-cd "/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard"
-
-/usr/bin/python3 generate_dashboard.py \
-  -c "../ALL Items.csv" \
-  -g "../Org Chart.csv" \
-  -t Templates \
-  -o "../ᵉShare DevOps Dashboard.html"
+cd "/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/"
+/usr/bin/python3 generate_dashboard.py "$@"
 ```
+
+**Usage:**
+```bash
+# Local mode (for testing) - outputs to local directory
+./update-eSHARE-DevOps-Dashboard.sh
+
+# Publish mode (production) - outputs to SharePoint
+./update-eSHARE-DevOps-Dashboard.sh --publish
+./update-eSHARE-DevOps-Dashboard.sh -p
+```
+
+The Python script has built-in default paths for CSV files (SharePoint locations) and handles local vs publish output paths based on the `-p` flag.
 
 Make it executable:
-
+```bash
+chmod +x /Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh
 ```
-chmod +x "/Users/tonythem/GitHub/ᵉShare DevOps Dashboard/update_ᵉShare_DevOps_Dashboard.sh"
-```
-
-The `cd` ensures the script runs in the correct directory so the relative CSV/template paths work as expected.[web:7]
 
 ---
 
-## 2. Create the LaunchAgent plist
+## 2. The LaunchAgent plist
+
+File: `~/Library/LaunchAgents/com.eshare.devops.dashboard.plist`
 
 Ensure the LaunchAgents folder exists:
-
-```
+```bash
 mkdir -p ~/Library/LaunchAgents
 ```
 
-Create:
+Current plist (includes `--publish` flag for production output):
 
-`~/Library/LaunchAgents/com.eshare.devops.dashboard.plist`
-
-with:
-
-```
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -65,17 +67,15 @@ with:
     <array>
         <string>/bin/bash</string>
         <string>/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
+        <string>--publish</string>
     </array>
 
-    <!-- Run every 60 seconds (1 minute) -->
     <key>StartInterval</key>
     <integer>60</integer>
 
-    <!-- Also run once immediately when loaded -->
     <key>RunAtLoad</key>
     <true/>
 
-    <!-- Logs for debugging -->
     <key>StandardOutPath</key>
     <string>/tmp/eshare_devops_dashboard.out</string>
     <key>StandardErrorPath</key>
@@ -84,52 +84,65 @@ with:
 </plist>
 ```
 
-`StartInterval` is in seconds; `60` means “run every minute”.[web:16][web:149]
+**Note:** The `--publish` flag ensures the scheduled job outputs directly to SharePoint. Remove this flag if you want the scheduled job to output to the local directory instead.
 
 ---
 
 ## 3. Load the agent and force a first run
 
-Initial load:
-
+**Easiest method - use the reload helper script:**
+```bash
+./reload-launchd-agent.sh
 ```
+
+This script:
+1. Clears old log files
+2. Unloads the agent (if loaded)
+3. Loads the agent
+4. Kickstarts it to run immediately
+5. Waits 2 seconds and shows the last 20 lines of output/error logs
+
+**Manual method:**
+```bash
 launchctl unload ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist 2>/dev/null || true
 launchctl load   ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
-```
-
-Force the job to run immediately (without waiting a minute):
-
-```
 launchctl kickstart -k gui/"$(id -u)"/com.eshare.devops.dashboard
 ```
 
-- `kickstart` tells `launchd` to start the job now.  
-- `-k` kills any existing instance before starting a new one, which is useful when testing changes.[web:95][web:96][web:97]
+- `kickstart` tells `launchd` to start the job now
+- `-k` kills any existing instance before starting a new one
 
 ---
 
-## 4. Logs, debugging, and the “reset & rerun” steps that worked
+## 4. Logs and debugging
 
-The job’s stdout/stderr go to:
-
-- Output: `/tmp/eshare_devops_dashboard.out`  
+**Log file locations:**
+- Output: `/tmp/eshare_devops_dashboard.out`
 - Errors: `/tmp/eshare_devops_dashboard.err`
 
-A handy “reset & rerun” sequence (this is what un-stuck your job):
-
+**Quick debugging with the reload script:**
+```bash
+./reload-launchd-agent.sh
 ```
-# Clear old error log so only the next run’s errors are visible
-> /tmp/eshare_devops_dashboard.err
+This clears logs, reloads the agent, and shows fresh output automatically.
 
-# Force one run of the current LaunchAgent definition
+**Manual reset & rerun:**
+```bash
+# Clear old logs
+: > /tmp/eshare_devops_dashboard.out
+: > /tmp/eshare_devops_dashboard.err
+
+# Force one run
 launchctl kickstart -k gui/"$(id -u)"/com.eshare.devops.dashboard
 
-# Wait a moment and inspect fresh errors (if any)
+# Wait and inspect
 sleep 2
+tail -n 20 /tmp/eshare_devops_dashboard.out
 tail -n 20 /tmp/eshare_devops_dashboard.err
 ```
 
-Truncating the log avoids confusing old errors (from earlier configurations) with current behavior, and `kickstart` guarantees the latest plist and script are what’s actually being run.[web:24][web:95][web:145]
+**OneDrive/SharePoint file lock handling:**
+The Python script includes retry logic (5 attempts with exponential backoff) to handle "Resource deadlock avoided" errors that can occur when OneDrive is syncing the CSV files.
 
 ---
 
@@ -156,44 +169,37 @@ tail -n 20 /tmp/eshare_devops_dashboard.out
 tail -n 20 /tmp/eshare_devops_dashboard.err
 ```
 
-These commands let you confirm that the job is loaded, see which script and arguments are actually being executed, and quickly inspect logs without opening Console.[web:27][web:33][web:95]
+These commands let you confirm that the job is loaded, see which script and arguments are actually being executed, and quickly inspect logs without opening Console.
 
 ---
 
 ## 6. Apply changes, stop, or remove the job
 
-When you edit either the plist or the `.sh` script, reload:
-
-```
-launchctl unload ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
-launchctl load   ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
-launchctl kickstart -k gui/"$(id -u)"/com.eshare.devops.dashboard
+**After editing plist or shell script:**
+```bash
+./reload-launchd-agent.sh
 ```
 
-To temporarily stop it:
-
-```
+**To temporarily stop:**
+```bash
 launchctl unload ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
 ```
 
-To start it again:
-
-```
+**To start again:**
+```bash
 launchctl load ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
 ```
 
-To fully remove the job:
-
-```
+**To fully remove:**
+```bash
 launchctl unload ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
 rm ~/Library/LaunchAgents/com.eshare.devops.dashboard.plist
 rm /tmp/eshare_devops_dashboard.out /tmp/eshare_devops_dashboard.err 2>/dev/null
 ```
 
-After removal, the script will no longer run automatically every minute.[web:18][web:33]
-```
+---
 
-Sources
+## References
 [1] Using launchd agents to schedule scripts on macOS - David Hamann https://davidhamann.de/2018/03/13/setting-up-a-launchagent-macos-cron/
 [2] MacOS launchd plist StartInterval and StartCalendarInterval examples https://alvinalexander.com/mac-os-x/launchd-plist-examples-startinterval-startcalendarinterval/
 [3] A launchd Tutorial https://www.launchd.info

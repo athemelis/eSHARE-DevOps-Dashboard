@@ -9,6 +9,7 @@
     <array>
         <string>/bin/bash</string>
         <string>/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
+        <string>--publish</string>
     </array>
 
     <key>StartInterval</key>

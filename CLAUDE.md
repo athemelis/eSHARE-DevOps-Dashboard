@@ -30,15 +30,17 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v69
+## Current Version: v70
 
 ## Data Schema
 The dashboard expects specific field names. See `DASHBOARD_README.md` for the complete schema.
 
 ## Commands for Claude
-- To generate dashboard: `python3 generate_dashboard.py`
+- To generate dashboard (local): `python3 generate_dashboard.py`
+- To generate and publish: `python3 generate_dashboard.py --publish`
 - To generate with custom CSV: `python3 generate_dashboard.py -c "../ALL_Items.csv"`
-- To open in browser (macOS): `open "ᵉShare DevOps Dashboard.html"`
+- To open in browser (macOS): `open "eSHARE-DevOps-Dashboard.html"`
+- To reload launchd agent: `./reload-launchd-agent.sh`
 
 ## Testing Changes
 After making edits, always:

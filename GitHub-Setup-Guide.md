@@ -151,8 +151,12 @@ Ask Claude to generate and preview:
 Or run manually:
 
 ```bash
+# Generate to local directory (for testing)
 python3 generate_dashboard.py
-open "ᵉShare DevOps Dashboard.html"
+open "eSHARE-DevOps-Dashboard.html"
+
+# Generate and publish to SharePoint (when ready)
+python3 generate_dashboard.py --publish
 ```
 
 ### Committing Your Changes

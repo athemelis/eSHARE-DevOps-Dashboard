@@ -3337,8 +3337,13 @@
             .join(', ');
         
         // Build dropdown options HTML
-        let dropdownHtml = '';
-        
+        let dropdownHtml = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search releases..." oninput="filterReleaseDropdownOptions(this.value)" onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="release-dropdown-options">
+        `;
+
         // Regular releases
         releases.forEach(r => {
             const info = releaseInfo[r];
@@ -3358,23 +3363,23 @@
             }
             
             dropdownHtml += `
-                <div class="filter-dropdown-option ${hasDateIssue ? 'warning' : ''}" onclick="event.stopPropagation();">
-                    <input type="checkbox" data-release="${r.replace(/"/g, '&quot;')}" 
-                           ${isSelected ? 'checked' : ''} 
+                <div class="filter-dropdown-option ${hasDateIssue ? 'warning' : ''}" data-search-value="${r.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" data-release="${r.replace(/"/g, '&quot;')}"
+                           ${isSelected ? 'checked' : ''}
                            onclick="handleReleaseCheckboxChange('${r.replace(/'/g, "\\'")}', this.checked, event)">
                     <span class="option-label">${r}</span>
                     <span class="option-meta">${dateDisplay}</span>
                 </div>
             `;
         });
-        
+
         // Add option for items with target date but no release version
         if (noReleaseWithDate.length > 0) {
             const isSelected = selectedReleases.includes('(Needs Release)');
             dropdownHtml += `
-                <div class="filter-dropdown-option warning" onclick="event.stopPropagation();">
-                    <input type="checkbox" data-release="(Needs Release)" 
-                           ${isSelected ? 'checked' : ''} 
+                <div class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
+                    <input type="checkbox" data-release="(Needs Release)"
+                           ${isSelected ? 'checked' : ''}
                            onclick="handleReleaseCheckboxChange('(Needs Release)', this.checked, event)">
                     <span class="option-label">⚠️ Needs Release</span>
                     <span class="option-meta">${noReleaseWithDate.length} items</span>
@@ -3386,16 +3391,19 @@
         if (noReleaseNoDate.length > 0) {
             const isSelected = selectedReleases.includes('(Not Set)');
             dropdownHtml += `
-                <div class="filter-dropdown-option" onclick="event.stopPropagation();">
-                    <input type="checkbox" data-release="(Not Set)" 
-                           ${isSelected ? 'checked' : ''} 
+                <div class="filter-dropdown-option" data-search-value="not set" onclick="event.stopPropagation();">
+                    <input type="checkbox" data-release="(Not Set)"
+                           ${isSelected ? 'checked' : ''}
                            onclick="handleReleaseCheckboxChange('(Not Set)', this.checked, event)">
                     <span class="option-label">(Not Set)</span>
                     <span class="option-meta">${noReleaseNoDate.length} items</span>
                 </div>
             `;
         }
-        
+
+        // Close options div
+        dropdownHtml += `</div>`;
+
         // Add action buttons
         dropdownHtml += `
             <div class="filter-dropdown-actions">
@@ -3748,27 +3756,27 @@
         
         // Update stat cards with filtered counts
         stats.innerHTML = `
-            <div class="stat-card">
+            <div class="stat-card non-clickable">
                 <div class="stat-label">Features</div>
                 <div class="stat-value" style="color: var(--accent-cyan)">${features.length}</div>
                 <div class="stat-subtitle">${filterLabel}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card non-clickable">
                 <div class="stat-label">Issues</div>
                 <div class="stat-value" style="color: var(--accent-orange)">${issues.length}</div>
                 <div class="stat-subtitle">${filterLabel}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card non-clickable">
                 <div class="stat-label">Customer Bugs</div>
                 <div class="stat-value" style="color: var(--accent-red)">${customerBugs.length}</div>
                 <div class="stat-subtitle">${filterLabel}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card non-clickable">
                 <div class="stat-label">Internal Bugs</div>
                 <div class="stat-value" style="color: var(--accent-purple)">${internalBugs.length}</div>
                 <div class="stat-subtitle">${filterLabel}</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card non-clickable">
                 <div class="stat-label">Customers</div>
                 <div class="stat-value" style="color: var(--accent-yellow)">${uniqueFilteredCustomers.length}</div>
                 <div class="stat-subtitle">${filteredItemsWithCustomers.length} items</div>
@@ -4153,14 +4161,200 @@
     function applyValidationFilters() {
         renderValidationView();
     }
-    
+
+    // Data Source Validation - compares CSV source data with dashboard data
+    function renderDataSourceValidation() {
+        const container = document.getElementById('data-source-validation-content');
+        if (!container) return;
+
+        // Calculate dashboard counts
+        const dashboardTotal = workItems.length;
+
+        // Count by type in dashboard
+        const dashboardByType = {};
+        workItems.forEach(w => {
+            if (w.type) {
+                dashboardByType[w.type] = (dashboardByType[w.type] || 0) + 1;
+            }
+        });
+
+        // Count by state in dashboard
+        const dashboardByState = {};
+        workItems.forEach(w => {
+            if (w.state) {
+                dashboardByState[w.state] = (dashboardByState[w.state] || 0) + 1;
+            }
+        });
+
+        // Count by team in dashboard
+        const dashboardByTeam = {};
+        workItems.forEach(w => {
+            if (w.team) {
+                dashboardByTeam[w.team] = (dashboardByTeam[w.team] || 0) + 1;
+            }
+        });
+
+        // Date range in dashboard
+        const dashboardDates = workItems.filter(w => w.createdDate).map(w => w.createdDate.substring(0, 10));
+        const dashboardMinDate = dashboardDates.length > 0 ? dashboardDates.sort()[0] : null;
+        const dashboardMaxDate = dashboardDates.length > 0 ? dashboardDates.sort()[dashboardDates.length - 1] : null;
+
+        // Unique IDs in dashboard
+        const dashboardIds = new Set(workItems.map(w => w.id));
+        const dashboardUniqueIds = dashboardIds.size;
+        const dashboardDuplicateIds = dashboardTotal - dashboardUniqueIds;
+
+        // Compare with CSV validation data
+        const csv = csvValidationData;
+
+        // Helper to create comparison row
+        function compRow(label, csvVal, dashVal, isMatch) {
+            const matchIcon = isMatch ? '<span style="color: var(--accent-green)">✓</span>' : '<span style="color: var(--accent-red)">✗</span>';
+            const rowClass = isMatch ? '' : 'style="background: rgba(248, 113, 113, 0.1);"';
+            return `<tr ${rowClass}><td>${label}</td><td style="text-align:right">${csvVal}</td><td style="text-align:right">${dashVal}</td><td style="text-align:center">${matchIcon}</td></tr>`;
+        }
+
+        // Build summary table
+        const totalMatch = csv.total === dashboardTotal;
+        const uniqueMatch = csv.uniqueIds === dashboardUniqueIds;
+        const dateRangeMatch = csv.dateRange.earliest === dashboardMinDate && csv.dateRange.latest === dashboardMaxDate;
+
+        let summaryHtml = `
+            <div class="validation-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1rem;">
+                <div class="validation-card" style="background: var(--bg-card); border-radius: 8px; padding: 1rem; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Summary</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th style="text-align: left; padding: 0.5rem;">Metric</th>
+                                <th style="text-align: right; padding: 0.5rem;">CSV</th>
+                                <th style="text-align: right; padding: 0.5rem;">Dashboard</th>
+                                <th style="text-align: center; padding: 0.5rem;">Match</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${compRow('Total Records', csv.total, dashboardTotal, totalMatch)}
+                            ${compRow('Unique IDs', csv.uniqueIds, dashboardUniqueIds, uniqueMatch)}
+                            ${compRow('Duplicate IDs', csv.duplicateIds, dashboardDuplicateIds, csv.duplicateIds === dashboardDuplicateIds)}
+                            ${compRow('Earliest Created', csv.dateRange.earliest || 'N/A', dashboardMinDate || 'N/A', dateRangeMatch)}
+                            ${compRow('Latest Created', csv.dateRange.latest || 'N/A', dashboardMaxDate || 'N/A', dateRangeMatch)}
+                        </tbody>
+                    </table>
+                </div>
+        `;
+
+        // Build type breakdown table
+        const allTypes = new Set([...Object.keys(csv.byType), ...Object.keys(dashboardByType)]);
+        let typeRows = '';
+        let allTypesMatch = true;
+        Array.from(allTypes).sort().forEach(type => {
+            const csvCount = csv.byType[type] || 0;
+            const dashCount = dashboardByType[type] || 0;
+            const match = csvCount === dashCount;
+            if (!match) allTypesMatch = false;
+            typeRows += compRow(type, csvCount, dashCount, match);
+        });
+
+        summaryHtml += `
+                <div class="validation-card" style="background: var(--bg-card); border-radius: 8px; padding: 1rem; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">By Work Item Type ${allTypesMatch ? '<span style="color: var(--accent-green)">✓</span>' : '<span style="color: var(--accent-red)">✗</span>'}</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th style="text-align: left; padding: 0.5rem;">Type</th>
+                                <th style="text-align: right; padding: 0.5rem;">CSV</th>
+                                <th style="text-align: right; padding: 0.5rem;">Dashboard</th>
+                                <th style="text-align: center; padding: 0.5rem;">Match</th>
+                            </tr>
+                        </thead>
+                        <tbody>${typeRows}</tbody>
+                    </table>
+                </div>
+        `;
+
+        // Build state breakdown table
+        const allStates = new Set([...Object.keys(csv.byState), ...Object.keys(dashboardByState)]);
+        let stateRows = '';
+        let allStatesMatch = true;
+        Array.from(allStates).sort().forEach(state => {
+            const csvCount = csv.byState[state] || 0;
+            const dashCount = dashboardByState[state] || 0;
+            const match = csvCount === dashCount;
+            if (!match) allStatesMatch = false;
+            stateRows += compRow(state, csvCount, dashCount, match);
+        });
+
+        summaryHtml += `
+                <div class="validation-card" style="background: var(--bg-card); border-radius: 8px; padding: 1rem; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">By State ${allStatesMatch ? '<span style="color: var(--accent-green)">✓</span>' : '<span style="color: var(--accent-red)">✗</span>'}</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th style="text-align: left; padding: 0.5rem;">State</th>
+                                <th style="text-align: right; padding: 0.5rem;">CSV</th>
+                                <th style="text-align: right; padding: 0.5rem;">Dashboard</th>
+                                <th style="text-align: center; padding: 0.5rem;">Match</th>
+                            </tr>
+                        </thead>
+                        <tbody>${stateRows}</tbody>
+                    </table>
+                </div>
+        `;
+
+        // Build team breakdown table
+        const allTeams = new Set([...Object.keys(csv.byTeam), ...Object.keys(dashboardByTeam)]);
+        let teamRows = '';
+        let allTeamsMatch = true;
+        Array.from(allTeams).sort().forEach(team => {
+            const csvCount = csv.byTeam[team] || 0;
+            const dashCount = dashboardByTeam[team] || 0;
+            const match = csvCount === dashCount;
+            if (!match) allTeamsMatch = false;
+            teamRows += compRow(team, csvCount, dashCount, match);
+        });
+
+        summaryHtml += `
+                <div class="validation-card" style="background: var(--bg-card); border-radius: 8px; padding: 1rem; border: 1px solid var(--border-color);">
+                    <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">By Team ${allTeamsMatch ? '<span style="color: var(--accent-green)">✓</span>' : '<span style="color: var(--accent-red)">✗</span>'}</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <th style="text-align: left; padding: 0.5rem;">Team</th>
+                                <th style="text-align: right; padding: 0.5rem;">CSV</th>
+                                <th style="text-align: right; padding: 0.5rem;">Dashboard</th>
+                                <th style="text-align: center; padding: 0.5rem;">Match</th>
+                            </tr>
+                        </thead>
+                        <tbody>${teamRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        // Overall status banner
+        const allMatch = totalMatch && uniqueMatch && allTypesMatch && allStatesMatch && allTeamsMatch;
+        const statusBanner = allMatch
+            ? `<div style="background: rgba(52, 211, 153, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+                 <span style="color: var(--accent-green); font-weight: 600; font-size: 1.1rem;">✓ All Data Source Validations Passed</span>
+               </div>`
+            : `<div style="background: rgba(248, 113, 113, 0.15); border: 1px solid var(--accent-red); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+                 <span style="color: var(--accent-red); font-weight: 600; font-size: 1.1rem;">✗ Data Source Validation Issues Detected</span>
+                 <p style="margin: 0.5rem 0 0 0; color: var(--text-secondary); font-size: 0.85rem;">Check the tables below for discrepancies between CSV source and dashboard data.</p>
+               </div>`;
+
+        container.innerHTML = statusBanner + summaryHtml;
+    }
+
     // Validation View (renamed from Product Quality)
     function renderValidationView() {
+        // Render data source validation first
+        renderDataSourceValidation();
+
         const stats = document.getElementById('validation-stats');
         const insights = document.getElementById('validation-insights');
         const issuesContainer = document.getElementById('validation-issues');
         const charts = document.getElementById('validation-charts');
-        
+
         const bugs = getFilteredValidationBugs();
         const typeFilter = document.getElementById('validation-type-filter')?.value || 'all';
         const selectedStates = getSelectedValidationStates();

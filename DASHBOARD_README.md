@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v69
+## Current Version: v70
 
 ---
 
@@ -53,10 +53,11 @@ python3 generate_dashboard.py \
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-c, --csv` | Path to ALL_Items.csv | `./ALL_Items.csv` |
-| `-g, --org` | Path to Org_Chart.csv | `./Org_Chart.csv` |
+| `-c, --csv` | Path to ALL_Items.csv | SharePoint `ALL Items.csv` |
+| `-g, --org` | Path to Org_Chart.csv | SharePoint `Org Chart.csv` |
 | `-t, --templates` | Folder containing template files | `./Templates` |
-| `-o, --output` | Output HTML file path | `./ᵉShare DevOps Dashboard.html` |
+| `-o, --output` | Output HTML file path (for local testing) | Local repo directory |
+| `-p, --publish` | Publish to SharePoint instead of local | Off (local mode) |
 | `-h, --help` | Show help message | |
 
 ### Refresh Timestamp
@@ -248,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v70 | 12/8/2025 | **Releases view:** Added dropdown search filter, scroll-to-close for filter dropdowns, fixed sticky header Clear button wrapping, fixed stat cards hover effect (now non-clickable). **Validation view:** Added Data Source Validation section comparing CSV source counts vs dashboard counts. **Infrastructure:** Added `-p/--publish` flag for local vs production workflow, added retry logic for OneDrive file locks, added `reload-launchd-agent.sh` helper script. |
 | v69 | 12/6/2025 | Bug fixes: Added null checks to updateSelectionInfo, renderDrilldown, and closeDrilldown functions to prevent errors when drilldown panel element doesn't exist (removed in v68). |
 | v68 | 12/6/2025 | Releases view: (1) Stat cards now update dynamically based on active filters. (2) Removed stat card drilldown feature. (3) Added Customer filter to header. (4) Filters update view immediately while dropdown stays open. (5) Cross-filter aware dropdowns show only options available in current filtered context. |
 | v67 | 12/6/2025 | Releases view: Replaced doughnut charts with header filters (Type, Bug Type, State, Team). Full bar chart when no filters, mini-bar when any filter active. Added "Clear All" button. Chart header pattern: title + subtitle on same line. Fixed dropdown behavior for Select All/Clear. |
