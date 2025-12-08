@@ -32,6 +32,30 @@ When making changes:
 
 ## Current Version: v70
 
+## v70 Summary (December 2024)
+Key changes implemented in v70:
+
+**Releases View Fixes:**
+- Dropdown search filter for release selection
+- Scroll-to-close for filter dropdowns
+- Sticky header Clear button fix (`flex-wrap: nowrap`)
+- Stat cards now non-clickable (removed hover effect)
+
+**Validation View:**
+- Data Source Validation section comparing CSV source counts vs dashboard counts
+- Uses `CSV_VALIDATION_DATA_PLACEHOLDER` injected by generator
+
+**Infrastructure:**
+- `-p/--publish` flag: default outputs to local directory, `--publish` outputs to SharePoint
+- Retry logic (5 attempts with exponential backoff) for OneDrive file locks
+- `reload-launchd-agent.sh` helper script for testing scheduled job
+- Plist updated to include `--publish` for scheduled runs
+
+**Key paths:**
+- Local output: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
+- Published output: SharePoint `Product Planning/ᵉShare DevOps Dashboard.html`
+- CSV source: SharePoint `Product Planning/ALL Items.csv`
+
 ## Data Schema
 The dashboard expects specific field names. See `DASHBOARD_README.md` for the complete schema.
 
