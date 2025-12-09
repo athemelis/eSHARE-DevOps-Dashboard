@@ -145,18 +145,22 @@
             color: var(--text-muted);
             font-weight: 500;
             text-transform: uppercase;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
-        
+
         .filter-row-hint {
             font-size: 0.65rem;
             color: var(--text-muted);
             margin-left: auto;
         }
-        
+
         /* Compact filter dropdown pattern */
         .filter-dropdown {
             position: relative;
-            min-width: 140px;
+            flex: 1;
+            min-width: 100px;
+            max-width: 200px;
         }
 
         .filter-dropdown-toggle {
@@ -208,10 +212,17 @@
             accent-color: var(--accent-purple);
             width: 14px;
             height: 14px;
+            cursor: pointer;
+            flex-shrink: 0;
         }
         .filter-dropdown-option .option-label { color: var(--text-primary); font-weight: 500; }
         .filter-dropdown-option .option-meta { color: var(--text-muted); font-size: 0.7rem; margin-left: auto; }
         .filter-dropdown-option.warning .option-meta { color: var(--accent-orange); }
+        /* Label-based filter options - entire row is clickable */
+        label.filter-dropdown-option {
+            margin: 0;
+            font-weight: normal;
+        }
         
         .filter-dropdown-actions {
             display: flex;
@@ -280,6 +291,7 @@
         /* Header info panel */
         .filter-row-info {
             position: relative;
+            flex-shrink: 0;
         }
         .info-toggle {
             font-size: 0.7rem;
@@ -361,7 +373,16 @@
         .mini-bar.selected {
             background: var(--accent-cyan);
         }
-        
+
+        .mini-bar.search-match,
+        .mini-bar.filter-match {
+            background: var(--accent-cyan);
+        }
+
+        .mini-bar.dimmed {
+            opacity: 0.3;
+        }
+
         .mini-bar.selected::after {
             content: '';
             position: absolute;
@@ -374,7 +395,11 @@
             border-right: 5px solid transparent;
             border-top: 5px solid var(--accent-cyan);
         }
-        
+
+        .mini-bar-label.dimmed {
+            opacity: 0.3;
+        }
+
         .mini-bar-labels {
             display: flex;
             gap: 3px;
@@ -487,6 +512,7 @@
             cursor: pointer;
             transition: all 0.2s;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         
         .clear-filters-btn:hover {
@@ -1664,7 +1690,8 @@
             color: var(--text-primary);
             font-family: inherit;
             font-size: 0.8rem;
-            min-width: 150px;
+            flex: 1;
+            min-width: 120px;
             max-width: 200px;
         }
 
@@ -2397,7 +2424,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v71</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v72</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -2434,6 +2461,9 @@
         <!-- Filter rows (view-specific, only one active at a time) -->
         <!-- Releases filter row -->
         <div class="filter-row" id="filter-row-releases">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="releases-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyReleasesSearch()">
+
             <span class="filter-row-label">Release:</span>
             <div class="filter-dropdown" id="release-filter-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-filter-dropdown')">
@@ -2503,7 +2533,7 @@
             <button class="clear-filters-btn hidden" id="release-clear-filters-btn" onclick="clearAllReleaseFilters()">✕ Clear All</button>
             
             <div class="filter-row-info" style="margin-left: auto;">
-                <span class="info-toggle" onclick="toggleHeaderInfo('releases-info-panel')">📖 Info ▼</span>
+                <span class="info-toggle" onclick="toggleHeaderInfo('releases-info-panel')">ℹ️ Info</span>
                 <div class="info-panel" id="releases-info-panel">
                     <p><strong>Release Items:</strong> Features, Issues, Bugs with a Release Version assigned.</p>
                     <p><strong>Completion %:</strong> Done or Closed items ÷ Total × 100.</p>
@@ -2539,7 +2569,7 @@
         <!-- Roadmap filter row -->
         <div class="filter-row" id="filter-row-roadmap">
             <span class="filter-row-label">Search:</span>
-            <input type="text" id="roadmap-search-input" class="filter-search-input" placeholder="Search titles..." oninput="applyRoadmapFilters()">
+            <input type="text" id="roadmap-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyRoadmapFilters()">
 
             <span class="filter-row-label">State:</span>
             <div class="filter-dropdown" id="roadmap-state-dropdown">
@@ -2610,7 +2640,7 @@
             <button class="clear-filters-btn hidden" id="roadmap-clear-filters-btn" onclick="clearAllRoadmapFilters()">✕ Clear All</button>
 
             <div class="filter-row-info" style="margin-left: auto;">
-                <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ What appears here?</span>
+                <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ Info</span>
                 <div class="info-panel" id="roadmap-info-panel">
                     <p><strong>Features in this table:</strong></p>
                     <p>• No Release Version assigned (field is blank)</p>

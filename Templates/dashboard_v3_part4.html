@@ -3246,27 +3246,42 @@
         
         // Get release items (Features, Issues, Bugs only)
         const releaseItems = workItems.filter(w => ['Feature', 'Issue', 'Bug'].includes(w.type));
-        
-        // Get releases with their dates
+
+        // Helper to check if item matches search filter
+        function itemMatchesSearch(item) {
+            if (!releasesSearchFilter) return true;
+            const searchLower = releasesSearchFilter.toLowerCase();
+            const titleMatch = (item.title || '').toLowerCase().includes(searchLower);
+            const idMatch = String(item.id).includes(releasesSearchFilter);
+            return titleMatch || idMatch;
+        }
+
+        // Get releases with their dates (filter by search if active)
         const releaseInfo = {};
         // Track items without release version separately
         let noReleaseWithDate = [];
         let noReleaseNoDate = [];
-        
+
         releaseItems.forEach(item => {
+            // Check search filter for release dropdown population
+            const matchesSearch = itemMatchesSearch(item);
+
             if (!item.releaseVersion) {
                 // No release version - split by whether they have a target date
-                if (item.targetDate) {
-                    noReleaseWithDate.push(item);
-                } else {
-                    noReleaseNoDate.push(item);
+                // Only include in dropdown options if matches search
+                if (matchesSearch) {
+                    if (item.targetDate) {
+                        noReleaseWithDate.push(item);
+                    } else {
+                        noReleaseNoDate.push(item);
+                    }
                 }
                 return;
             }
-            
+
             const rv = item.releaseVersion;
             if (!releaseInfo[rv]) {
-                releaseInfo[rv] = { dates: new Set(), count: 0, missingDates: 0, items: [] };
+                releaseInfo[rv] = { dates: new Set(), count: 0, missingDates: 0, items: [], matchingItems: 0 };
             }
             if (item.targetDate) {
                 releaseInfo[rv].dates.add(item.targetDate.split(' ')[0]); // Just the date part
@@ -3275,6 +3290,9 @@
             }
             releaseInfo[rv].count++;
             releaseInfo[rv].items.push(item);
+            if (matchesSearch) {
+                releaseInfo[rv].matchingItems++;
+            }
         });
         
         // Sort releases
@@ -3344,9 +3362,12 @@
             <div class="filter-dropdown-options" id="release-dropdown-options">
         `;
 
-        // Regular releases
+        // Regular releases (only show releases with matching items when search is active)
         releases.forEach(r => {
             const info = releaseInfo[r];
+            // Skip releases with no matching items when search is active
+            if (releasesSearchFilter && info.matchingItems === 0) return;
+
             const hasDateIssue = releasesWithDateIssues.includes(r);
             const isSelected = selectedReleases.includes(r);
             let dateDisplay;
@@ -3361,15 +3382,18 @@
             } else {
                 dateDisplay = 'No date';
             }
-            
+
+            // Show matching count when search is active
+            const metaDisplay = releasesSearchFilter ? `${info.matchingItems} match` : dateDisplay;
+
             dropdownHtml += `
-                <div class="filter-dropdown-option ${hasDateIssue ? 'warning' : ''}" data-search-value="${r.toLowerCase()}" onclick="event.stopPropagation();">
+                <label class="filter-dropdown-option ${hasDateIssue ? 'warning' : ''}" data-search-value="${r.toLowerCase()}" onclick="event.stopPropagation();">
                     <input type="checkbox" data-release="${r.replace(/"/g, '&quot;')}"
                            ${isSelected ? 'checked' : ''}
-                           onclick="handleReleaseCheckboxChange('${r.replace(/'/g, "\\'")}', this.checked, event)">
+                           onchange="handleReleaseCheckboxChange('${r.replace(/'/g, "\\'")}', this.checked, event)">
                     <span class="option-label">${r}</span>
-                    <span class="option-meta">${dateDisplay}</span>
-                </div>
+                    <span class="option-meta">${metaDisplay}</span>
+                </label>
             `;
         });
 
@@ -3377,27 +3401,27 @@
         if (noReleaseWithDate.length > 0) {
             const isSelected = selectedReleases.includes('(Needs Release)');
             dropdownHtml += `
-                <div class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
+                <label class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
                     <input type="checkbox" data-release="(Needs Release)"
                            ${isSelected ? 'checked' : ''}
-                           onclick="handleReleaseCheckboxChange('(Needs Release)', this.checked, event)">
+                           onchange="handleReleaseCheckboxChange('(Needs Release)', this.checked, event)">
                     <span class="option-label">⚠️ Needs Release</span>
                     <span class="option-meta">${noReleaseWithDate.length} items</span>
-                </div>
+                </label>
             `;
         }
-        
+
         // Add option for items with no release and no target date
         if (noReleaseNoDate.length > 0) {
             const isSelected = selectedReleases.includes('(Not Set)');
             dropdownHtml += `
-                <div class="filter-dropdown-option" data-search-value="not set" onclick="event.stopPropagation();">
+                <label class="filter-dropdown-option" data-search-value="not set" onclick="event.stopPropagation();">
                     <input type="checkbox" data-release="(Not Set)"
                            ${isSelected ? 'checked' : ''}
-                           onclick="handleReleaseCheckboxChange('(Not Set)', this.checked, event)">
+                           onchange="handleReleaseCheckboxChange('(Not Set)', this.checked, event)">
                     <span class="option-label">(Not Set)</span>
                     <span class="option-meta">${noReleaseNoDate.length} items</span>
-                </div>
+                </label>
             `;
         }
 
@@ -3455,6 +3479,14 @@
         // Helper function to filter items excluding one filter type
         function getItemsExcludingFilter(items, excludeFilter) {
             return items.filter(item => {
+                // Always apply search filter (never excluded)
+                if (releasesSearchFilter) {
+                    const searchLower = releasesSearchFilter.toLowerCase();
+                    const titleMatch = (item.title || '').toLowerCase().includes(searchLower);
+                    const idMatch = String(item.id).includes(releasesSearchFilter);
+                    if (!titleMatch && !idMatch) return false;
+                }
+
                 // Apply release filter (unless excluded)
                 if (excludeFilter !== 'release' && selectedReleases.length > 0) {
                     let releaseMatch = false;
@@ -3533,10 +3565,10 @@
                 if (availableTypes.has(opt.value)) {
                     const isChecked = releaseHeaderFilters.type.includes(opt.value);
                     typeHtml += `
-                        <div class="filter-dropdown-option" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="type" value="${opt.value}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('type', event)">
                             <span class="option-label">${opt.label}</span>
-                        </div>
+                        </label>
                     `;
                 }
             });
@@ -3569,10 +3601,10 @@
                 if (availableBugTypes.has(bt)) {
                     const isChecked = releaseHeaderFilters.bugtype.includes(bt);
                     bugtypeHtml += `
-                        <div class="filter-dropdown-option" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="bugtype" value="${bt}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('bugtype', event)">
                             <span class="option-label">${bt}</span>
-                        </div>
+                        </label>
                     `;
                 }
             });
@@ -3605,10 +3637,10 @@
                 if (availableStates.has(st)) {
                     const isChecked = releaseHeaderFilters.state.includes(st);
                     stateHtml += `
-                        <div class="filter-dropdown-option" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="state" value="${st}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('state', event)">
                             <span class="option-label">${st}</span>
-                        </div>
+                        </label>
                     `;
                 }
             });
@@ -3642,10 +3674,10 @@
                 sortedTeams.forEach(team => {
                     const isChecked = releaseHeaderFilters.team.includes(team);
                     teamHtml += `
-                        <div class="filter-dropdown-option" data-search-value="${team.toLowerCase()}" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" data-search-value="${team.toLowerCase()}" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="team" value="${team}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('team', event)">
                             <span class="option-label">${team}</span>
-                        </div>
+                        </label>
                     `;
                 });
                 teamHtml += `</div>`;
@@ -3691,10 +3723,10 @@
                 sortedCustomers.forEach(customer => {
                     const isChecked = releaseHeaderFilters.customer.includes(customer);
                     customerHtml += `
-                        <div class="filter-dropdown-option" data-search-value="${customer.toLowerCase()}" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" data-search-value="${customer.toLowerCase()}" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="customer" value="${customer}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('customer', event)">
                             <span class="option-label">${customer}</span>
-                        </div>
+                        </label>
                     `;
                 });
                 customerHtml += `</div>`;
@@ -3734,9 +3766,11 @@
         });
         
         // Then filter by selected releases for tables
+        // BASE FILTER: Only show items WITH a Release Version (unless explicitly selecting special categories)
         let filtered;
         if (selectedReleases.length === 0) {
-            filtered = headerFilteredItems;
+            // No release selection = show only items WITH a release version
+            filtered = headerFilteredItems.filter(w => w.releaseVersion);
         } else {
             filtered = headerFilteredItems.filter(w => {
                 if (selectedReleases.includes('(Needs Release)') && !w.releaseVersion && w.targetDate) {
@@ -3838,11 +3872,27 @@
                 });
                 
                 setTimeout(() => {
+                    // Highlight bars with matching items when any filter is active
+                    const anyFilterActive = releasesSearchFilter ||
+                        releaseHeaderFilters.type.length > 0 ||
+                        releaseHeaderFilters.bugtype.length > 0 ||
+                        releaseHeaderFilters.state.length > 0 ||
+                        releaseHeaderFilters.team.length > 0 ||
+                        releaseHeaderFilters.customer.length > 0;
+
+                    const barColors = releases.map(r => {
+                        const hasFilteredItems = (filteredReleaseInfo[r] || 0) > 0;
+                        if (anyFilterActive && hasFilteredItems) {
+                            return 'rgba(34, 211, 238, 1)'; // Bright cyan for matches
+                        }
+                        return anyFilterActive ? 'rgba(100, 116, 139, 0.4)' : colors.primary[0]; // Dimmed for non-matches
+                    });
+
                     createChart('release-bar-chart', 'bar', {
                         labels: releaseLabels,
                         datasets: [{
                             data: releases.map(r => filteredReleaseInfo[r] || 0),
-                            backgroundColor: colors.primary[0]
+                            backgroundColor: barColors
                         }]
                     }, {
                         onClick: (evt, elements) => {
@@ -3852,9 +3902,9 @@
                         },
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { 
-                                ticks: { color: '#94a3b8', maxRotation: 45 }, 
-                                grid: { color: '#334155' } 
+                            x: {
+                                ticks: { color: '#94a3b8', maxRotation: 45 },
+                                grid: { color: '#334155' }
                             },
                             y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
                         }
@@ -3875,12 +3925,24 @@
                 let barsHtml = '';
                 let labelsHtml = '';
                 
+                // Check if any non-release filters are active (for highlighting)
+                const anyNonReleaseFilterActive = releasesSearchFilter ||
+                    releaseHeaderFilters.type.length > 0 ||
+                    releaseHeaderFilters.bugtype.length > 0 ||
+                    releaseHeaderFilters.state.length > 0 ||
+                    releaseHeaderFilters.team.length > 0 ||
+                    releaseHeaderFilters.customer.length > 0;
+
                 releases.forEach(r => {
                     const count = filteredReleaseInfo[r] || 0;
                     const heightPercent = Math.max((count / maxValue) * 100, 5); // Min 5% height for visibility
                     const isSelected = selectedReleases.includes(r);
                     const info = releaseInfo[r];
-                    
+                    // Highlight bars with filtered items when any filter is active
+                    const hasFilteredItems = count > 0;
+                    const isHighlighted = isSelected || (anyNonReleaseFilterActive && hasFilteredItems);
+                    const isDimmed = anyNonReleaseFilterActive && !hasFilteredItems && !isSelected;
+
                     let dateStr = '';
                     if (info.dates.size === 1) {
                         dateStr = [...info.dates][0];
@@ -3889,10 +3951,10 @@
                     } else if (info.missingDates > 0) {
                         dateStr = 'No date set';
                     }
-                    
+
                     barsHtml += `
-                        <div class="mini-bar ${isSelected ? 'selected' : ''}" 
-                             style="height: ${heightPercent}%;" 
+                        <div class="mini-bar ${isSelected ? 'selected' : ''} ${(anyNonReleaseFilterActive && hasFilteredItems) ? 'filter-match' : ''} ${isDimmed ? 'dimmed' : ''}"
+                             style="height: ${heightPercent}%;"
                              onclick="selectRelease('${r}', event)">
                             <div class="mini-bar-tooltip">
                                 <span class="tooltip-version">${r}</span>
@@ -3901,9 +3963,9 @@
                             </div>
                         </div>
                     `;
-                    
+
                     labelsHtml += `
-                        <div class="mini-bar-label ${isSelected ? 'selected' : ''}">${r}</div>
+                        <div class="mini-bar-label ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}">${r}</div>
                     `;
                 });
                 
@@ -4073,6 +4135,7 @@
                 { key: 'customers', label: 'Customer' },
                 { key: 'assignedTo', label: 'Assigned To' },
                 { key: 'team', label: 'Team' },
+                { key: 'releaseVersion', label: 'Release' },
                 { key: 'targetDate', label: 'Target Date' }
             ], defaultSort);
         }
@@ -4085,6 +4148,7 @@
                 { key: 'ticketCategory', label: 'Category' },
                 { key: 'customers', label: 'Customer' },
                 { key: 'csOwner', label: 'CS Owner' },
+                { key: 'releaseVersion', label: 'Release' },
                 { key: 'targetDate', label: 'Target Date' }
             ], defaultSort);
         }
@@ -4098,6 +4162,7 @@
                 { key: 'assignedTo', label: 'Assigned To' },
                 { key: 'team', label: 'Team' },
                 { key: 'feature', label: 'Feature' },
+                { key: 'releaseVersion', label: 'Release' },
                 { key: 'targetDate', label: 'Target Date' }
             ], defaultSort);
         }
@@ -4111,6 +4176,7 @@
                 { key: 'assignedTo', label: 'Assigned To' },
                 { key: 'team', label: 'Team' },
                 { key: 'feature', label: 'Feature' },
+                { key: 'releaseVersion', label: 'Release' },
                 { key: 'targetDate', label: 'Target Date' }
             ], defaultSort);
         }

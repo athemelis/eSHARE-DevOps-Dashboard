@@ -30,7 +30,77 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v71
+## Current Version: v72
+
+## UI Patterns for All Dashboards
+
+### Label-Based Checkbox Filters
+All filter dropdowns use `<label class="filter-dropdown-option">` elements so clicking anywhere on the row toggles the checkbox. Use `onchange` handlers (not `onclick`) on the checkbox input.
+
+### Multi-Select Tag Filters with AND Logic
+When a filter allows multiple selections (like Tags), use AND logic by default:
+```javascript
+// Show items that have ALL selected tags
+return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+```
+
+### Search Filter Integration
+When adding a search filter to a dashboard:
+1. Add search input to sticky header with `class="filter-search-input"`
+2. Create a search state variable (e.g., `releasesSearchFilter = ''`)
+3. Add search to `getHeaderFilteredItems()` - always apply search (no exclusion)
+4. Add search to `hasActiveFilters()` check
+5. Clear search in `clearAllFilters()`
+6. Update cross-filter dropdown population to respect search
+
+### Cross-Filter Dropdown Aware of Search
+Filter dropdowns should only show options relevant to current search:
+```javascript
+function getItemsExcludingFilter(items, excludeFilter) {
+    return items.filter(item => {
+        // Always apply search filter (never excluded)
+        if (searchFilter) {
+            const searchLower = searchFilter.toLowerCase();
+            const titleMatch = (item.title || '').toLowerCase().includes(searchLower);
+            const idMatch = String(item.id).includes(searchFilter);
+            if (!titleMatch && !idMatch) return false;
+        }
+        // ... other filters with excludeFilter logic ...
+    });
+}
+```
+
+### Chart Highlighting for Search Results
+When search is active, highlight relevant bars/columns:
+```javascript
+const barColors = releases.map(r => {
+    if (searchFilter && releaseInfo[r].matchingItems > 0) {
+        return 'rgba(34, 211, 238, 1)'; // Bright cyan for matches
+    }
+    return searchFilter ? 'rgba(100, 116, 139, 0.4)' : colors.primary[0];
+});
+```
+
+### Preserving Scroll Position on Re-render
+When checkbox selection triggers a re-render that rebuilds the dropdown:
+```javascript
+// Save scroll position before re-render
+const optionsContainer = document.getElementById('dropdown-options');
+const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+// ... re-render ...
+// Restore scroll position after re-render
+const newOptionsContainer = document.getElementById('dropdown-options');
+if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+```
+
+### Info Popup Standardization
+All dashboards use consistent info popup: `<span class="info-toggle">ℹ️ Info</span>`
+
+### Flexible Filter Row Layout
+Filter dropdowns use `flex: 1` with min/max widths to fill available space:
+- `.filter-dropdown { flex: 1; min-width: 100px; max-width: 200px; }`
+- `.filter-search-input { flex: 1; min-width: 120px; max-width: 200px; }`
+- Labels and buttons use `flex-shrink: 0`
 
 ## Dual-Mode Filter Pattern
 When implementing multi-select checkbox filters that need to support both inclusion and exclusion:
@@ -69,6 +139,25 @@ if (roadmapFilters.tags.length > 0) {
     }
 }
 ```
+
+## v72 Summary (December 2024)
+**Releases & Roadmap Dashboards - UX Improvements:**
+- Search filter added to Releases dashboard (searches title and ID)
+- Search placeholder updated to "Search titles and IDs..." on both dashboards
+- Checkbox click behavior aligned: `<label>` elements make entire row clickable
+- Release filter scroll position preserved when selecting items
+- Tag filter uses AND logic (items must have ALL selected tags)
+- Filter dropdowns expand to fill available space (`flex: 1`)
+- Info popups standardized to "ℹ️ Info" across all dashboards
+
+**Releases Dashboard - Search Integration:**
+- Filter dropdowns only show options relevant to search results
+- Release dropdown shows matching item count when search is active
+- Items by Release chart highlights bars with matching items
+- Release Version column added to all tables
+
+**Documentation:**
+- Added UI Patterns section to CLAUDE.md for reuse across dashboards
 
 ## v71 Summary (December 2024)
 **Roadmap View - Tag Filter Refactor:**

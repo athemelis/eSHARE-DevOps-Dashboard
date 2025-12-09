@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v71
+## Current Version: v72
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v72 | 12/9/2025 | **Releases view:** Added search filter (title/ID), chart highlighting for filtered results, Release Version column in tables, Bug Type filter now excludes Features/Issues. **Roadmap view:** Search placeholder updated, Tag filter AND logic. **Both dashboards:** Label-based checkbox filters (full row clickable), scroll position preserved on dropdown re-render, flexible filter widths (`flex: 1`), standardized "ℹ️ Info" popups. **Patterns:** Documented UI patterns in CLAUDE.md for reuse. |
 | v71 | 12/9/2025 | **Roadmap view:** Refactored tag filtering - "Candidate" now selected by default in Tag dropdown (user-controllable), dual-mode filter (inclusion/exclusion), Clear All preserves Candidate default, Clear button hidden in default state. Compact sticky header, wider filter dropdowns (140px). **Pattern:** Documented dual-mode filter and default filter state patterns for future use. |
 | v70 | 12/8/2025 | **Releases view:** Added searchable dropdowns for Release, Team, and Customer filters (type to filter long lists), scroll-to-close for filter dropdowns, fixed sticky header Clear button wrapping, fixed stat cards hover effect (now non-clickable). **Validation view:** Added Data Source Validation section comparing CSV source counts vs dashboard counts. **Infrastructure:** Added `-p/--publish` flag for local vs production workflow, added retry logic for OneDrive file locks, added `reload-launchd-agent.sh` helper script. |
 | v69 | 12/6/2025 | Bug fixes: Added null checks to updateSelectionInfo, renderDrilldown, and closeDrilldown functions to prevent errors when drilldown panel element doesn't exist (removed in v68). |

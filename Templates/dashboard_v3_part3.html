@@ -1029,10 +1029,10 @@
                     return !featureTags.some(tag => uncheckedTags.includes(tag));
                 });
             } else {
-                // Inclusion mode: Show features that have at least one selected tag
+                // Inclusion mode: Show features that have ALL selected tags (AND logic)
                 features = features.filter(f => {
                     const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
-                    return featureTags.some(tag => roadmapFilters.tags.includes(tag));
+                    return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
                 });
             }
         }
@@ -1330,10 +1330,10 @@
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-state-options">
                     ${states.map(s => `
-                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('state', '${s}', this)">
-                            <input type="checkbox" ${roadmapFilters.states.includes(s) ? 'checked' : ''}>
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.states.includes(s) ? 'checked' : ''} onchange="handleRoadmapFilterChange('state', '${s}', this.checked)">
                             <span class="option-label">${s}</span>
-                        </div>
+                        </label>
                     `).join('')}
                 </div>
                 <div class="filter-dropdown-actions">
@@ -1353,10 +1353,10 @@
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-customer-options">
                     ${customers.map(c => `
-                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('customer', '${c.replace(/'/g, "\\'")}', this)">
-                            <input type="checkbox" ${roadmapFilters.customers.includes(c) ? 'checked' : ''}>
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.customers.includes(c) ? 'checked' : ''} onchange="handleRoadmapFilterChange('customer', '${c.replace(/'/g, "\\'")}', this.checked)">
                             <span class="option-label">${c}</span>
-                        </div>
+                        </label>
                     `).join('')}
                 </div>
                 <div class="filter-dropdown-actions">
@@ -1376,10 +1376,10 @@
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-assignee-options">
                     ${assignees.map(a => `
-                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('assignee', '${a.replace(/'/g, "\\'")}', this)">
-                            <input type="checkbox" ${roadmapFilters.assignees.includes(a) ? 'checked' : ''}>
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.assignees.includes(a) ? 'checked' : ''} onchange="handleRoadmapFilterChange('assignee', '${a.replace(/'/g, "\\'")}', this.checked)">
                             <span class="option-label">${a}</span>
-                        </div>
+                        </label>
                     `).join('')}
                 </div>
                 <div class="filter-dropdown-actions">
@@ -1399,10 +1399,10 @@
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-team-options">
                     ${teams.map(t => `
-                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('team', '${t.replace(/'/g, "\\'")}', this)">
-                            <input type="checkbox" ${roadmapFilters.teams.includes(t) ? 'checked' : ''}>
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.teams.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('team', '${t.replace(/'/g, "\\'")}', this.checked)">
                             <span class="option-label">${t}</span>
-                        </div>
+                        </label>
                     `).join('')}
                 </div>
                 <div class="filter-dropdown-actions">
@@ -1422,10 +1422,10 @@
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-iteration-options">
                     ${iterations.map(i => `
-                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('iteration', '${i.replace(/'/g, "\\'")}', this)">
-                            <input type="checkbox" ${roadmapFilters.iterations.includes(i) ? 'checked' : ''}>
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.iterations.includes(i) ? 'checked' : ''} onchange="handleRoadmapFilterChange('iteration', '${i.replace(/'/g, "\\'")}', this.checked)">
                             <span class="option-label">${i}</span>
-                        </div>
+                        </label>
                     `).join('')}
                 </div>
                 <div class="filter-dropdown-actions">
@@ -1445,10 +1445,10 @@
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-tag-options">
                     ${tags.map(t => `
-                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('tag', '${t.replace(/'/g, "\\'")}', this)">
-                            <input type="checkbox" ${roadmapFilters.tags.includes(t) ? 'checked' : ''}>
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.tags.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('tag', '${t.replace(/'/g, "\\'")}', this.checked)">
                             <span class="option-label">${t}</span>
-                        </div>
+                        </label>
                     `).join('')}
                 </div>
                 <div class="filter-dropdown-actions">
@@ -1473,13 +1473,11 @@
         });
     }
 
-    function toggleRoadmapFilter(filterType, value, element) {
-        const checkbox = element.querySelector('input[type="checkbox"]');
-        checkbox.checked = !checkbox.checked;
-
+    // New handler for label-based filter options (onchange on checkbox)
+    function handleRoadmapFilterChange(filterType, value, checked) {
         const filterKey = getFilterKey(filterType);
 
-        if (checkbox.checked) {
+        if (checked) {
             if (!roadmapFilters[filterKey].includes(value)) {
                 roadmapFilters[filterKey].push(value);
             }
@@ -1493,6 +1491,13 @@
 
         updateRoadmapFilterDisplay(filterType);
         renderRoadmapView();
+    }
+
+    // Legacy handler - kept for compatibility but now using handleRoadmapFilterChange
+    function toggleRoadmapFilter(filterType, value, element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        handleRoadmapFilterChange(filterType, value, checkbox.checked);
     }
 
     function getFilterKey(filterType) {
