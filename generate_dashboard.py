@@ -67,7 +67,7 @@ DEFAULT_TEMPLATE_DIR = './Templates'
 LOCAL_OUTPUT_PATH = '/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html'
 PUBLISH_OUTPUT_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html'
 
-CURRENT_VERSION = 70  # Increment this with each code change
+CURRENT_VERSION = 71  # Increment this with each code change
 
 # Placeholders that MUST be replaced
 PLACEHOLDERS = {
@@ -377,6 +377,7 @@ def process_csv(csv_path, max_retries=5, retry_delay=5):
             'feature': clean_string(get_col(row, 'Custom.Feature', 'Feature')),
             'ticketCategory': clean_string(get_col(row, 'Custom.TicketCategory', 'Ticket Category')),
             'deliverySliceOwner': clean_name(get_col(row, 'Custom.DeliverySliceOwner', 'Delivery Slice Owner')),
+            'csOwner': clean_name(get_col(row, 'Custom.CSOwner', 'CS Owner')),
             'url': f"https://dev.azure.com/ncryptedcloud/eShare/_workitems/edit/{clean_int(get_col(row, 'System.Id', 'ID'))}"
         }
         records.append(record)
@@ -471,7 +472,7 @@ def validate_schema(records):
         'closedDate', 'targetDate', 'priority', 'severity', 'tags', 
         'parentId', 'effort', 'effortRollup', 'backlogPriority',
         'customers', 'teamsAffected', 'releaseVersion', 'bugType',
-        'component', 'feature', 'ticketCategory', 'deliverySliceOwner', 'url'
+        'component', 'feature', 'ticketCategory', 'deliverySliceOwner', 'csOwner', 'url'
     }
     
     if records:

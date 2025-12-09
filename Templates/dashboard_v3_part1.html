@@ -132,16 +132,16 @@
         .filter-row {
             display: none;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-bottom: 2px solid var(--accent-cyan);
+            gap: 0.4rem;
+            padding: 0.15rem 0.75rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(34, 211, 238, 0.3);
             flex-wrap: nowrap;
         }
         .filter-row.active { display: flex; }
         
         .filter-row-label {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
             font-weight: 500;
             text-transform: uppercase;
@@ -156,22 +156,22 @@
         /* Compact filter dropdown pattern */
         .filter-dropdown {
             position: relative;
-            min-width: 200px;
+            min-width: 140px;
         }
-        
+
         .filter-dropdown-toggle {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.5rem;
-            padding: 0.4rem 0.75rem;
+            gap: 0.35rem;
+            padding: 0.15rem 0.5rem;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 3px;
             color: var(--text-primary);
             cursor: pointer;
             font-family: inherit;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             width: 100%;
         }
         .filter-dropdown-toggle:hover { border-color: var(--accent-purple); }
@@ -1438,7 +1438,245 @@
             background: var(--hover-bg);
             color: var(--text-secondary);
         }
-        
+
+        /* Roadmap view styles */
+        .roadmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+        }
+
+        .roadmap-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .roadmap-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .roadmap-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #roadmap-table-container {
+            max-height: calc(100vh - 280px);
+        }
+
+        /* Effort summary cards */
+        .roadmap-effort-cards {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .effort-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            min-width: 160px;
+            max-width: 200px;
+            flex: 1;
+        }
+
+        .effort-card.total {
+            border-color: var(--accent-cyan);
+            border-width: 2px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 211, 238, 0.1) 100%);
+        }
+
+        .effort-card-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .effort-card-label {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .effort-card-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .effort-card.total .effort-card-value {
+            color: var(--accent-cyan);
+        }
+
+        .effort-card-unit {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 0.25rem;
+        }
+
+        .effort-card-capacity {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .effort-card-stats {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .effort-card-stats span {
+            display: block;
+        }
+
+        .effort-card-footer {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .effort-card-lead-photo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+
+        .effort-card-lead-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .effort-card-lead-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .reset-sort-btn {
+            background: transparent;
+            border: 1px solid var(--accent-orange);
+            color: var(--accent-orange);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .reset-sort-btn:hover {
+            background: var(--accent-orange);
+            color: var(--bg-primary);
+        }
+
+        /* Clickable table rows */
+        .clickable-row {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .clickable-row:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Iteration count badge for features spanning multiple iterations */
+        .iteration-count-badge {
+            display: inline-block;
+            background: var(--accent-purple);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* Blocked badge - critical warning indicator */
+        .blocked-badge {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* No slices badge - warning indicator */
+        .no-slices-badge {
+            display: inline-block;
+            background: var(--state-removed);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* Zero effort badge - warning indicator */
+        .zero-effort-badge {
+            display: inline-block;
+            background: var(--accent-orange);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* Filter search input in header */
+        .filter-search-input {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            min-width: 150px;
+            max-width: 200px;
+        }
+
+        .filter-search-input:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+        }
+
+        .filter-search-input::placeholder {
+            color: var(--text-muted);
+        }
+
         /* Auto-fit and resizable columns */
         .work-items-table,
         .sortable-table {
@@ -2159,11 +2397,12 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v70</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v71</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
                 <button class="nav-tab" data-view="releases">Releases</button>
+                <button class="nav-tab" data-view="roadmap">Roadmap</button>
                 <button class="nav-tab" data-view="customers">Customers</button>
                 <button class="nav-tab" data-view="bugs">Bugs</button>
                 <button class="nav-tab" data-view="tasks">Tasks</button>
@@ -2182,6 +2421,7 @@
         <div class="nav-mobile" id="nav-mobile">
             <button class="nav-tab active" data-view="executive">Executive</button>
             <button class="nav-tab" data-view="releases">Releases</button>
+            <button class="nav-tab" data-view="roadmap">Roadmap</button>
             <button class="nav-tab" data-view="customers">Customers</button>
             <button class="nav-tab" data-view="bugs">Bugs</button>
             <button class="nav-tab" data-view="tasks">Tasks</button>
@@ -2294,6 +2534,91 @@
                 <option value="Delivery Slice">Delivery Slice</option>
                 <option value="Task">Task</option>
             </select>
+        </div>
+
+        <!-- Roadmap filter row -->
+        <div class="filter-row" id="filter-row-roadmap">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="roadmap-search-input" class="filter-search-input" placeholder="Search titles..." oninput="applyRoadmapFilters()">
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="roadmap-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-state-dropdown')">
+                    <span id="roadmap-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="roadmap-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-customer-dropdown')">
+                    <span id="roadmap-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Assigned To:</span>
+            <div class="filter-dropdown" id="roadmap-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-assignee-dropdown')">
+                    <span id="roadmap-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-assignee-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="roadmap-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-team-dropdown')">
+                    <span id="roadmap-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-team-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="roadmap-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-iteration-dropdown')">
+                    <span id="roadmap-iteration-display">All Iterations</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-iteration-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="roadmap-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
+                    <span id="roadmap-tag-display">Candidate</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="roadmap-clear-filters-btn" onclick="clearAllRoadmapFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ What appears here?</span>
+                <div class="info-panel" id="roadmap-info-panel">
+                    <p><strong>Features in this table:</strong></p>
+                    <p>• No Release Version assigned (field is blank)</p>
+                    <p>• Filtered by "Candidate" tag (default)</p>
+                    <p><strong>Default order:</strong> Backlog Priority (lower = higher priority)</p>
+                    <p>Click any column header to sort. Use "Reset to Backlog Priority" to restore default order.</p>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -2819,7 +3144,25 @@
                 <!-- Tables generated dynamically by renderReleaseItemsTables -->
             </div>
         </div>
-        
+
+        <!-- Feature Roadmap View -->
+        <div class="dashboard-view" id="view-roadmap">
+            <div class="roadmap-header">
+                <h2>Feature Roadmap</h2>
+                <span class="roadmap-count" id="roadmap-count"></span>
+            </div>
+            <!-- Effort Summary Cards -->
+            <div class="roadmap-effort-cards" id="roadmap-effort-cards">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="table-container" id="roadmap-table-container">
+                <table class="work-items-table" id="roadmap-table">
+                    <thead id="roadmap-table-head"></thead>
+                    <tbody id="roadmap-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Tasks View -->
         <div class="dashboard-view" id="view-tasks">
             <div class="filter-bar" id="tasks-filters">

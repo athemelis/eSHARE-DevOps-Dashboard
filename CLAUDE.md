@@ -30,7 +30,63 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v70
+## Current Version: v71
+
+## Dual-Mode Filter Pattern
+When implementing multi-select checkbox filters that need to support both inclusion and exclusion:
+
+**The Problem:**
+- User selects "Blocked" → expects to see items WITH "Blocked" tag (inclusion)
+- User clicks "Select All" then unchecks "Blocked" → expects to see items WITHOUT "Blocked" tag (exclusion)
+- Same checkbox state can mean different things depending on how user got there
+
+**The Solution:**
+1. Add a `[filterType]ExclusionMode` flag to filter state (e.g., `tagsExclusionMode: false`)
+2. When "Select All" is clicked, set `exclusionMode = true`
+3. When "Clear" is clicked or all items are manually unchecked, set `exclusionMode = false`
+4. In the filter logic:
+   - If `exclusionMode = true`: Calculate unchecked items and EXCLUDE items matching those
+   - If `exclusionMode = false`: INCLUDE items matching selected items (using `.some()`)
+
+**Example implementation (from Roadmap Tag filter):**
+```javascript
+if (roadmapFilters.tags.length > 0) {
+    if (roadmapFilters.tagsExclusionMode) {
+        // Exclusion mode: hide items with unchecked tags
+        const allAvailableTags = new Set();
+        // ... collect all available tags ...
+        const uncheckedTags = [...allAvailableTags].filter(t => !roadmapFilters.tags.includes(t));
+        features = features.filter(f => {
+            const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            return !featureTags.some(tag => uncheckedTags.includes(tag));
+        });
+    } else {
+        // Inclusion mode: show items with any selected tag
+        features = features.filter(f => {
+            const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            return featureTags.some(tag => roadmapFilters.tags.includes(tag));
+        });
+    }
+}
+```
+
+## v71 Summary (December 2024)
+**Roadmap View - Tag Filter Refactor:**
+- Refactored base filter: now shows all Features with no Release Version (tag filtering moved to UI)
+- "Candidate" tag selected by default in Tag dropdown (same behavior as before, but now user-controllable)
+- Dual-mode tag filter: inclusion mode for manual selections, exclusion mode after "Select All"
+- Clear All button preserves Candidate as default (resets to default state, not empty)
+- Clear All button hidden when filters are in default state (only Candidate selected)
+- Compact sticky header (reduced padding from 0.25rem to 0.15rem, font sizes reduced)
+- Filter dropdowns widened from 120px to 140px for better readability
+- Info popup updated: "Filtered by 'Candidate' tag (default)"
+
+**Default Filter State Pattern:**
+When a filter has a default value that should be preserved:
+1. Initialize filter state with default value (e.g., `tags: ['Candidate']`)
+2. Set initial display text in HTML to match default
+3. In `clearAllFilters()`, reset to default instead of empty
+4. In `isFiltered` check, treat default state as "not filtered" for UI purposes (hide Clear button)
 
 ## v70 Summary (December 2024)
 Key changes implemented in v70:

@@ -1201,16 +1201,19 @@
         }
         
         // Render header with sort indicators and resize handles
-        const hasSortActive = tableSortState[tableId]?.column;
-        const clearSortBtn = hasSortActive ? `<button class="clear-sort-btn" onclick="clearTableSort('${tableId}')">Clear Sort</button>` : '';
-        
+        // Show reset button only when sorted by column other than default backlogPriority
+        const currentColumn = tableSortState[tableId]?.column;
+        const defaultColumn = tableSortState[tableId]?.defaultSort?.column;
+        const showResetBtn = currentColumn && currentColumn !== defaultColumn;
+        const resetSortBtn = showResetBtn ? `<button class="reset-sort-btn" onclick="clearTableSort('${tableId}')">Reset to Backlog Priority</button>` : '';
+
         thead.innerHTML = `<tr>${columns.map(c => `
             <th class="sortable-header resizable-header ${getColumnClass(c.key)}" onclick="sortTable('${tableId}', '${c.key}')">
                 ${c.label}
                 <span class="sort-indicator">${getSortIndicator(tableId, c.key)}</span>
                 <div class="resize-handle" onmousedown="startResize(event, this)"></div>
             </th>
-        `).join('')}${hasSortActive ? `<th style="width: 80px;">${clearSortBtn}</th>` : ''}</tr>`;
+        `).join('')}${showResetBtn ? `<th style="width: 140px;">${resetSortBtn}</th>` : ''}</tr>`;
         
         // Sort items if sort is active
         let sortedItems = [...items];
@@ -1223,7 +1226,7 @@
         tbody.innerHTML = sortedItems.map(item => `
             <tr>
                 ${columns.map(col => renderTableCell(item, col)).join('')}
-                ${hasSortActive ? '<td></td>' : ''}
+                ${showResetBtn ? '<td></td>' : ''}
             </tr>
         `).join('');
         
@@ -1238,7 +1241,9 @@
             'type': 'col-type',
             'state': 'col-state',
             'assignedTo': 'col-assignee',
+            'csOwner': 'col-assignee',
             'team': 'col-team',
+            'customers': 'col-customers',
             'targetDate': 'col-date',
             'createdDate': 'col-date',
             'closedDate': 'col-date',

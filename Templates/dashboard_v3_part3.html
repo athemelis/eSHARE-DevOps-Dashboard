@@ -807,4 +807,997 @@
         const items = allItems.filter(w => w.customers === customer);
         showDrilldown(`Customer: ${customer}`, items, getSliceFields(items));
     }
+
+    // ==================== FEATURE ROADMAP VIEW ====================
+
+    // Roadmap state
+    let roadmapSortState = {
+        column: null,  // null means use default backlog priority order
+        direction: 'asc'
+    };
+
+    // Roadmap filter state
+    // Note: tags defaults to ['Candidate'] to show only Candidate features initially
+    // Users can uncheck Candidate to see all unreleased features
+    let roadmapFilters = {
+        search: '',
+        states: [],
+        customers: [],
+        assignees: [],
+        teams: [],
+        iterations: [],
+        tags: ['Candidate'],
+        tagsExclusionMode: false  // Track if we started from "Select All" for tag filter
+    };
+
+    // Helper to extract last segment from backslash-delimited path
+    function getLastPathSegment(path) {
+        if (!path) return '';
+        const parts = path.split('\\');
+        return parts[parts.length - 1].trim();
+    }
+
+    // Get all Delivery Slices that are children of the given feature IDs
+    function getDeliverySlicesForFeatures(featureIds) {
+        const featureIdSet = new Set(featureIds.map(id => String(id)));
+        return workItems.filter(w => {
+            if (w.type !== 'Delivery Slice') return false;
+            // Check if parent is one of our features
+            return w.parentId && featureIdSet.has(String(w.parentId));
+        });
+    }
+
+    // Calculate effort by team from delivery slices
+    function calculateEffortByTeam(deliverySlices) {
+        const effortByTeam = {};
+        let totalEffort = 0;
+
+        deliverySlices.forEach(ds => {
+            const effort = ds.effort || 0;
+            const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+
+            if (!effortByTeam[team]) {
+                effortByTeam[team] = 0;
+            }
+            effortByTeam[team] += effort;
+            totalEffort += effort;
+        });
+
+        return { effortByTeam, totalEffort };
+    }
+
+    // Team leads mapping
+    const roadmapTeamLeads = {
+        'Frontend': 'Andreas Davros',
+        'Backend': 'Thanos Terzis',
+        'QA': 'Kostas Tzoulas',
+        'DevOps': 'Christos Sidiropoulos',
+        'Analytics': 'Maya Dahan',
+        'Govern': 'Maya Dahan',
+        'SCG': 'Alexandros Papadakis',
+        'Staff': 'John Paglierani',
+        'Security & Compliance': 'Chakra Bokissam',
+        'Customer Success': ''
+    };
+
+    // Get team member count for capacity calculation
+    function getRoadmapTeamMemberCount(teamName) {
+        if (typeof orgChartData === 'undefined') return 0;
+
+        // Find the org chart entry that contains this team
+        // Note: t.team may be "Analytics & Govern" for leads who manage multiple teams
+        const teamData = orgChartData.find(t => {
+            // Split combined team names and check if any matches
+            const teams = t.team.split(' & ').map(name => name.split(' (')[0].trim());
+            return teams.includes(teamName) || t.team === teamName;
+        });
+
+        if (!teamData) return 0;
+
+        // Count only members from this specific team (plus lead if they manage just this team)
+        let count = 0;
+
+        // Check if lead manages only this team (not multiple teams)
+        const leadTeams = teamData.team.split(' & ').map(name => name.split(' (')[0].trim());
+        if (leadTeams.length === 1 && leadTeams[0] === teamName) {
+            count = 1; // Include the lead
+        }
+
+        // Count active members from this specific team
+        teamData.members.forEach(m => {
+            if (m.status !== 'Former' && m.team === teamName) {
+                count++;
+            }
+        });
+
+        return count;
+    }
+
+    // Get initials from name
+    function getInitials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(' ');
+        if (parts.length === 1) return parts[0][0].toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    // Count features and delivery slices by team
+    function countItemsByTeam(features, slices, team) {
+        // Count features that have at least one slice from this team
+        const featureIdsWithTeam = new Set();
+        slices.forEach(ds => {
+            const dsTeam = getLastPathSegment(ds.areaPath) || '(No Team)';
+            if (dsTeam === team && ds.parentId) {
+                featureIdsWithTeam.add(String(ds.parentId));
+            }
+        });
+        const featureCount = features.filter(f => featureIdsWithTeam.has(String(f.id))).length;
+
+        // Count slices from this team
+        const sliceCount = slices.filter(ds => {
+            const dsTeam = getLastPathSegment(ds.areaPath) || '(No Team)';
+            return dsTeam === team;
+        }).length;
+
+        return { featureCount, sliceCount };
+    }
+
+    function getRoadmapFeatures() {
+        // Filter Features that have no Release Version (blank or null)
+        // Tag filtering (including Candidate) is handled by the Tag filter dropdown
+        return workItems.filter(w => {
+            if (w.type !== 'Feature') return false;
+            if (w.releaseVersion && w.releaseVersion.trim() !== '') return false;
+            return true;
+        });
+    }
+
+    function getFilteredRoadmapFeatures() {
+        let features = getRoadmapFeatures();
+
+        // Apply search filter (searches both Title and ID)
+        if (roadmapFilters.search) {
+            const searchLower = roadmapFilters.search.toLowerCase();
+            features = features.filter(f =>
+                (f.title || '').toLowerCase().includes(searchLower) ||
+                String(f.id).includes(roadmapFilters.search)
+            );
+        }
+
+        // Apply state filter
+        if (roadmapFilters.states.length > 0) {
+            features = features.filter(f => roadmapFilters.states.includes(f.state));
+        }
+
+        // Apply customer filter
+        if (roadmapFilters.customers.length > 0) {
+            features = features.filter(f => {
+                if (!f.customers) return roadmapFilters.customers.includes('(No Customer)');
+                return roadmapFilters.customers.some(c => f.customers.includes(c));
+            });
+        }
+
+        // Apply assignee filter
+        if (roadmapFilters.assignees.length > 0) {
+            features = features.filter(f => {
+                const assignee = f.assignedTo || '(Unassigned)';
+                return roadmapFilters.assignees.includes(assignee);
+            });
+        }
+
+        // Apply team filter (based on delivery slices)
+        if (roadmapFilters.teams.length > 0) {
+            features = features.filter(f => {
+                const slices = getDeliverySlicesForFeatures([f.id]);
+                return slices.some(ds => {
+                    const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+                    return roadmapFilters.teams.includes(team);
+                });
+            });
+        }
+
+        // Apply iteration filter (based on delivery slices)
+        if (roadmapFilters.iterations.length > 0) {
+            features = features.filter(f => {
+                const slices = getDeliverySlicesForFeatures([f.id]);
+                return slices.some(ds => {
+                    const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                    return roadmapFilters.iterations.includes(iteration);
+                });
+            });
+        }
+
+        // Apply tag filter
+        if (roadmapFilters.tags.length > 0) {
+            if (roadmapFilters.tagsExclusionMode) {
+                // Exclusion mode: Started from "Select All", now excluding unchecked tags
+                // Get all available tags to determine what's unchecked
+                const allAvailableTags = new Set();
+                getRoadmapFeatures().forEach(f => {
+                    if (f.tags) {
+                        f.tags.split(';').forEach(t => {
+                            const trimmed = t.trim();
+                            if (trimmed) allAvailableTags.add(trimmed);
+                        });
+                    }
+                });
+                const uncheckedTags = [...allAvailableTags].filter(t => !roadmapFilters.tags.includes(t));
+
+                features = features.filter(f => {
+                    const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    // Exclude features that have any unchecked tag
+                    return !featureTags.some(tag => uncheckedTags.includes(tag));
+                });
+            } else {
+                // Inclusion mode: Show features that have at least one selected tag
+                features = features.filter(f => {
+                    const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    return featureTags.some(tag => roadmapFilters.tags.includes(tag));
+                });
+            }
+        }
+
+        return features;
+    }
+
+    // Get delivery slices filtered by current team/iteration filters
+    function getFilteredDeliverySlices(featureIds) {
+        let slices = getDeliverySlicesForFeatures(featureIds);
+
+        // Apply team filter
+        if (roadmapFilters.teams.length > 0) {
+            slices = slices.filter(ds => {
+                const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+                return roadmapFilters.teams.includes(team);
+            });
+        }
+
+        // Apply iteration filter
+        if (roadmapFilters.iterations.length > 0) {
+            slices = slices.filter(ds => {
+                const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                return roadmapFilters.iterations.includes(iteration);
+            });
+        }
+
+        return slices;
+    }
+
+    function renderRoadmapView() {
+        // Populate filter dropdowns on first render
+        populateRoadmapFilterDropdowns();
+
+        const features = getFilteredRoadmapFeatures();
+        const allFeatures = getRoadmapFeatures();
+        const countEl = document.getElementById('roadmap-count');
+        const thead = document.getElementById('roadmap-table-head');
+        const tbody = document.getElementById('roadmap-table-body');
+        const effortCardsEl = document.getElementById('roadmap-effort-cards');
+
+        // Update count (show filtered vs total if filtering)
+        // Note: tags: ['Candidate'] is the default state, not considered filtered
+        const isTagsDefault = roadmapFilters.tags.length === 1 && roadmapFilters.tags[0] === 'Candidate';
+        const isFiltered = roadmapFilters.search || roadmapFilters.states.length > 0 ||
+                          roadmapFilters.customers.length > 0 || roadmapFilters.assignees.length > 0 ||
+                          roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0 ||
+                          (roadmapFilters.tags.length > 0 && !isTagsDefault);
+        if (isFiltered) {
+            countEl.textContent = `${features.length} of ${allFeatures.length} features`;
+        } else {
+            countEl.textContent = `${features.length} feature${features.length !== 1 ? 's' : ''}`;
+        }
+
+        // Update clear button visibility
+        const clearBtn = document.getElementById('roadmap-clear-filters-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !isFiltered);
+        }
+
+        // Calculate and render effort cards
+        const featureIds = features.map(f => f.id);
+        const filteredSlices = getFilteredDeliverySlices(featureIds);
+        const { effortByTeam, totalEffort } = calculateEffortByTeam(filteredSlices);
+
+        // Sort teams by effort (descending)
+        const sortedTeams = Object.entries(effortByTeam)
+            .sort((a, b) => b[1] - a[1]);
+
+        // Calculate totals for the "All Teams" card
+        const totalFeatures = features.length;
+        const totalSlices = filteredSlices.length;
+        const totalMembers = sortedTeams.reduce((sum, [team]) => sum + getRoadmapTeamMemberCount(team), 0);
+        const totalCapacity = totalMembers * 22;
+
+        // Build team cards HTML
+        const teamCardsHtml = sortedTeams.map(([team, effort]) => {
+            const lead = roadmapTeamLeads[team] || '';
+            const memberCount = getRoadmapTeamMemberCount(team);
+            const capacity = memberCount * 22;
+            const { featureCount, sliceCount } = countItemsByTeam(features, filteredSlices, team);
+
+            // Try to get lead photo if available
+            const hasPhoto = typeof leadPhotos !== 'undefined' && leadPhotos[lead];
+            const photoHtml = hasPhoto
+                ? `<img src="data:image/jpeg;base64,${leadPhotos[lead]}" class="effort-card-lead-photo" alt="${lead}">`
+                : `<div class="effort-card-lead-avatar">${getInitials(lead)}</div>`;
+
+            // Get team color for this card
+            const teamColor = typeof getTeamColor === 'function' ? getTeamColor(team) : '#94a3b8';
+
+            return `
+                <div class="effort-card">
+                    <div class="effort-card-header">
+                        <div class="effort-card-label">${team}</div>
+                    </div>
+                    <div class="effort-card-value" style="color: ${teamColor}">${effort.toFixed(1)}<span class="effort-card-unit">d</span></div>
+                    <div class="effort-card-capacity">of ${capacity}d monthly capacity</div>
+                    <div class="effort-card-stats">
+                        <span>${featureCount} Feature${featureCount !== 1 ? 's' : ''}</span>
+                        <span>${sliceCount} Delivery Slice${sliceCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    ${lead ? `
+                    <div class="effort-card-footer">
+                        ${photoHtml}
+                        <span class="effort-card-lead-name">${lead}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        // Render effort cards
+        effortCardsEl.innerHTML = `
+            <div class="effort-card total">
+                <div class="effort-card-header">
+                    <div class="effort-card-label">Total Effort</div>
+                </div>
+                <div class="effort-card-value">${totalEffort.toFixed(1)}<span class="effort-card-unit">days</span></div>
+                <div class="effort-card-capacity">of ${totalCapacity}d monthly capacity</div>
+                <div class="effort-card-stats">
+                    <span>${totalFeatures} Feature${totalFeatures !== 1 ? 's' : ''}</span>
+                    <span>${totalSlices} Delivery Slice${totalSlices !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+            ${teamCardsHtml}
+        `;
+
+        // Define columns (ID, Title, State, Customers, Assigned To)
+        const columns = [
+            { key: 'id', label: 'ID' },
+            { key: 'title', label: 'Title' },
+            { key: 'state', label: 'State' },
+            { key: 'customers', label: 'Customers' },
+            { key: 'assignedTo', label: 'Assigned To' }
+        ];
+
+        // Sort features
+        let sortedFeatures = [...features];
+        if (roadmapSortState.column) {
+            // User-selected sort
+            sortedFeatures = sortRoadmapItems(sortedFeatures, roadmapSortState.column, roadmapSortState.direction);
+        } else {
+            // Default: sort by backlog priority (lower value = higher priority)
+            sortedFeatures.sort((a, b) => {
+                const aPri = a.backlogPriority || Number.MAX_VALUE;
+                const bPri = b.backlogPriority || Number.MAX_VALUE;
+                return aPri - bPri;
+            });
+        }
+
+        // Build header
+        const showResetBtn = roadmapSortState.column !== null;
+        thead.innerHTML = `<tr>
+            ${columns.map(c => `
+                <th class="sortable-header resizable-header ${getRoadmapColumnClass(c.key)}" onclick="sortRoadmapTable('${c.key}')">
+                    ${c.label}
+                    <span class="sort-indicator">${getRoadmapSortIndicator(c.key)}</span>
+                    <div class="resize-handle" onmousedown="startResize(event, this)"></div>
+                </th>
+            `).join('')}
+            ${showResetBtn ? `<th style="width: 140px;"><button class="reset-sort-btn" onclick="resetRoadmapSort()">Reset to Backlog Priority</button></th>` : ''}
+        </tr>`;
+
+        // Build body - rows are clickable to show delivery slices
+        tbody.innerHTML = sortedFeatures.map(item => {
+            const slices = getDeliverySlicesForFeatures([item.id]);
+
+            // Build badges
+            let badges = '';
+
+            // Badge 0: Blocked tag (highest priority warning)
+            const tags = (item.tags || '').split(';').map(t => t.trim().toLowerCase());
+            if (tags.includes('blocked')) {
+                badges += `<span class="blocked-badge" title="This feature is tagged as Blocked">Blocked</span>`;
+            }
+
+            // Badge 1: No Delivery Slices
+            if (slices.length === 0) {
+                badges += `<span class="no-slices-badge" title="This feature has no Delivery Slices">No slices</span>`;
+            } else {
+                // Badge 2: Zero effort (only if there are slices)
+                const hasZeroEffort = slices.some(ds => !ds.effort || ds.effort === 0);
+                if (hasZeroEffort) {
+                    const zeroEffortSlices = slices.filter(ds => !ds.effort || ds.effort === 0);
+                    badges += `<span class="zero-effort-badge" title="${zeroEffortSlices.length} slice(s) with zero effort">0 effort</span>`;
+                }
+
+                // Badge 3: Multiple iterations
+                const iterationSet = new Set(slices.map(ds => getLastPathSegment(ds.iterationPath) || '(No Iteration)'));
+                const iterationCount = iterationSet.size;
+                if (iterationCount > 1) {
+                    badges += `<span class="iteration-count-badge" title="${[...iterationSet].join(', ')}">${iterationCount} iterations</span>`;
+                }
+            }
+
+            return `
+            <tr class="clickable-row" data-feature-id="${item.id}" data-feature-title="${(item.title || '').replace(/"/g, '&quot;')}">
+                <td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>
+                <td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>
+                <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
+                <td>${item.customers || ''}</td>
+                <td>${item.assignedTo || ''}</td>
+                ${showResetBtn ? '<td></td>' : ''}
+            </tr>
+        `;
+        }).join('');
+
+        // Ensure click handler is attached
+        setupRoadmapTableClickHandler();
+    }
+
+    // Set up click delegation on the roadmap table body (once)
+    function setupRoadmapTableClickHandler() {
+        const tbody = document.getElementById('roadmap-table-body');
+        if (!tbody || tbody.dataset.clickHandlerAttached) return;
+
+        tbody.addEventListener('click', function(e) {
+            // Don't trigger if clicking on a link
+            if (e.target.tagName === 'A' || e.target.closest('a')) return;
+
+            // Find the clicked row
+            const row = e.target.closest('.clickable-row');
+            if (!row) return;
+
+            const featureId = parseInt(row.dataset.featureId);
+            const featureTitle = row.dataset.featureTitle;
+            if (featureId) {
+                drilldownFeatureSlices(featureId, featureTitle);
+            }
+        });
+
+        tbody.dataset.clickHandlerAttached = 'true';
+    }
+
+    // Initialize click handler when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupRoadmapTableClickHandler);
+    } else {
+        setupRoadmapTableClickHandler();
+    }
+
+    function populateRoadmapFilterDropdowns() {
+        const features = getRoadmapFeatures();
+        const allSlices = getDeliverySlicesForFeatures(features.map(f => f.id));
+
+        // Get unique values from features
+        const states = [...new Set(features.map(f => f.state).filter(Boolean))].sort();
+        const customersSet = new Set();
+        features.forEach(f => {
+            if (f.customers) {
+                f.customers.split(';').forEach(c => {
+                    const trimmed = c.trim();
+                    if (trimmed) customersSet.add(trimmed);
+                });
+            } else {
+                customersSet.add('(No Customer)');
+            }
+        });
+        const customers = [...customersSet].sort();
+        const assignees = [...new Set(features.map(f => f.assignedTo || '(Unassigned)'))].sort();
+
+        // Get unique teams and iterations from delivery slices
+        const teamsSet = new Set();
+        const iterationsSet = new Set();
+        allSlices.forEach(ds => {
+            const team = getLastPathSegment(ds.areaPath);
+            const iteration = getLastPathSegment(ds.iterationPath);
+            if (team) teamsSet.add(team);
+            else teamsSet.add('(No Team)');
+            if (iteration) iterationsSet.add(iteration);
+            else iterationsSet.add('(No Iteration)');
+        });
+        const teams = [...teamsSet].sort();
+        const iterations = [...iterationsSet].sort();
+
+        // Get unique tags from features
+        const tagsSet = new Set();
+        features.forEach(f => {
+            if (f.tags) {
+                f.tags.split(';').forEach(t => {
+                    const trimmed = t.trim();
+                    if (trimmed) tagsSet.add(trimmed);
+                });
+            }
+        });
+        const tags = [...tagsSet].sort();
+
+        // Populate State dropdown
+        const stateMenu = document.getElementById('roadmap-state-menu');
+        if (stateMenu && !stateMenu.dataset.populated) {
+            stateMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search states..." oninput="filterRoadmapDropdownOptions('state', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-state-options">
+                    ${states.map(s => `
+                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('state', '${s}', this)">
+                            <input type="checkbox" ${roadmapFilters.states.includes(s) ? 'checked' : ''}>
+                            <span class="option-label">${s}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('state')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('state')">Clear</button>
+                </div>
+            `;
+            stateMenu.dataset.populated = 'true';
+        }
+
+        // Populate Customer dropdown
+        const customerMenu = document.getElementById('roadmap-customer-menu');
+        if (customerMenu && !customerMenu.dataset.populated) {
+            customerMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search customers..." oninput="filterRoadmapDropdownOptions('customer', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-customer-options">
+                    ${customers.map(c => `
+                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('customer', '${c.replace(/'/g, "\\'")}', this)">
+                            <input type="checkbox" ${roadmapFilters.customers.includes(c) ? 'checked' : ''}>
+                            <span class="option-label">${c}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('customer')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('customer')">Clear</button>
+                </div>
+            `;
+            customerMenu.dataset.populated = 'true';
+        }
+
+        // Populate Assignee dropdown
+        const assigneeMenu = document.getElementById('roadmap-assignee-menu');
+        if (assigneeMenu && !assigneeMenu.dataset.populated) {
+            assigneeMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search assignees..." oninput="filterRoadmapDropdownOptions('assignee', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-assignee-options">
+                    ${assignees.map(a => `
+                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('assignee', '${a.replace(/'/g, "\\'")}', this)">
+                            <input type="checkbox" ${roadmapFilters.assignees.includes(a) ? 'checked' : ''}>
+                            <span class="option-label">${a}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('assignee')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('assignee')">Clear</button>
+                </div>
+            `;
+            assigneeMenu.dataset.populated = 'true';
+        }
+
+        // Populate Team dropdown
+        const teamMenu = document.getElementById('roadmap-team-menu');
+        if (teamMenu && !teamMenu.dataset.populated) {
+            teamMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search teams..." oninput="filterRoadmapDropdownOptions('team', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-team-options">
+                    ${teams.map(t => `
+                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('team', '${t.replace(/'/g, "\\'")}', this)">
+                            <input type="checkbox" ${roadmapFilters.teams.includes(t) ? 'checked' : ''}>
+                            <span class="option-label">${t}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('team')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('team')">Clear</button>
+                </div>
+            `;
+            teamMenu.dataset.populated = 'true';
+        }
+
+        // Populate Iteration dropdown
+        const iterationMenu = document.getElementById('roadmap-iteration-menu');
+        if (iterationMenu && !iterationMenu.dataset.populated) {
+            iterationMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search iterations..." oninput="filterRoadmapDropdownOptions('iteration', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-iteration-options">
+                    ${iterations.map(i => `
+                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('iteration', '${i.replace(/'/g, "\\'")}', this)">
+                            <input type="checkbox" ${roadmapFilters.iterations.includes(i) ? 'checked' : ''}>
+                            <span class="option-label">${i}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('iteration')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('iteration')">Clear</button>
+                </div>
+            `;
+            iterationMenu.dataset.populated = 'true';
+        }
+
+        // Populate Tag dropdown
+        const tagMenu = document.getElementById('roadmap-tag-menu');
+        if (tagMenu && !tagMenu.dataset.populated) {
+            tagMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search tags..." oninput="filterRoadmapDropdownOptions('tag', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-tag-options">
+                    ${tags.map(t => `
+                        <div class="filter-dropdown-option" onclick="toggleRoadmapFilter('tag', '${t.replace(/'/g, "\\'")}', this)">
+                            <input type="checkbox" ${roadmapFilters.tags.includes(t) ? 'checked' : ''}>
+                            <span class="option-label">${t}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('tag')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('tag')">Clear</button>
+                </div>
+            `;
+            tagMenu.dataset.populated = 'true';
+        }
+    }
+
+    function filterRoadmapDropdownOptions(filterType, searchText) {
+        const optionsContainer = document.getElementById(`roadmap-${filterType}-options`);
+        if (!optionsContainer) return;
+
+        const options = optionsContainer.querySelectorAll('.filter-dropdown-option');
+        const searchLower = searchText.toLowerCase();
+
+        options.forEach(opt => {
+            const label = opt.querySelector('.option-label')?.textContent || '';
+            opt.style.display = label.toLowerCase().includes(searchLower) ? '' : 'none';
+        });
+    }
+
+    function toggleRoadmapFilter(filterType, value, element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+
+        const filterKey = getFilterKey(filterType);
+
+        if (checkbox.checked) {
+            if (!roadmapFilters[filterKey].includes(value)) {
+                roadmapFilters[filterKey].push(value);
+            }
+        } else {
+            roadmapFilters[filterKey] = roadmapFilters[filterKey].filter(v => v !== value);
+            // Reset exclusion mode if all tags are unchecked
+            if (filterType === 'tag' && roadmapFilters.tags.length === 0) {
+                roadmapFilters.tagsExclusionMode = false;
+            }
+        }
+
+        updateRoadmapFilterDisplay(filterType);
+        renderRoadmapView();
+    }
+
+    function getFilterKey(filterType) {
+        const keyMap = {
+            'state': 'states',
+            'customer': 'customers',
+            'assignee': 'assignees',
+            'team': 'teams',
+            'iteration': 'iterations',
+            'tag': 'tags'
+        };
+        return keyMap[filterType] || filterType;
+    }
+
+    function getFilterLabel(filterType) {
+        const labelMap = {
+            'state': 'All States',
+            'customer': 'All Customers',
+            'assignee': 'All Assignees',
+            'team': 'All Teams',
+            'iteration': 'All Iterations',
+            'tag': 'All Tags'
+        };
+        return labelMap[filterType] || 'All';
+    }
+
+    function updateRoadmapFilterDisplay(filterType) {
+        const filterKey = getFilterKey(filterType);
+        const displayEl = document.getElementById(`roadmap-${filterType}-display`);
+        const selected = roadmapFilters[filterKey];
+
+        if (selected.length === 0) {
+            displayEl.textContent = getFilterLabel(filterType);
+        } else if (selected.length === 1) {
+            displayEl.textContent = selected[0];
+        } else {
+            displayEl.textContent = `${selected.length} selected`;
+        }
+    }
+
+    function clearRoadmapFilter(filterType) {
+        const filterKey = getFilterKey(filterType);
+        roadmapFilters[filterKey] = [];
+
+        // Reset exclusion mode when clearing tag filter
+        if (filterType === 'tag') {
+            roadmapFilters.tagsExclusionMode = false;
+        }
+
+        // Uncheck all checkboxes
+        const optionsContainer = document.getElementById(`roadmap-${filterType}-options`);
+        if (optionsContainer) {
+            optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        updateRoadmapFilterDisplay(filterType);
+        renderRoadmapView();
+    }
+
+    function selectAllRoadmapFilter(filterType) {
+        const filterKey = getFilterKey(filterType);
+        const optionsContainer = document.getElementById(`roadmap-${filterType}-options`);
+        if (!optionsContainer) return;
+
+        // Check all visible checkboxes and collect their values
+        const values = [];
+        optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            if (opt.style.display !== 'none') {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                const label = opt.querySelector('.option-label')?.textContent;
+                if (cb && label) {
+                    cb.checked = true;
+                    values.push(label);
+                }
+            }
+        });
+
+        roadmapFilters[filterKey] = values;
+
+        // For tag filter, entering exclusion mode when Select All is clicked
+        if (filterType === 'tag') {
+            roadmapFilters.tagsExclusionMode = true;
+        }
+
+        updateRoadmapFilterDisplay(filterType);
+        renderRoadmapView();
+    }
+
+    function closeRoadmapDropdown(dropdownId) {
+        const menu = document.getElementById(dropdownId)?.querySelector('.filter-dropdown-menu');
+        if (menu) menu.classList.remove('open');
+    }
+
+    function clearAllRoadmapFilters() {
+        // Clear search
+        const searchInput = document.getElementById('roadmap-search-input');
+        if (searchInput) searchInput.value = '';
+        roadmapFilters.search = '';
+
+        // Clear all filter arrays except tags (preserve Candidate default)
+        roadmapFilters.states = [];
+        roadmapFilters.customers = [];
+        roadmapFilters.assignees = [];
+        roadmapFilters.teams = [];
+        roadmapFilters.iterations = [];
+        roadmapFilters.tags = ['Candidate'];  // Reset to default instead of clearing
+        roadmapFilters.tagsExclusionMode = false;
+
+        // Reset dropdowns (except tag which gets Candidate checked)
+        ['state', 'customer', 'assignee', 'team', 'iteration'].forEach(type => {
+            const optionsContainer = document.getElementById(`roadmap-${type}-options`);
+            if (optionsContainer) {
+                optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            }
+            updateRoadmapFilterDisplay(type);
+        });
+
+        // Handle tag dropdown specially - check only Candidate
+        const tagOptionsContainer = document.getElementById('roadmap-tag-options');
+        if (tagOptionsContainer) {
+            tagOptionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                const label = opt.querySelector('.option-label')?.textContent;
+                if (cb) {
+                    cb.checked = (label === 'Candidate');
+                }
+            });
+        }
+        updateRoadmapFilterDisplay('tag');
+
+        renderRoadmapView();
+    }
+
+    function applyRoadmapFilters() {
+        const searchInput = document.getElementById('roadmap-search-input');
+        roadmapFilters.search = searchInput ? searchInput.value : '';
+        renderRoadmapView();
+    }
+
+    function getRoadmapColumnClass(key) {
+        const classMap = {
+            'id': 'col-id',
+            'title': 'col-title',
+            'state': 'col-state',
+            'customers': 'col-customers',
+            'assignedTo': 'col-assignee'
+        };
+        return classMap[key] || '';
+    }
+
+    function sortRoadmapTable(columnKey) {
+        // Toggle direction if same column, otherwise set to asc
+        if (roadmapSortState.column === columnKey) {
+            roadmapSortState.direction = roadmapSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            roadmapSortState.column = columnKey;
+            roadmapSortState.direction = 'asc';
+        }
+        renderRoadmapView();
+    }
+
+    function getRoadmapSortIndicator(columnKey) {
+        if (roadmapSortState.column !== columnKey) return '';
+        return roadmapSortState.direction === 'asc' ? '▲' : '▼';
+    }
+
+    function sortRoadmapItems(items, column, direction) {
+        return [...items].sort((a, b) => {
+            let aVal = a[column];
+            let bVal = b[column];
+
+            // Handle null/undefined
+            if (aVal == null) aVal = '';
+            if (bVal == null) bVal = '';
+
+            // Handle numbers (id)
+            if (column === 'id') {
+                aVal = parseInt(aVal) || 0;
+                bVal = parseInt(bVal) || 0;
+            } else {
+                // Handle strings
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+            }
+
+            if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function resetRoadmapSort() {
+        roadmapSortState.column = null;
+        roadmapSortState.direction = 'asc';
+        renderRoadmapView();
+    }
+
+    // Show delivery slices for a feature in a modal
+    function drilldownFeatureSlices(featureId, featureTitle) {
+        const slices = getDeliverySlicesForFeatures([featureId]);
+        const modal = document.getElementById('feature-slices-modal');
+        const titleEl = document.getElementById('feature-modal-title');
+        const contentEl = document.getElementById('feature-modal-content');
+
+        if (!modal || !titleEl || !contentEl) {
+            console.error('[Roadmap] Modal elements not found');
+            return;
+        }
+
+        // Set title
+        titleEl.textContent = `Feature ${featureId}: ${featureTitle}`;
+
+        if (slices.length === 0) {
+            contentEl.innerHTML = `<div class="feature-modal-empty">No Delivery Slices found for this Feature.</div>`;
+        } else {
+            // Build table rows
+            const rows = slices.map(ds => {
+                const iteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '—';
+                const team = ds.team || getLastPathSegment(ds.areaPath) || '—';
+                return `
+                    <tr>
+                        <td class="feature-modal-col-id"><a href="${ds.url}" target="_blank" class="work-item-id">${ds.id}</a></td>
+                        <td class="feature-modal-col-title" title="${(ds.title || '').replace(/"/g, '&quot;')}">${ds.title || ''}</td>
+                        <td class="feature-modal-col-state"><span class="state-badge ${getStateClass(ds.state)}">${ds.state || ''}</span></td>
+                        <td class="feature-modal-col-iteration">${iteration}</td>
+                        <td class="feature-modal-col-team">${team}</td>
+                        <td class="feature-modal-col-effort">${ds.effort || '—'}</td>
+                        <td class="feature-modal-col-owner">${ds.assignedTo || '—'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Use separate header and body tables for fixed header
+            contentEl.innerHTML = `
+                <div class="feature-modal-table-container">
+                    <div class="feature-modal-table-header">
+                        <table>
+                            <colgroup>
+                                <col class="feature-modal-col-id">
+                                <col class="feature-modal-col-title">
+                                <col class="feature-modal-col-state">
+                                <col class="feature-modal-col-iteration">
+                                <col class="feature-modal-col-team">
+                                <col class="feature-modal-col-effort">
+                                <col class="feature-modal-col-owner">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>State</th>
+                                    <th>Iteration</th>
+                                    <th>Team</th>
+                                    <th>Effort</th>
+                                    <th>Owner</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                    <div class="feature-modal-table-body">
+                        <table>
+                            <colgroup>
+                                <col class="feature-modal-col-id">
+                                <col class="feature-modal-col-title">
+                                <col class="feature-modal-col-state">
+                                <col class="feature-modal-col-iteration">
+                                <col class="feature-modal-col-team">
+                                <col class="feature-modal-col-effort">
+                                <col class="feature-modal-col-owner">
+                            </colgroup>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show modal
+        modal.style.display = 'flex';
+    }
+
+    // Scroll-to-close for roadmap dropdowns
+    let roadmapScrollHandler = null;
+
+    function setupRoadmapScrollToClose() {
+        if (roadmapScrollHandler) return;
+
+        roadmapScrollHandler = () => {
+            // Close all roadmap dropdowns on scroll
+            ['roadmap-state-dropdown', 'roadmap-customer-dropdown', 'roadmap-assignee-dropdown',
+             'roadmap-team-dropdown', 'roadmap-iteration-dropdown', 'roadmap-tag-dropdown'].forEach(id => {
+                const menu = document.getElementById(id)?.querySelector('.filter-dropdown-menu');
+                if (menu && menu.classList.contains('open')) {
+                    menu.classList.remove('open');
+                }
+            });
+        };
+
+        window.addEventListener('scroll', roadmapScrollHandler, { passive: true });
+    }
+
+    // Initialize scroll-to-close when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupRoadmapScrollToClose);
+    } else {
+        setupRoadmapScrollToClose();
+    }
 </script>

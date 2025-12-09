@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v71 | 12/9/2025 | **Roadmap view:** Refactored tag filtering - "Candidate" now selected by default in Tag dropdown (user-controllable), dual-mode filter (inclusion/exclusion), Clear All preserves Candidate default, Clear button hidden in default state. Compact sticky header, wider filter dropdowns (140px). **Pattern:** Documented dual-mode filter and default filter state patterns for future use. |
 | v70 | 12/8/2025 | **Releases view:** Added searchable dropdowns for Release, Team, and Customer filters (type to filter long lists), scroll-to-close for filter dropdowns, fixed sticky header Clear button wrapping, fixed stat cards hover effect (now non-clickable). **Validation view:** Added Data Source Validation section comparing CSV source counts vs dashboard counts. **Infrastructure:** Added `-p/--publish` flag for local vs production workflow, added retry logic for OneDrive file locks, added `reload-launchd-agent.sh` helper script. |
 | v69 | 12/6/2025 | Bug fixes: Added null checks to updateSelectionInfo, renderDrilldown, and closeDrilldown functions to prevent errors when drilldown panel element doesn't exist (removed in v68). |
 | v68 | 12/6/2025 | Releases view: (1) Stat cards now update dynamically based on active filters. (2) Removed stat card drilldown feature. (3) Added Customer filter to header. (4) Filters update view immediately while dropdown stays open. (5) Cross-filter aware dropdowns show only options available in current filtered context. |
