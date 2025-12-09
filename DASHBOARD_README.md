@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v70
+## Current Version: v71
 
 ---
 
