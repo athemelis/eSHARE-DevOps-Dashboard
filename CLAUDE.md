@@ -149,11 +149,22 @@ if (roadmapFilters.tags.length > 0) {
 - Clear All preserves both "(No Release)" and "Candidate" defaults
 - Updated Info popup to document the two default filters
 
+**Release Version Column in Table:**
+- Added Release column between Assigned To and Effort columns
+- Column is sortable like other columns
+- CSS class `.col-release` with width 120px
+
 **Bug Fix - Team + Iteration Filter Combination:**
 - Fixed issue where Team and Iteration filters were evaluated independently
 - Before: Feature passed if it had ANY slice from selected team AND ANY slice in selected iteration (could be different slices)
 - After: Feature passes only if it has at least one slice matching BOTH team AND iteration filters
 - Example: Analytics + CY2025Q4-Dec now correctly excludes features that only have Analytics slices in October
+
+**Bug Fix - Effort Column Sorting:**
+- Fixed sorting by Effort column which wasn't working
+- Effort values are calculated dynamically in `featureEffortMap`, not stored on the item
+- `sortRoadmapItems()` now accepts optional `effortMap` parameter
+- When sorting by 'effort', looks up values from the map instead of item properties
 
 **Implementation Pattern - Release Filter:**
 - Filter dropdown with "(No Release)" as first option, followed by sorted release versions

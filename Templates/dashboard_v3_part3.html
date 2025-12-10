@@ -1191,13 +1191,14 @@
             ${teamCardsHtml}
         `;
 
-        // Define columns (ID, Title, State, Customers, Assigned To, Effort)
+        // Define columns (ID, Title, State, Customers, Assigned To, Release, Effort)
         const columns = [
             { key: 'id', label: 'ID' },
             { key: 'title', label: 'Title' },
             { key: 'state', label: 'State' },
             { key: 'customers', label: 'Customers' },
             { key: 'assignedTo', label: 'Assigned To' },
+            { key: 'releaseVersion', label: 'Release' },
             { key: 'effort', label: 'Effort' }
         ];
 
@@ -1234,7 +1235,7 @@
         let sortedFeatures = [...features];
         if (roadmapSortState.column) {
             // User-selected sort
-            sortedFeatures = sortRoadmapItems(sortedFeatures, roadmapSortState.column, roadmapSortState.direction);
+            sortedFeatures = sortRoadmapItems(sortedFeatures, roadmapSortState.column, roadmapSortState.direction, featureEffortMap);
         } else {
             // Default: sort by backlog priority (lower value = higher priority)
             sortedFeatures.sort((a, b) => {
@@ -1297,6 +1298,7 @@
                 <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
                 <td>${item.customers || ''}</td>
                 <td>${item.assignedTo || ''}</td>
+                <td>${item.releaseVersion || ''}</td>
                 <td class="effort-value">${featureEffort > 0 ? featureEffort.toFixed(1) + 'd' : ''}</td>
                 ${showResetBtn ? '<td></td>' : ''}
             </tr>
@@ -1306,7 +1308,7 @@
         // Add total row
         tbody.innerHTML += `
             <tr class="total-row">
-                <td colspan="5" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
+                <td colspan="6" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
                 <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalTableEffort.toFixed(1)}d</td>
                 ${showResetBtn ? '<td></td>' : ''}
             </tr>
@@ -1825,6 +1827,7 @@
             'state': 'col-state',
             'customers': 'col-customers',
             'assignedTo': 'col-assignee',
+            'releaseVersion': 'col-release',
             'effort': 'col-effort'
         };
         return classMap[key] || '';
@@ -1846,19 +1849,27 @@
         return roadmapSortState.direction === 'asc' ? '▲' : '▼';
     }
 
-    function sortRoadmapItems(items, column, direction) {
+    function sortRoadmapItems(items, column, direction, effortMap) {
         return [...items].sort((a, b) => {
-            let aVal = a[column];
-            let bVal = b[column];
+            let aVal, bVal;
+
+            // Handle effort column specially - uses calculated effort map
+            if (column === 'effort' && effortMap) {
+                aVal = effortMap[a.id] || 0;
+                bVal = effortMap[b.id] || 0;
+            } else {
+                aVal = a[column];
+                bVal = b[column];
+            }
 
             // Handle null/undefined
             if (aVal == null) aVal = '';
             if (bVal == null) bVal = '';
 
-            // Handle numbers (id)
-            if (column === 'id') {
-                aVal = parseInt(aVal) || 0;
-                bVal = parseInt(bVal) || 0;
+            // Handle numbers (id, effort)
+            if (column === 'id' || column === 'effort') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
             } else {
                 // Handle strings
                 aVal = String(aVal).toLowerCase();
