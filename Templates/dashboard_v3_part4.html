@@ -6792,6 +6792,55 @@
     padding: 3rem 2rem;
     color: var(--text-muted);
 }
+
+/* Effort summary in modal */
+.feature-modal-effort-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+}
+
+.effort-team-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.effort-team-value {
+    color: var(--accent-cyan);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.effort-total-label {
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+}
+
+.effort-total-value {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* Grayed out rows for other teams */
+.other-team-row td {
+    opacity: 0.45;
+}
+
+.other-team-row:hover td {
+    opacity: 0.6;
+}
+
+.other-team-row td a {
+    color: var(--text-muted);
+}
+
+.other-team-row .state-badge {
+    opacity: 0.7;
+}
 </style>
 
 <script>

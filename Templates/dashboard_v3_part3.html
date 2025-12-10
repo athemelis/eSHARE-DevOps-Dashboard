@@ -1124,8 +1124,12 @@
             // Get team color for this card
             const teamColor = typeof getTeamColor === 'function' ? getTeamColor(team) : '#94a3b8';
 
+            // Check if this team is selected
+            const isSelected = roadmapFilters.teams.length === 1 && roadmapFilters.teams[0] === team;
+            const selectedClass = isSelected ? ' selected' : '';
+
             return `
-                <div class="effort-card">
+                <div class="effort-card${selectedClass}" onclick="toggleRoadmapTeamCard('${team.replace(/'/g, "\\'")}')">
                     <div class="effort-card-header">
                         <div class="effort-card-label">${team}</div>
                     </div>
@@ -1147,7 +1151,7 @@
 
         // Render effort cards
         effortCardsEl.innerHTML = `
-            <div class="effort-card total">
+            <div class="effort-card total" onclick="clearRoadmapTeamFilter()" title="Click to show all teams">
                 <div class="effort-card-header">
                     <div class="effort-card-label">Total Effort</div>
                 </div>
@@ -1161,14 +1165,44 @@
             ${teamCardsHtml}
         `;
 
-        // Define columns (ID, Title, State, Customers, Assigned To)
+        // Define columns (ID, Title, State, Customers, Assigned To, Effort)
         const columns = [
             { key: 'id', label: 'ID' },
             { key: 'title', label: 'Title' },
             { key: 'state', label: 'State' },
             { key: 'customers', label: 'Customers' },
-            { key: 'assignedTo', label: 'Assigned To' }
+            { key: 'assignedTo', label: 'Assigned To' },
+            { key: 'effort', label: 'Effort' }
         ];
+
+        // Pre-calculate effort for each feature (sum of child delivery slices)
+        // When team/iteration filters are active, only sum effort from matching slices
+        const featureEffortMap = {};
+        features.forEach(f => {
+            const featureSlices = getDeliverySlicesForFeatures([f.id]);
+            let relevantSlices = featureSlices;
+
+            // If team filter is active, only count effort from that team
+            if (roadmapFilters.teams.length > 0) {
+                relevantSlices = relevantSlices.filter(ds => {
+                    const dsTeam = getLastPathSegment(ds.areaPath) || '(No Team)';
+                    return roadmapFilters.teams.includes(dsTeam);
+                });
+            }
+
+            // If iteration filter is active, only count effort from that iteration
+            if (roadmapFilters.iterations.length > 0) {
+                relevantSlices = relevantSlices.filter(ds => {
+                    const dsIteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                    return roadmapFilters.iterations.includes(dsIteration);
+                });
+            }
+
+            featureEffortMap[f.id] = relevantSlices.reduce((sum, ds) => sum + (ds.effort || 0), 0);
+        });
+
+        // Calculate total effort (for the total row)
+        const totalTableEffort = Object.values(featureEffortMap).reduce((sum, e) => sum + e, 0);
 
         // Sort features
         let sortedFeatures = [...features];
@@ -1229,6 +1263,7 @@
                 }
             }
 
+            const featureEffort = featureEffortMap[item.id] || 0;
             return `
             <tr class="clickable-row" data-feature-id="${item.id}" data-feature-title="${(item.title || '').replace(/"/g, '&quot;')}">
                 <td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>
@@ -1236,10 +1271,29 @@
                 <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
                 <td>${item.customers || ''}</td>
                 <td>${item.assignedTo || ''}</td>
+                <td class="effort-value">${featureEffort > 0 ? featureEffort.toFixed(1) + 'd' : ''}</td>
                 ${showResetBtn ? '<td></td>' : ''}
             </tr>
         `;
         }).join('');
+
+        // Add total row
+        tbody.innerHTML += `
+            <tr class="total-row">
+                <td colspan="5" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
+                <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalTableEffort.toFixed(1)}d</td>
+                ${showResetBtn ? '<td></td>' : ''}
+            </tr>
+        `;
+
+        // Update inline effort summary above table
+        const effortSummaryEl = document.getElementById('roadmap-table-effort-summary');
+        if (effortSummaryEl) {
+            const teamLabel = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : 'All Teams';
+            const iterationLabel = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : '';
+            const filterLabel = iterationLabel ? `${teamLabel} · ${iterationLabel}` : teamLabel;
+            effortSummaryEl.innerHTML = `Table Total: <strong>${totalTableEffort.toFixed(1)}d</strong> (${filterLabel})`;
+        }
 
         // Ensure click handler is attached
         setupRoadmapTableClickHandler();
@@ -1591,6 +1645,44 @@
         if (menu) menu.classList.remove('open');
     }
 
+    // Toggle team filter when clicking on a team card
+    function toggleRoadmapTeamCard(team) {
+        // If this team is already selected alone, clear it
+        if (roadmapFilters.teams.length === 1 && roadmapFilters.teams[0] === team) {
+            roadmapFilters.teams = [];
+        } else {
+            // Select only this team
+            roadmapFilters.teams = [team];
+        }
+
+        // Sync the team dropdown checkboxes
+        syncRoadmapTeamDropdown();
+        updateRoadmapFilterDisplay('team');
+        renderRoadmapView();
+    }
+
+    // Clear team filter (when clicking Total card)
+    function clearRoadmapTeamFilter() {
+        roadmapFilters.teams = [];
+        syncRoadmapTeamDropdown();
+        updateRoadmapFilterDisplay('team');
+        renderRoadmapView();
+    }
+
+    // Sync the team dropdown checkboxes with roadmapFilters.teams
+    function syncRoadmapTeamDropdown() {
+        const optionsContainer = document.getElementById('roadmap-team-options');
+        if (!optionsContainer) return;
+
+        optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const cb = opt.querySelector('input[type="checkbox"]');
+            const label = opt.querySelector('.option-label')?.textContent;
+            if (cb && label) {
+                cb.checked = roadmapFilters.teams.includes(label);
+            }
+        });
+    }
+
     function clearAllRoadmapFilters() {
         // Clear search
         const searchInput = document.getElementById('roadmap-search-input');
@@ -1643,7 +1735,8 @@
             'title': 'col-title',
             'state': 'col-state',
             'customers': 'col-customers',
-            'assignedTo': 'col-assignee'
+            'assignedTo': 'col-assignee',
+            'effort': 'col-effort'
         };
         return classMap[key] || '';
     }
@@ -1713,12 +1806,79 @@
         if (slices.length === 0) {
             contentEl.innerHTML = `<div class="feature-modal-empty">No Delivery Slices found for this Feature.</div>`;
         } else {
+            // Check if team/iteration filters are active
+            const activeTeamFilter = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : null;
+            const activeIterationFilter = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : null;
+
+            // Sort slices: matching filters first, then others
+            let sortedSlices = [...slices];
+            sortedSlices.sort((a, b) => {
+                const teamA = a.team || getLastPathSegment(a.areaPath) || '(No Team)';
+                const teamB = b.team || getLastPathSegment(b.areaPath) || '(No Team)';
+                const iterA = a.iteration || getLastPathSegment(a.iterationPath) || '(No Iteration)';
+                const iterB = b.iteration || getLastPathSegment(b.iterationPath) || '(No Iteration)';
+
+                // Calculate match score (higher = better match)
+                const matchA = (activeTeamFilter && teamA === activeTeamFilter ? 2 : 0) +
+                               (activeIterationFilter && iterA === activeIterationFilter ? 1 : 0);
+                const matchB = (activeTeamFilter && teamB === activeTeamFilter ? 2 : 0) +
+                               (activeIterationFilter && iterB === activeIterationFilter ? 1 : 0);
+
+                return matchB - matchA;  // Higher score first
+            });
+
+            // Calculate effort summary
+            let filteredEffort = 0;
+            let totalEffort = 0;
+            sortedSlices.forEach(ds => {
+                const effort = ds.effort || 0;
+                totalEffort += effort;
+                const dsTeam = ds.team || getLastPathSegment(ds.areaPath) || '(No Team)';
+                const dsIteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                const teamMatch = !activeTeamFilter || dsTeam === activeTeamFilter;
+                const iterationMatch = !activeIterationFilter || dsIteration === activeIterationFilter;
+                if (teamMatch && iterationMatch) {
+                    filteredEffort += effort;
+                }
+            });
+
+            // Build effort summary HTML
+            let effortSummaryHtml = '';
+            const hasFilters = activeTeamFilter || activeIterationFilter;
+            if (hasFilters) {
+                const filterLabels = [];
+                if (activeTeamFilter) filterLabels.push(activeTeamFilter);
+                if (activeIterationFilter) filterLabels.push(activeIterationFilter);
+                effortSummaryHtml = `
+                    <div class="feature-modal-effort-summary">
+                        <span class="effort-team-label">${filterLabels.join(' · ')} Effort:</span>
+                        <span class="effort-team-value">${filteredEffort.toFixed(1)}d</span>
+                        <span class="effort-total-label">/ Total:</span>
+                        <span class="effort-total-value">${totalEffort.toFixed(1)}d</span>
+                    </div>
+                `;
+            } else {
+                effortSummaryHtml = `
+                    <div class="feature-modal-effort-summary">
+                        <span class="effort-total-label">Total Effort:</span>
+                        <span class="effort-total-value">${totalEffort.toFixed(1)}d</span>
+                    </div>
+                `;
+            }
+
             // Build table rows
-            const rows = slices.map(ds => {
+            const rows = sortedSlices.map(ds => {
                 const iteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '—';
                 const team = ds.team || getLastPathSegment(ds.areaPath) || '—';
+
+                // Determine if this row should be grayed out (doesn't match active filters)
+                const teamMatch = !activeTeamFilter || team === activeTeamFilter;
+                const iterationMatch = !activeIterationFilter || iteration === activeIterationFilter;
+                const isOtherRow = !teamMatch || !iterationMatch;
+                const rowClass = isOtherRow ? 'other-team-row' : '';
+
                 return `
-                    <tr>
+                    <tr class="${rowClass}">
                         <td class="feature-modal-col-id"><a href="${ds.url}" target="_blank" class="work-item-id">${ds.id}</a></td>
                         <td class="feature-modal-col-title" title="${(ds.title || '').replace(/"/g, '&quot;')}">${ds.title || ''}</td>
                         <td class="feature-modal-col-state"><span class="state-badge ${getStateClass(ds.state)}">${ds.state || ''}</span></td>
@@ -1732,6 +1892,7 @@
 
             // Use separate header and body tables for fixed header
             contentEl.innerHTML = `
+                ${effortSummaryHtml}
                 <div class="feature-modal-table-container">
                     <div class="feature-modal-table-header">
                         <table>

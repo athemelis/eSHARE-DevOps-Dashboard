@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v72
+## Current Version: v73
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v73 | 12/9/2025 | **Roadmap view:** Added "Link to ADO Feature Backlog" hyperlink. Team cards now clickable (filters by team, syncs with dropdown). Added Effort column to table (sum of child delivery slice efforts). Added total row with effort sum. Team AND Iteration filters now combine to show filtered effort (e.g., Analytics + CY2025Q4-Dec). Delivery Slices popup: matching slices at top, others grayed out, effort summary shows filtered vs total. |
 | v72 | 12/9/2025 | **Releases view:** Added search filter (title/ID), chart highlighting for filtered results, Release Version column in tables, Bug Type filter now excludes Features/Issues. **Roadmap view:** Search placeholder updated, Tag filter AND logic. **Both dashboards:** Label-based checkbox filters (full row clickable), scroll position preserved on dropdown re-render, flexible filter widths (`flex: 1`), standardized "ℹ️ Info" popups. **Patterns:** Documented UI patterns in CLAUDE.md for reuse. |
 | v71 | 12/9/2025 | **Roadmap view:** Refactored tag filtering - "Candidate" now selected by default in Tag dropdown (user-controllable), dual-mode filter (inclusion/exclusion), Clear All preserves Candidate default, Clear button hidden in default state. Compact sticky header, wider filter dropdowns (140px). **Pattern:** Documented dual-mode filter and default filter state patterns for future use. |
 | v70 | 12/8/2025 | **Releases view:** Added searchable dropdowns for Release, Team, and Customer filters (type to filter long lists), scroll-to-close for filter dropdowns, fixed sticky header Clear button wrapping, fixed stat cards hover effect (now non-clickable). **Validation view:** Added Data Source Validation section comparing CSV source counts vs dashboard counts. **Infrastructure:** Added `-p/--publish` flag for local vs production workflow, added retry logic for OneDrive file locks, added `reload-launchd-agent.sh` helper script. |

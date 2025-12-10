@@ -1481,6 +1481,25 @@
             margin: 0;
         }
 
+        .roadmap-title-group {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+        }
+
+        .ado-backlog-link {
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .ado-backlog-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
         .roadmap-header-actions {
             display: flex;
             align-items: center;
@@ -1512,6 +1531,19 @@
             min-width: 160px;
             max-width: 200px;
             flex: 1;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .effort-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+        }
+
+        .effort-card.selected {
+            border-color: var(--accent-cyan);
+            border-width: 2px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 211, 238, 0.08) 100%);
         }
 
         .effort-card.total {
@@ -1627,6 +1659,39 @@
 
         .clickable-row:hover {
             background: var(--bg-hover);
+        }
+
+        /* Total row styling */
+        .total-row {
+            background: var(--bg-secondary);
+            border-top: 2px solid var(--border-color);
+        }
+
+        .total-row:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Inline effort summary above table */
+        .roadmap-table-info {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 0.25rem;
+            padding: 0 0.5rem;
+        }
+
+        .roadmap-table-effort-summary {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.25rem 0.6rem;
+        }
+
+        .roadmap-table-effort-summary strong {
+            color: var(--accent-cyan);
+            font-weight: 600;
         }
 
         /* Iteration count badge for features spanning multiple iterations */
@@ -2424,7 +2489,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v72</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v73</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -3178,12 +3243,19 @@
         <!-- Feature Roadmap View -->
         <div class="dashboard-view" id="view-roadmap">
             <div class="roadmap-header">
-                <h2>Feature Roadmap</h2>
+                <div class="roadmap-title-group">
+                    <h2>Feature Roadmap</h2>
+                    <a href="https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false" target="_blank" class="ado-backlog-link">Link to ADO Feature Backlog</a>
+                </div>
                 <span class="roadmap-count" id="roadmap-count"></span>
             </div>
             <!-- Effort Summary Cards -->
             <div class="roadmap-effort-cards" id="roadmap-effort-cards">
                 <!-- Populated dynamically -->
+            </div>
+            <!-- Inline effort summary for the table -->
+            <div class="roadmap-table-info">
+                <span class="roadmap-table-effort-summary" id="roadmap-table-effort-summary"></span>
             </div>
             <div class="table-container" id="roadmap-table-container">
                 <table class="work-items-table" id="roadmap-table">

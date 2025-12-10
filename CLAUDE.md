@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v72
+## Current Version: v73
 
 ## UI Patterns for All Dashboards
 
@@ -139,6 +139,27 @@ if (roadmapFilters.tags.length > 0) {
     }
 }
 ```
+
+## v73 Summary (December 2024)
+**Roadmap Dashboard - Team-Centric UX Improvements:**
+- Added "Link to ADO Feature Backlog" hyperlink next to "Feature Roadmap" title
+- Team cards are now clickable: click to filter by that team (syncs with Team dropdown)
+- "Total Effort" card clears team filter when clicked
+- Added Effort column to table showing sum of child delivery slice efforts
+- When team/iteration filters are active, Effort column shows only matching effort
+- Added total row at bottom of table with sum of all visible effort
+- Added inline effort summary badge above table showing "Table Total: Xd (Team · Iteration)"
+
+**Delivery Slices Popup Improvements:**
+- When team/iteration filters are active, matching slices appear at the top
+- Non-matching slices are visible but grayed out (45% opacity)
+- Effort summary shows filtered effort vs total effort
+- Example: "Analytics · CY2025Q4-Dec Effort: 12.5d / Total: 45.0d"
+
+**New Patterns:**
+- Clickable stat cards that sync with filter dropdowns
+- Team/iteration-aware popup sorting and styling
+- Combined filter effort calculations (team + iteration)
 
 ## v72 Summary (December 2024)
 **Releases & Roadmap Dashboards - UX Improvements:**
