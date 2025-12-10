@@ -817,9 +817,7 @@
     };
 
     // Roadmap filter state
-    // Note: tags defaults to ['Candidate'] to show only Candidate features initially
-    // Note: releases defaults to ['(No Release)'] to show features without release version
-    // Users can change these defaults to see all features
+    // Roadmap filters - all filters start empty (no defaults)
     let roadmapFilters = {
         search: '',
         states: [],
@@ -827,10 +825,11 @@
         assignees: [],
         teams: [],
         iterations: [],
-        releases: ['(No Release)'],  // Default to showing features with no release version
+        releases: [],
         releasesExclusionMode: false,  // Track if we started from "Select All" for release filter
-        tags: ['Candidate'],
-        tagsExclusionMode: false  // Track if we started from "Select All" for tag filter
+        tags: [],
+        tagsExclusionMode: false,  // Track if we started from "Select All" for tag filter
+        tagsLogicMode: 'or'  // 'and' or 'or' - controls how multiple tag selections are combined
     };
 
     // Helper to extract last segment from backslash-delimited path
@@ -1053,10 +1052,16 @@
                     return !featureTags.some(tag => uncheckedTags.includes(tag));
                 });
             } else {
-                // Inclusion mode: Show features that have ALL selected tags (AND logic)
+                // Inclusion mode: logic depends on tagsLogicMode setting
                 features = features.filter(f => {
                     const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
-                    return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+                    if (roadmapFilters.tagsLogicMode === 'and') {
+                        // AND logic: feature must have ALL selected tags
+                        return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+                    } else {
+                        // OR logic (default): feature must have ANY selected tag
+                        return roadmapFilters.tags.some(selectedTag => featureTags.includes(selectedTag));
+                    }
                 });
             }
         }
@@ -1091,6 +1096,12 @@
         // Populate filter dropdowns on first render
         populateRoadmapFilterDropdowns();
 
+        // If state was loaded from localStorage, sync dropdown checkboxes with loaded state
+        if (stateWasLoaded) {
+            syncRoadmapFilterDropdowns();
+            stateWasLoaded = false; // Only sync once after state load
+        }
+
         const features = getFilteredRoadmapFeatures();
         const allFeatures = getRoadmapFeatures();
         const countEl = document.getElementById('roadmap-count');
@@ -1099,14 +1110,10 @@
         const effortCardsEl = document.getElementById('roadmap-effort-cards');
 
         // Update count (show filtered vs total if filtering)
-        // Note: tags: ['Candidate'] and releases: ['(No Release)'] are the default states, not considered filtered
-        const isTagsDefault = roadmapFilters.tags.length === 1 && roadmapFilters.tags[0] === 'Candidate';
-        const isReleasesDefault = roadmapFilters.releases.length === 1 && roadmapFilters.releases[0] === '(No Release)';
         const isFiltered = roadmapFilters.search || roadmapFilters.states.length > 0 ||
                           roadmapFilters.customers.length > 0 || roadmapFilters.assignees.length > 0 ||
                           roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0 ||
-                          (roadmapFilters.releases.length > 0 && !isReleasesDefault) ||
-                          (roadmapFilters.tags.length > 0 && !isTagsDefault);
+                          roadmapFilters.releases.length > 0 || roadmapFilters.tags.length > 0;
         if (isFiltered) {
             countEl.textContent = `${features.length} of ${allFeatures.length} features`;
         } else {
@@ -1191,12 +1198,13 @@
             ${teamCardsHtml}
         `;
 
-        // Define columns (ID, Title, State, Customers, Assigned To, Release, Effort)
+        // Define columns (ID, Title, State, Customers, Tags, Assigned To, Release, Effort)
         const columns = [
             { key: 'id', label: 'ID' },
             { key: 'title', label: 'Title' },
             { key: 'state', label: 'State' },
             { key: 'customers', label: 'Customers' },
+            { key: 'tags', label: 'Tags' },
             { key: 'assignedTo', label: 'Assigned To' },
             { key: 'releaseVersion', label: 'Release' },
             { key: 'effort', label: 'Effort' }
@@ -1291,12 +1299,15 @@
             }
 
             const featureEffort = featureEffortMap[item.id] || 0;
+            // Format tags for display (remove duplicates, sort, join with comma)
+            const displayTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t).join(', ');
             return `
             <tr class="clickable-row" data-feature-id="${item.id}" data-feature-title="${(item.title || '').replace(/"/g, '&quot;')}">
                 <td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>
                 <td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>
                 <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
                 <td>${item.customers || ''}</td>
+                <td class="tags-cell" title="${displayTags}">${displayTags}</td>
                 <td>${item.assignedTo || ''}</td>
                 <td>${item.releaseVersion || ''}</td>
                 <td class="effort-value">${featureEffort > 0 ? featureEffort.toFixed(1) + 'd' : ''}</td>
@@ -1305,10 +1316,10 @@
         `;
         }).join('');
 
-        // Add total row
+        // Add total row (colspan = 7 for columns before Effort: ID, Title, State, Customers, Tags, Assigned To, Release)
         tbody.innerHTML += `
             <tr class="total-row">
-                <td colspan="6" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
+                <td colspan="7" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
                 <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalTableEffort.toFixed(1)}d</td>
                 ${showResetBtn ? '<td></td>' : ''}
             </tr>
@@ -1562,6 +1573,11 @@
                 <div class="filter-dropdown-search">
                     <input type="text" placeholder="Search tags..." oninput="filterRoadmapDropdownOptions('tag', this.value)">
                 </div>
+                <div class="tag-logic-toggle" onclick="event.stopPropagation();">
+                    <span class="tag-logic-label">Match:</span>
+                    <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'or' ? 'active' : ''}" onclick="setTagLogicMode('or')">Any (OR)</button>
+                    <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'and' ? 'active' : ''}" onclick="setTagLogicMode('and')">All (AND)</button>
+                </div>
                 <div class="filter-dropdown-options" id="roadmap-tag-options">
                     ${tags.map(t => `
                         <label class="filter-dropdown-option" onclick="event.stopPropagation();">
@@ -1576,6 +1592,66 @@
                 </div>
             `;
             tagMenu.dataset.populated = 'true';
+        }
+    }
+
+    // Toggle between AND/OR logic for tag filter
+    function setTagLogicMode(mode) {
+        roadmapFilters.tagsLogicMode = mode;
+        // Update button states
+        document.querySelectorAll('.tag-logic-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.textContent.toLowerCase().includes(mode));
+        });
+        renderRoadmapView();
+        saveStateToStorage(); // Persist logic mode change
+    }
+
+    // Sync all roadmap filter dropdown checkboxes with current filter state
+    // Called after state is loaded from localStorage to update UI
+    function syncRoadmapFilterDropdowns() {
+        const filterTypes = ['state', 'customer', 'assignee', 'team', 'iteration', 'release', 'tag'];
+        const filterKeyMap = {
+            'state': 'states',
+            'customer': 'customers',
+            'assignee': 'assignees',
+            'team': 'teams',
+            'iteration': 'iterations',
+            'release': 'releases',
+            'tag': 'tags'
+        };
+
+        filterTypes.forEach(type => {
+            const optionsContainer = document.getElementById(`roadmap-${type}-options`);
+            if (!optionsContainer) return;
+
+            const filterKey = filterKeyMap[type];
+            const selectedValues = roadmapFilters[filterKey] || [];
+
+            optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                const label = opt.querySelector('.option-label')?.textContent;
+                if (cb && label) {
+                    cb.checked = selectedValues.includes(label);
+                }
+            });
+
+            updateRoadmapFilterDisplay(type);
+        });
+
+        // Sync tag logic mode buttons
+        document.querySelectorAll('.tag-logic-btn').forEach(btn => {
+            const isOrBtn = btn.textContent.includes('OR');
+            const isAndBtn = btn.textContent.includes('AND');
+            btn.classList.toggle('active',
+                (isOrBtn && roadmapFilters.tagsLogicMode === 'or') ||
+                (isAndBtn && roadmapFilters.tagsLogicMode === 'and')
+            );
+        });
+
+        // Sync search input
+        const searchInput = document.getElementById('roadmap-search-input');
+        if (searchInput && roadmapFilters.search) {
+            searchInput.value = roadmapFilters.search;
         }
     }
 
@@ -1613,6 +1689,7 @@
 
         updateRoadmapFilterDisplay(filterType);
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     // Legacy handler - kept for compatibility but now using handleRoadmapFilterChange
@@ -1682,6 +1759,7 @@
 
         updateRoadmapFilterDisplay(filterType);
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     function selectAllRoadmapFilter(filterType) {
@@ -1714,6 +1792,7 @@
 
         updateRoadmapFilterDisplay(filterType);
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     function closeRoadmapDropdown(dropdownId) {
@@ -1735,6 +1814,7 @@
         syncRoadmapTeamDropdown();
         updateRoadmapFilterDisplay('team');
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     // Clear team filter (when clicking Total card)
@@ -1743,6 +1823,7 @@
         syncRoadmapTeamDropdown();
         updateRoadmapFilterDisplay('team');
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     // Sync the team dropdown checkboxes with roadmapFilters.teams
@@ -1765,19 +1846,20 @@
         if (searchInput) searchInput.value = '';
         roadmapFilters.search = '';
 
-        // Clear all filter arrays except releases and tags (preserve defaults)
+        // Clear all filter arrays
         roadmapFilters.states = [];
         roadmapFilters.customers = [];
         roadmapFilters.assignees = [];
         roadmapFilters.teams = [];
         roadmapFilters.iterations = [];
-        roadmapFilters.releases = ['(No Release)'];  // Reset to default instead of clearing
+        roadmapFilters.releases = [];
         roadmapFilters.releasesExclusionMode = false;
-        roadmapFilters.tags = ['Candidate'];  // Reset to default instead of clearing
+        roadmapFilters.tags = [];
         roadmapFilters.tagsExclusionMode = false;
+        // Note: tagsLogicMode is not reset - user preference is preserved
 
-        // Reset dropdowns (except release and tag which get defaults checked)
-        ['state', 'customer', 'assignee', 'team', 'iteration'].forEach(type => {
+        // Reset all dropdowns
+        ['state', 'customer', 'assignee', 'team', 'iteration', 'release', 'tag'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -1785,39 +1867,15 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Handle release dropdown specially - check only (No Release)
-        const releaseOptionsContainer = document.getElementById('roadmap-release-options');
-        if (releaseOptionsContainer) {
-            releaseOptionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
-                const cb = opt.querySelector('input[type="checkbox"]');
-                const label = opt.querySelector('.option-label')?.textContent;
-                if (cb) {
-                    cb.checked = (label === '(No Release)');
-                }
-            });
-        }
-        updateRoadmapFilterDisplay('release');
-
-        // Handle tag dropdown specially - check only Candidate
-        const tagOptionsContainer = document.getElementById('roadmap-tag-options');
-        if (tagOptionsContainer) {
-            tagOptionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
-                const cb = opt.querySelector('input[type="checkbox"]');
-                const label = opt.querySelector('.option-label')?.textContent;
-                if (cb) {
-                    cb.checked = (label === 'Candidate');
-                }
-            });
-        }
-        updateRoadmapFilterDisplay('tag');
-
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     function applyRoadmapFilters() {
         const searchInput = document.getElementById('roadmap-search-input');
         roadmapFilters.search = searchInput ? searchInput.value : '';
         renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
     }
 
     function getRoadmapColumnClass(key) {
@@ -1826,6 +1884,7 @@
             'title': 'col-title',
             'state': 'col-state',
             'customers': 'col-customers',
+            'tags': 'col-tags',
             'assignedTo': 'col-assignee',
             'releaseVersion': 'col-release',
             'effort': 'col-effort'
@@ -1842,6 +1901,7 @@
             roadmapSortState.direction = 'asc';
         }
         renderRoadmapView();
+        saveStateToStorage(); // Persist sort changes
     }
 
     function getRoadmapSortIndicator(columnKey) {
@@ -1886,6 +1946,7 @@
         roadmapSortState.column = null;
         roadmapSortState.direction = 'asc';
         renderRoadmapView();
+        saveStateToStorage(); // Persist sort changes
     }
 
     // Show delivery slices for a feature in a modal

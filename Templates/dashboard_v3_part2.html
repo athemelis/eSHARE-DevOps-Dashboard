@@ -12,6 +12,67 @@
     let activeCharts = {};
     let selectedReleases = []; // Array for multi-select
     let selectedTimePeriod = 'all';
+
+    // ==================== STATE PERSISTENCE (localStorage) ====================
+    const STORAGE_KEY = 'eshare-devops-dashboard-state';
+
+    // Save current state to localStorage
+    function saveStateToStorage() {
+        try {
+            const state = {
+                currentView: currentView,
+                roadmapFilters: typeof roadmapFilters !== 'undefined' ? roadmapFilters : null,
+                roadmapSortState: typeof roadmapSortState !== 'undefined' ? roadmapSortState : null,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+            console.warn('[State] Failed to save state to localStorage:', e);
+        }
+    }
+
+    // Load state from localStorage
+    function loadStateFromStorage() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) return null;
+
+            const state = JSON.parse(stored);
+            // State expires after 24 hours
+            if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(STORAGE_KEY);
+                return null;
+            }
+            return state;
+        } catch (e) {
+            console.warn('[State] Failed to load state from localStorage:', e);
+            return null;
+        }
+    }
+
+    // Flag to indicate state was loaded and dropdowns need syncing
+    let stateWasLoaded = false;
+
+    // Apply loaded state (called after all components are initialized)
+    function applyLoadedState(state) {
+        if (!state) return;
+
+        // Restore roadmap filters if available
+        if (state.roadmapFilters && typeof roadmapFilters !== 'undefined') {
+            Object.assign(roadmapFilters, state.roadmapFilters);
+            stateWasLoaded = true;
+        }
+
+        // Restore roadmap sort state if available
+        if (state.roadmapSortState && typeof roadmapSortState !== 'undefined') {
+            Object.assign(roadmapSortState, state.roadmapSortState);
+        }
+
+        // Restore view (will be applied during initialization)
+        if (state.currentView) {
+            currentView = state.currentView;
+        }
+    }
     
     // Color palettes
     const colors = {

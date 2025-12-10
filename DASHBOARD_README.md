@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v74
+## Current Version: v75
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v75 | 12/10/2025 | **Roadmap view:** Added Tags column (after Customers). **State persistence:** View and filter selections now preserved across page refreshes via localStorage. **Filter changes:** Removed default values for Release and Tag filters (all start empty). Added AND/OR toggle to Tag filter dropdown for flexible multi-tag filtering. |
 | v74 | 12/9/2025 | **Roadmap view:** Added Release Version filter dropdown (between Iteration and Tag filters). Default filter is "(No Release)" to show Features with no release version assigned. Dual-mode filter behavior. Added Release column to table (between Assigned To and Effort). **Bug fixes:** Team + Iteration filters now correctly require slices to match BOTH filters; Effort column sorting now works correctly. |
 | v73 | 12/9/2025 | **Roadmap view:** Added "Link to ADO Feature Backlog" hyperlink. Team cards now clickable (filters by team, syncs with dropdown). Added Effort column to table (sum of child delivery slice efforts). Added total row with effort sum. Team AND Iteration filters now combine to show filtered effort (e.g., Analytics + CY2025Q4-Dec). Delivery Slices popup: matching slices at top, others grayed out, effort summary shows filtered vs total. |
 | v72 | 12/9/2025 | **Releases view:** Added search filter (title/ID), chart highlighting for filtered results, Release Version column in tables, Bug Type filter now excludes Features/Issues. **Roadmap view:** Search placeholder updated, Tag filter AND logic. **Both dashboards:** Label-based checkbox filters (full row clickable), scroll position preserved on dropdown re-render, flexible filter widths (`flex: 1`), standardized "ℹ️ Info" popups. **Patterns:** Documented UI patterns in CLAUDE.md for reuse. |

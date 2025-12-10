@@ -4939,15 +4939,15 @@
         currentView = view;
         closeDrilldown();
         selectedReleases = [];
-        
+
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.view === view);
         });
-        
+
         document.querySelectorAll('.dashboard-view').forEach(v => {
             v.classList.toggle('active', v.id === `view-${view}`);
         });
-        
+
         // Switch filter rows
         document.querySelectorAll('.filter-row').forEach(row => {
             row.classList.remove('active');
@@ -4956,10 +4956,10 @@
         if (filterRow) {
             filterRow.classList.add('active');
         }
-        
+
         // Close mobile nav if open
         document.getElementById('nav-mobile')?.classList.remove('open');
-        
+
         // Render the appropriate view
         switch(view) {
             case 'executive': renderExecutiveView(); break;
@@ -4973,8 +4973,11 @@
             case 'orgchart': renderOrgChartView(); break;
             case 'details': renderDetailsView(); break;
         }
-        
+
         updateBreadcrumb();
+
+        // Save state to localStorage for persistence across refreshes
+        saveStateToStorage();
     }
     
     // Time period selector for Team Lead
@@ -6634,8 +6637,14 @@
         tab.addEventListener('click', () => switchView(tab.dataset.view));
     });
 
-    // Initial render
-    switchView('executive');
+    // Load persisted state from localStorage (if any)
+    const loadedState = loadStateFromStorage();
+    if (loadedState) {
+        applyLoadedState(loadedState);
+    }
+
+    // Initial render - use restored view or default to executive
+    switchView(currentView);
 </script>
 
 <!-- Feature Delivery Slices Modal -->

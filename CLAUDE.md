@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v74
+## Current Version: v75
 
 ## UI Patterns for All Dashboards
 
@@ -138,6 +138,79 @@ if (roadmapFilters.tags.length > 0) {
         });
     }
 }
+```
+
+## v75 Summary (December 2024)
+**Roadmap Dashboard - Tags Column:**
+- Added Tags column to table between Customers and Assigned To columns
+- Tags displayed comma-separated with ellipsis for overflow (hover for full list)
+- Column is sortable; CSS class `.col-tags` with width 150px
+
+**Roadmap Dashboard - State Persistence (localStorage):**
+- Current view preserved across page refreshes (no longer resets to Executive)
+- All Roadmap filter selections saved automatically to localStorage
+- Sort state (column and direction) also persisted
+- State expires after 24 hours to prevent stale data issues
+- Key: `eshare-devops-dashboard-state`
+
+**Roadmap Dashboard - Default Filters Removed:**
+- Release filter no longer defaults to "(No Release)" - starts empty
+- Tag filter no longer defaults to "Candidate" - starts empty
+- All filters now behave consistently (empty = show all)
+- Clear All now clears all filters completely
+
+**Roadmap Dashboard - AND/OR Toggle for Tag Filter:**
+- New "Match:" toggle in Tag dropdown with "Any (OR)" and "All (AND)" buttons
+- OR mode (default): Shows features matching ANY selected tag
+- AND mode: Shows features matching ALL selected tags
+- Logic mode preference is persisted with other filter state
+
+**Implementation Pattern - State Persistence:**
+```javascript
+// Save state to localStorage
+const STORAGE_KEY = 'eshare-devops-dashboard-state';
+function saveStateToStorage() {
+    const state = {
+        currentView: currentView,
+        roadmapFilters: roadmapFilters,
+        roadmapSortState: roadmapSortState,
+        timestamp: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// Load and apply state on page load
+const loadedState = loadStateFromStorage();
+if (loadedState) applyLoadedState(loadedState);
+
+// Sync dropdown UI after state load
+if (stateWasLoaded) {
+    syncRoadmapFilterDropdowns(); // Updates checkboxes to match loaded state
+    stateWasLoaded = false;
+}
+```
+
+**Implementation Pattern - AND/OR Filter Logic Toggle:**
+```javascript
+// Filter state includes logic mode
+let roadmapFilters = {
+    tags: [],
+    tagsLogicMode: 'or'  // 'and' or 'or'
+};
+
+// Filter logic respects mode
+if (roadmapFilters.tagsLogicMode === 'and') {
+    return roadmapFilters.tags.every(tag => featureTags.includes(tag));
+} else {
+    return roadmapFilters.tags.some(tag => featureTags.includes(tag));
+}
+
+// UI toggle buttons
+<div class="tag-logic-toggle">
+    <span class="tag-logic-label">Match:</span>
+    <button class="tag-logic-btn ${mode === 'or' ? 'active' : ''}" onclick="setTagLogicMode('or')">Any (OR)</button>
+    <button class="tag-logic-btn ${mode === 'and' ? 'active' : ''}" onclick="setTagLogicMode('and')">All (AND)</button>
+</div>
 ```
 
 ## v74 Summary (December 2024)
