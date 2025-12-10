@@ -2489,7 +2489,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v73</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v74</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -2691,6 +2691,17 @@
                 </div>
             </div>
 
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="roadmap-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-release-dropdown')">
+                    <span id="roadmap-release-display">(No Release)</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-release-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
             <span class="filter-row-label">Tag:</span>
             <div class="filter-dropdown" id="roadmap-tag-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
@@ -2707,9 +2718,9 @@
             <div class="filter-row-info" style="margin-left: auto;">
                 <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ Info</span>
                 <div class="info-panel" id="roadmap-info-panel">
-                    <p><strong>Features in this table:</strong></p>
-                    <p>• No Release Version assigned (field is blank)</p>
-                    <p>• Filtered by "Candidate" tag (default)</p>
+                    <p><strong>Default filters:</strong></p>
+                    <p>• Release: "(No Release)" - Features with no Release Version assigned</p>
+                    <p>• Tag: "Candidate" - Features tagged as Candidate</p>
                     <p><strong>Default order:</strong> Backlog Priority (lower = higher priority)</p>
                     <p>Click any column header to sort. Use "Reset to Backlog Priority" to restore default order.</p>
                 </div>

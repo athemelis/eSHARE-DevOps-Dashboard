@@ -818,7 +818,8 @@
 
     // Roadmap filter state
     // Note: tags defaults to ['Candidate'] to show only Candidate features initially
-    // Users can uncheck Candidate to see all unreleased features
+    // Note: releases defaults to ['(No Release)'] to show features without release version
+    // Users can change these defaults to see all features
     let roadmapFilters = {
         search: '',
         states: [],
@@ -826,6 +827,8 @@
         assignees: [],
         teams: [],
         iterations: [],
+        releases: ['(No Release)'],  // Default to showing features with no release version
+        releasesExclusionMode: false,  // Track if we started from "Select All" for release filter
         tags: ['Candidate'],
         tagsExclusionMode: false  // Track if we started from "Select All" for tag filter
     };
@@ -943,13 +946,9 @@
     }
 
     function getRoadmapFeatures() {
-        // Filter Features that have no Release Version (blank or null)
+        // Return all Features - release version filtering is now handled by the Release filter dropdown
         // Tag filtering (including Candidate) is handled by the Tag filter dropdown
-        return workItems.filter(w => {
-            if (w.type !== 'Feature') return false;
-            if (w.releaseVersion && w.releaseVersion.trim() !== '') return false;
-            return true;
-        });
+        return workItems.filter(w => w.type === 'Feature');
     }
 
     function getFilteredRoadmapFeatures() {
@@ -985,26 +984,51 @@
             });
         }
 
-        // Apply team filter (based on delivery slices)
-        if (roadmapFilters.teams.length > 0) {
+        // Apply team and iteration filters together (based on delivery slices)
+        // When both are active, a feature must have at least one slice that matches BOTH filters
+        if (roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0) {
             features = features.filter(f => {
                 const slices = getDeliverySlicesForFeatures([f.id]);
                 return slices.some(ds => {
                     const team = getLastPathSegment(ds.areaPath) || '(No Team)';
-                    return roadmapFilters.teams.includes(team);
+                    const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+
+                    // Check team filter (if active)
+                    const teamMatch = roadmapFilters.teams.length === 0 || roadmapFilters.teams.includes(team);
+                    // Check iteration filter (if active)
+                    const iterationMatch = roadmapFilters.iterations.length === 0 || roadmapFilters.iterations.includes(iteration);
+
+                    // Slice must match both filters (when active)
+                    return teamMatch && iterationMatch;
                 });
             });
         }
 
-        // Apply iteration filter (based on delivery slices)
-        if (roadmapFilters.iterations.length > 0) {
-            features = features.filter(f => {
-                const slices = getDeliverySlicesForFeatures([f.id]);
-                return slices.some(ds => {
-                    const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
-                    return roadmapFilters.iterations.includes(iteration);
+        // Apply release version filter
+        if (roadmapFilters.releases.length > 0) {
+            if (roadmapFilters.releasesExclusionMode) {
+                // Exclusion mode: Started from "Select All", now excluding unchecked releases
+                // Get all available releases to determine what's unchecked
+                const allAvailableReleases = new Set(['(No Release)']);
+                getRoadmapFeatures().forEach(f => {
+                    if (f.releaseVersion && f.releaseVersion.trim()) {
+                        allAvailableReleases.add(f.releaseVersion.trim());
+                    }
                 });
-            });
+                const uncheckedReleases = [...allAvailableReleases].filter(r => !roadmapFilters.releases.includes(r));
+
+                features = features.filter(f => {
+                    const featureRelease = (f.releaseVersion && f.releaseVersion.trim()) || '(No Release)';
+                    // Exclude features that have any unchecked release
+                    return !uncheckedReleases.includes(featureRelease);
+                });
+            } else {
+                // Inclusion mode: Show features that have any of the selected releases
+                features = features.filter(f => {
+                    const featureRelease = (f.releaseVersion && f.releaseVersion.trim()) || '(No Release)';
+                    return roadmapFilters.releases.includes(featureRelease);
+                });
+            }
         }
 
         // Apply tag filter
@@ -1075,11 +1099,13 @@
         const effortCardsEl = document.getElementById('roadmap-effort-cards');
 
         // Update count (show filtered vs total if filtering)
-        // Note: tags: ['Candidate'] is the default state, not considered filtered
+        // Note: tags: ['Candidate'] and releases: ['(No Release)'] are the default states, not considered filtered
         const isTagsDefault = roadmapFilters.tags.length === 1 && roadmapFilters.tags[0] === 'Candidate';
+        const isReleasesDefault = roadmapFilters.releases.length === 1 && roadmapFilters.releases[0] === '(No Release)';
         const isFiltered = roadmapFilters.search || roadmapFilters.states.length > 0 ||
                           roadmapFilters.customers.length > 0 || roadmapFilters.assignees.length > 0 ||
                           roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0 ||
+                          (roadmapFilters.releases.length > 0 && !isReleasesDefault) ||
                           (roadmapFilters.tags.length > 0 && !isTagsDefault);
         if (isFiltered) {
             countEl.textContent = `${features.length} of ${allFeatures.length} features`;
@@ -1363,6 +1389,20 @@
         const teams = [...teamsSet].sort();
         const iterations = [...iterationsSet].sort();
 
+        // Get unique release versions from features
+        const releasesSet = new Set(['(No Release)']);  // Always include the "no release" option
+        features.forEach(f => {
+            if (f.releaseVersion && f.releaseVersion.trim()) {
+                releasesSet.add(f.releaseVersion.trim());
+            }
+        });
+        const releases = [...releasesSet].sort((a, b) => {
+            // Put "(No Release)" first, then sort the rest alphabetically
+            if (a === '(No Release)') return -1;
+            if (b === '(No Release)') return 1;
+            return a.localeCompare(b);
+        });
+
         // Get unique tags from features
         const tagsSet = new Set();
         features.forEach(f => {
@@ -1490,6 +1530,29 @@
             iterationMenu.dataset.populated = 'true';
         }
 
+        // Populate Release dropdown
+        const releaseMenu = document.getElementById('roadmap-release-menu');
+        if (releaseMenu && !releaseMenu.dataset.populated) {
+            releaseMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search releases..." oninput="filterRoadmapDropdownOptions('release', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-release-options">
+                    ${releases.map(r => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.releases.includes(r) ? 'checked' : ''} onchange="handleRoadmapFilterChange('release', '${r.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${r}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('release')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('release')">Clear</button>
+                </div>
+            `;
+            releaseMenu.dataset.populated = 'true';
+        }
+
         // Populate Tag dropdown
         const tagMenu = document.getElementById('roadmap-tag-menu');
         if (tagMenu && !tagMenu.dataset.populated) {
@@ -1537,9 +1600,12 @@
             }
         } else {
             roadmapFilters[filterKey] = roadmapFilters[filterKey].filter(v => v !== value);
-            // Reset exclusion mode if all tags are unchecked
+            // Reset exclusion mode if all tags/releases are unchecked
             if (filterType === 'tag' && roadmapFilters.tags.length === 0) {
                 roadmapFilters.tagsExclusionMode = false;
+            }
+            if (filterType === 'release' && roadmapFilters.releases.length === 0) {
+                roadmapFilters.releasesExclusionMode = false;
             }
         }
 
@@ -1561,6 +1627,7 @@
             'assignee': 'assignees',
             'team': 'teams',
             'iteration': 'iterations',
+            'release': 'releases',
             'tag': 'tags'
         };
         return keyMap[filterType] || filterType;
@@ -1573,6 +1640,7 @@
             'assignee': 'All Assignees',
             'team': 'All Teams',
             'iteration': 'All Iterations',
+            'release': 'All Releases',
             'tag': 'All Tags'
         };
         return labelMap[filterType] || 'All';
@@ -1596,9 +1664,12 @@
         const filterKey = getFilterKey(filterType);
         roadmapFilters[filterKey] = [];
 
-        // Reset exclusion mode when clearing tag filter
+        // Reset exclusion mode when clearing tag/release filter
         if (filterType === 'tag') {
             roadmapFilters.tagsExclusionMode = false;
+        }
+        if (filterType === 'release') {
+            roadmapFilters.releasesExclusionMode = false;
         }
 
         // Uncheck all checkboxes
@@ -1631,9 +1702,12 @@
 
         roadmapFilters[filterKey] = values;
 
-        // For tag filter, entering exclusion mode when Select All is clicked
+        // For tag/release filter, entering exclusion mode when Select All is clicked
         if (filterType === 'tag') {
             roadmapFilters.tagsExclusionMode = true;
+        }
+        if (filterType === 'release') {
+            roadmapFilters.releasesExclusionMode = true;
         }
 
         updateRoadmapFilterDisplay(filterType);
@@ -1689,16 +1763,18 @@
         if (searchInput) searchInput.value = '';
         roadmapFilters.search = '';
 
-        // Clear all filter arrays except tags (preserve Candidate default)
+        // Clear all filter arrays except releases and tags (preserve defaults)
         roadmapFilters.states = [];
         roadmapFilters.customers = [];
         roadmapFilters.assignees = [];
         roadmapFilters.teams = [];
         roadmapFilters.iterations = [];
+        roadmapFilters.releases = ['(No Release)'];  // Reset to default instead of clearing
+        roadmapFilters.releasesExclusionMode = false;
         roadmapFilters.tags = ['Candidate'];  // Reset to default instead of clearing
         roadmapFilters.tagsExclusionMode = false;
 
-        // Reset dropdowns (except tag which gets Candidate checked)
+        // Reset dropdowns (except release and tag which get defaults checked)
         ['state', 'customer', 'assignee', 'team', 'iteration'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
@@ -1706,6 +1782,19 @@
             }
             updateRoadmapFilterDisplay(type);
         });
+
+        // Handle release dropdown specially - check only (No Release)
+        const releaseOptionsContainer = document.getElementById('roadmap-release-options');
+        if (releaseOptionsContainer) {
+            releaseOptionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                const label = opt.querySelector('.option-label')?.textContent;
+                if (cb) {
+                    cb.checked = (label === '(No Release)');
+                }
+            });
+        }
+        updateRoadmapFilterDisplay('release');
 
         // Handle tag dropdown specially - check only Candidate
         const tagOptionsContainer = document.getElementById('roadmap-tag-options');
@@ -1949,7 +2038,7 @@
         roadmapScrollHandler = () => {
             // Close all roadmap dropdowns on scroll
             ['roadmap-state-dropdown', 'roadmap-customer-dropdown', 'roadmap-assignee-dropdown',
-             'roadmap-team-dropdown', 'roadmap-iteration-dropdown', 'roadmap-tag-dropdown'].forEach(id => {
+             'roadmap-team-dropdown', 'roadmap-iteration-dropdown', 'roadmap-release-dropdown', 'roadmap-tag-dropdown'].forEach(id => {
                 const menu = document.getElementById(id)?.querySelector('.filter-dropdown-menu');
                 if (menu && menu.classList.contains('open')) {
                     menu.classList.remove('open');

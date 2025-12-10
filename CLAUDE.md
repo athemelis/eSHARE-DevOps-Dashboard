@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v73
+## Current Version: v74
 
 ## UI Patterns for All Dashboards
 
@@ -137,6 +137,46 @@ if (roadmapFilters.tags.length > 0) {
             return featureTags.some(tag => roadmapFilters.tags.includes(tag));
         });
     }
+}
+```
+
+## v74 Summary (December 2024)
+**Roadmap Dashboard - Release Version Filter:**
+- Added Release Version filter dropdown (between Iteration and Tag filters)
+- Default filter is "(No Release)" to show Features with no release version assigned
+- Previously, this was a hardcoded filter in `getRoadmapFeatures()` - now it's user-controllable
+- Dual-mode filter behavior: inclusion mode for manual selections, exclusion mode after "Select All"
+- Clear All preserves both "(No Release)" and "Candidate" defaults
+- Updated Info popup to document the two default filters
+
+**Bug Fix - Team + Iteration Filter Combination:**
+- Fixed issue where Team and Iteration filters were evaluated independently
+- Before: Feature passed if it had ANY slice from selected team AND ANY slice in selected iteration (could be different slices)
+- After: Feature passes only if it has at least one slice matching BOTH team AND iteration filters
+- Example: Analytics + CY2025Q4-Dec now correctly excludes features that only have Analytics slices in October
+
+**Implementation Pattern - Release Filter:**
+- Filter dropdown with "(No Release)" as first option, followed by sorted release versions
+- `roadmapFilters.releases` defaults to `['(No Release)']`
+- `roadmapFilters.releasesExclusionMode` tracks inclusion vs exclusion mode
+- `isFiltered` check treats `releases: ['(No Release)']` as default (not filtered) state
+
+**Implementation Pattern - Combined Slice Filters:**
+When filtering features by delivery slice properties (team, iteration), combine the filters:
+```javascript
+// Apply team and iteration filters together (based on delivery slices)
+// When both are active, a feature must have at least one slice that matches BOTH filters
+if (roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0) {
+    features = features.filter(f => {
+        const slices = getDeliverySlicesForFeatures([f.id]);
+        return slices.some(ds => {
+            const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+            const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+            const teamMatch = roadmapFilters.teams.length === 0 || roadmapFilters.teams.includes(team);
+            const iterationMatch = roadmapFilters.iterations.length === 0 || roadmapFilters.iterations.includes(iteration);
+            return teamMatch && iterationMatch;
+        });
+    });
 }
 ```
 
