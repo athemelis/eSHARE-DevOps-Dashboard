@@ -944,6 +944,164 @@
         return { featureCount, sliceCount };
     }
 
+    // Strategy categories for Summary View (Section 1)
+    const strategyCategories = [
+        { prefix: '1:', label: 'eSHARE is must-have' },
+        { prefix: '2:', label: 'eSHARE is the collaboration standard' },
+        { prefix: '3:', label: 'eSHARE deployability' },
+        { prefix: '4:', label: 'eSHARE is customer-focused, stable and secure' }
+    ];
+
+    // Calculate strategy summary for filtered features
+    function calculateStrategySummary(features, featureEffortMap) {
+        // Initialize results for each category
+        const results = strategyCategories.map(cat => ({
+            prefix: cat.prefix,
+            label: cat.label,
+            count: 0,
+            effort: 0,
+            featureIds: []
+        }));
+
+        // Track features that match multiple categories (for error detection)
+        const multiCategoryFeatures = [];
+
+        features.forEach(f => {
+            const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            const featureEffort = featureEffortMap[f.id] || 0;
+
+            // Check which categories this feature matches
+            const matchedCategories = [];
+            results.forEach((cat, idx) => {
+                const hasMatchingTag = tags.some(tag => tag.startsWith(cat.prefix));
+                if (hasMatchingTag) {
+                    matchedCategories.push(idx);
+                    cat.count++;
+                    cat.effort += featureEffort;
+                    cat.featureIds.push(f.id);
+                }
+            });
+
+            // If feature matches more than one category, track it
+            if (matchedCategories.length > 1) {
+                multiCategoryFeatures.push({
+                    id: f.id,
+                    title: f.title,
+                    categories: matchedCategories.map(idx => results[idx].prefix)
+                });
+            }
+        });
+
+        return { results, multiCategoryFeatures };
+    }
+
+    // Render strategy summary (Section 1)
+    function renderStrategySummary(features, featureEffortMap) {
+        const tbody = document.getElementById('strategy-summary-body');
+        const errorContainer = document.getElementById('strategy-error-container');
+        const unmatchedNote = document.getElementById('strategy-unmatched-note');
+        if (!tbody || !errorContainer) return;
+
+        const { results, multiCategoryFeatures } = calculateStrategySummary(features, featureEffortMap);
+
+        // Calculate features that don't match any category
+        const matchedFeatureIds = new Set();
+        results.forEach(r => r.featureIds.forEach(id => matchedFeatureIds.add(id)));
+        const unmatchedCount = features.length - matchedFeatureIds.size;
+
+        // Build table rows - counts are clickable to filter by that strategy tag
+        tbody.innerHTML = `
+            <tr>
+                <td class="row-label">Features</td>
+                ${results.map((r, idx) => `<td class="count-value clickable" onclick="filterByOkrCategory('${r.prefix}')" title="Click to filter by ${r.prefix}* tags">${r.count}</td>`).join('')}
+            </tr>
+            <tr>
+                <td class="row-label">Effort</td>
+                ${results.map(r => `<td class="effort-value">${r.effort > 0 ? r.effort.toFixed(1) + 'd' : '0d'}</td>`).join('')}
+            </tr>
+        `;
+
+        // Show note about features without matching tags
+        if (unmatchedNote) {
+            if (unmatchedCount > 0) {
+                unmatchedNote.textContent = `${unmatchedCount} feature${unmatchedCount !== 1 ? 's' : ''} without OKR tags`;
+            } else {
+                unmatchedNote.textContent = '';
+            }
+        }
+
+        // Show error message if any features match multiple categories
+        if (multiCategoryFeatures.length > 0) {
+            const featureIdList = multiCategoryFeatures.map(f => f.id).join(',');
+            errorContainer.innerHTML = `
+                <div class="strategy-error-message">
+                    <span class="error-icon">⚠️</span>
+                    <span>${multiCategoryFeatures.length} feature${multiCategoryFeatures.length !== 1 ? 's have' : ' has'} tags in multiple OKR categories.
+                    <a onclick="filterMultiCategoryFeatures('${featureIdList}')">Show in table</a></span>
+                </div>
+            `;
+        } else {
+            errorContainer.innerHTML = '';
+        }
+    }
+
+    // Filter by OKR category (e.g., "1:", "2:", etc.)
+    // Preserves all existing filters except tags - only updates the tag filter
+    function filterByOkrCategory(prefix) {
+        // Get all tags that start with this prefix from the current features
+        const allFeatures = getRoadmapFeatures();
+        const matchingTags = new Set();
+        allFeatures.forEach(f => {
+            const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            tags.forEach(tag => {
+                if (tag.startsWith(prefix)) {
+                    matchingTags.add(tag);
+                }
+            });
+        });
+
+        // Update only the tag filter (preserve all other filters)
+        roadmapFilters.tags = [...matchingTags];
+        roadmapFilters.tagsExclusionMode = false;
+        roadmapFilters.tagsLogicMode = 'or'; // Show features with ANY of these tags
+
+        // Update display (use 'tag' not 'tags')
+        updateRoadmapFilterDisplay('tag');
+
+        // Save state and re-render
+        saveStateToStorage();
+        renderRoadmapView();
+
+        // Sync the tag dropdown checkboxes AFTER render (since render may rebuild the dropdown)
+        const tagOptionsContainer = document.getElementById('roadmap-tag-options');
+        if (tagOptionsContainer) {
+            tagOptionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = roadmapFilters.tags.includes(cb.value);
+            });
+        }
+    }
+
+    // Filter table to show only multi-category features
+    function filterMultiCategoryFeatures(featureIdList) {
+        const ids = featureIdList.split(',').map(id => id.trim());
+        // Set search filter to show these IDs
+        // We'll use a special search that matches these specific IDs
+        const searchInput = document.getElementById('roadmap-search-input');
+        if (searchInput) {
+            // Use a regex-like pattern that the search can handle: ID1|ID2|ID3
+            searchInput.value = ids.join('|');
+            roadmapFilters.search = ids.join('|');
+            saveStateToStorage();
+            renderRoadmapView();
+
+            // Scroll to the table section
+            const tableSection = document.getElementById('roadmap-section-details');
+            if (tableSection) {
+                tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    }
+
     function getRoadmapFeatures() {
         // Return all Features - release version filtering is now handled by the Release filter dropdown
         // Tag filtering (including Candidate) is handled by the Tag filter dropdown
@@ -954,12 +1112,21 @@
         let features = getRoadmapFeatures();
 
         // Apply search filter (searches both Title and ID)
+        // Supports pipe-separated ID list (e.g., "123|456|789") for multi-category feature filter
         if (roadmapFilters.search) {
-            const searchLower = roadmapFilters.search.toLowerCase();
-            features = features.filter(f =>
-                (f.title || '').toLowerCase().includes(searchLower) ||
-                String(f.id).includes(roadmapFilters.search)
-            );
+            const searchTerm = roadmapFilters.search;
+            if (searchTerm.includes('|')) {
+                // Pipe-separated ID list - match exact IDs
+                const ids = searchTerm.split('|').map(id => id.trim());
+                features = features.filter(f => ids.includes(String(f.id)));
+            } else {
+                // Regular search - searches both Title and ID
+                const searchLower = searchTerm.toLowerCase();
+                features = features.filter(f =>
+                    (f.title || '').toLowerCase().includes(searchLower) ||
+                    String(f.id).includes(searchTerm)
+                );
+            }
         }
 
         // Apply state filter
@@ -1235,6 +1402,9 @@
 
             featureEffortMap[f.id] = relevantSlices.reduce((sum, ds) => sum + (ds.effort || 0), 0);
         });
+
+        // Render Strategy Summary (Section 1)
+        renderStrategySummary(features, featureEffortMap);
 
         // Calculate total effort (for the total row)
         const totalTableEffort = Object.values(featureEffortMap).reduce((sum, e) => sum + e, 0);
@@ -1581,7 +1751,7 @@
                 <div class="filter-dropdown-options" id="roadmap-tag-options">
                     ${tags.map(t => `
                         <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.tags.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('tag', '${t.replace(/'/g, "\\'")}', this.checked)">
+                            <input type="checkbox" value="${t.replace(/"/g, '&quot;')}" ${roadmapFilters.tags.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('tag', '${t.replace(/'/g, "\\'")}', this.checked)">
                             <span class="option-label">${t}</span>
                         </label>
                     `).join('')}

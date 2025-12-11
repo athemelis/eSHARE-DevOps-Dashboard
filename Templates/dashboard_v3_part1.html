@@ -1781,6 +1781,153 @@
             vertical-align: middle;
         }
 
+        /* Roadmap section headers */
+        .roadmap-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .roadmap-section-header {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .roadmap-section-header .section-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 50%;
+        }
+
+        /* Strategy Summary Table */
+        .strategy-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .strategy-summary-table th {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            line-height: 1.3;
+        }
+
+        .strategy-summary-table th:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .strategy-summary-table td {
+            padding: 0.6rem 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .strategy-summary-table td:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .strategy-summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .strategy-summary-table .row-label {
+            background: var(--bg-secondary);
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: left;
+            padding-left: 1rem;
+            width: 100px;
+        }
+
+        .strategy-summary-table .count-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+
+        .strategy-summary-table .count-value.clickable {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .strategy-summary-table .count-value.clickable:hover {
+            color: var(--accent-cyan);
+        }
+
+        .strategy-summary-table .effort-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+        }
+
+        .strategy-summary-table th.strategy-col {
+            width: calc((100% - 100px) / 4);
+        }
+
+        /* OKR Summary footer note */
+        .strategy-summary-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+            padding-right: 0.25rem;
+        }
+
+        .strategy-summary-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Strategy multi-category error message */
+        .strategy-error-message {
+            margin-top: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(251, 146, 60, 0.1);
+            border: 1px solid var(--accent-orange);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--accent-orange);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .strategy-error-message .error-icon {
+            font-size: 1rem;
+        }
+
+        .strategy-error-message a {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .strategy-error-message a:hover {
+            opacity: 0.8;
+        }
+
         /* Filter search input in header */
         .filter-search-input {
             padding: 0.4rem 0.75rem;
@@ -2535,7 +2682,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v75</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v76</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -3299,26 +3446,61 @@
 
         <!-- Feature Roadmap View -->
         <div class="dashboard-view" id="view-roadmap">
-            <div class="roadmap-header">
-                <div class="roadmap-title-group">
-                    <h2>Feature Roadmap</h2>
-                    <a href="https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false" target="_blank" class="ado-backlog-link">Link to ADO Feature Backlog</a>
+            <!-- Section 1: OKR Summary -->
+            <div class="roadmap-section" id="roadmap-section-summary">
+                <div class="roadmap-section-header">
+                    <span class="section-number">1</span>
+                    <span>OKR Summary</span>
                 </div>
-                <span class="roadmap-count" id="roadmap-count"></span>
-            </div>
-            <!-- Effort Summary Cards -->
-            <div class="roadmap-effort-cards" id="roadmap-effort-cards">
-                <!-- Populated dynamically -->
-            </div>
-            <!-- Inline effort summary for the table -->
-            <div class="roadmap-table-info">
-                <span class="roadmap-table-effort-summary" id="roadmap-table-effort-summary"></span>
-            </div>
-            <div class="table-container" id="roadmap-table-container">
-                <table class="work-items-table" id="roadmap-table">
-                    <thead id="roadmap-table-head"></thead>
-                    <tbody id="roadmap-table-body"></tbody>
+                <table class="strategy-summary-table" id="strategy-summary-table">
+                    <thead>
+                        <tr>
+                            <th class="row-label"></th>
+                            <th class="strategy-col">eSHARE is must-have</th>
+                            <th class="strategy-col">eSHARE is the collaboration standard</th>
+                            <th class="strategy-col">eSHARE deployability</th>
+                            <th class="strategy-col">eSHARE is customer-focused, stable and secure</th>
+                        </tr>
+                    </thead>
+                    <tbody id="strategy-summary-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
                 </table>
+                <div class="strategy-summary-footer">
+                    <span class="strategy-summary-note" id="strategy-unmatched-note"></span>
+                </div>
+                <div id="strategy-error-container"></div>
+            </div>
+
+            <!-- Section 2: Team Summary -->
+            <div class="roadmap-section" id="roadmap-section-teams">
+                <div class="roadmap-section-header">
+                    <span class="section-number">2</span>
+                    <span>Team Summary</span>
+                </div>
+                <div class="roadmap-effort-cards" id="roadmap-effort-cards">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Section 3: Feature Details -->
+            <div class="roadmap-section" id="roadmap-section-details">
+                <div class="roadmap-section-header">
+                    <span class="section-number">3</span>
+                    <span>Feature Details</span>
+                    <a href="https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false" target="_blank" class="ado-backlog-link">Link to ADO Feature Backlog</a>
+                    <span class="roadmap-count" id="roadmap-count" style="margin-left: auto;"></span>
+                </div>
+                <!-- Inline effort summary for the table -->
+                <div class="roadmap-table-info">
+                    <span class="roadmap-table-effort-summary" id="roadmap-table-effort-summary"></span>
+                </div>
+                <div class="table-container" id="roadmap-table-container">
+                    <table class="work-items-table" id="roadmap-table">
+                        <thead id="roadmap-table-head"></thead>
+                        <tbody id="roadmap-table-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

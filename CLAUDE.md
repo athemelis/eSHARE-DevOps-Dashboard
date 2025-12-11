@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v75
+## Current Version: v76
 
 ## UI Patterns for All Dashboards
 
@@ -138,6 +138,95 @@ if (roadmapFilters.tags.length > 0) {
         });
     }
 }
+```
+
+## v76 Summary (December 2024)
+**Roadmap Dashboard - Three-Section Restructure:**
+- Reorganized Roadmap view into 3 distinct sections with numbered headers
+- **Section 1: OKR Summary** - Strategy alignment table with 4 OKR columns
+- **Section 2: Team Summary** - Existing team effort cards (renamed from "Team View")
+- **Section 3: Feature Details** - Feature table with ADO backlog link (renamed from "Feature Roadmap Details")
+
+**OKR Summary Table (Section 1):**
+- 4 columns matching OKR strategy categories:
+  - Column 1: "eSHARE is must-have" (tags starting with `1:`)
+  - Column 2: "eSHARE is the collaboration standard" (tags starting with `2:`)
+  - Column 3: "eSHARE deployability" (tags starting with `3:`)
+  - Column 4: "eSHARE is customer-focused, stable and secure" (tags starting with `4:`)
+- Row 1: Feature count per category (clickable to filter)
+- Row 2: Sum of effort per category
+- Footer note shows count of features without OKR tags
+- Error message appears if features have tags in multiple categories (with "Show in table" link)
+- All values respond to header filters (Team, Iteration, etc.)
+
+**Clickable OKR Feature Counts:**
+- Clicking a feature count in OKR Summary filters by that category's tags
+- Preserves all other existing filters (only updates Tag filter)
+- Tag dropdown checkboxes sync to show selected tags
+- No auto-scroll - page stays in position
+
+**Implementation Pattern - OKR Category Filtering:**
+```javascript
+// Strategy categories definition
+const strategyCategories = [
+    { prefix: '1:', label: 'eSHARE is must-have' },
+    { prefix: '2:', label: 'eSHARE is the collaboration standard' },
+    { prefix: '3:', label: 'eSHARE deployability' },
+    { prefix: '4:', label: 'eSHARE is customer-focused, stable and secure' }
+];
+
+// Filter by OKR category - preserves other filters, only updates tags
+function filterByOkrCategory(prefix) {
+    // Get all tags that start with this prefix
+    const matchingTags = new Set();
+    allFeatures.forEach(f => {
+        const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+        tags.forEach(tag => {
+            if (tag.startsWith(prefix)) matchingTags.add(tag);
+        });
+    });
+
+    // Update only the tag filter (preserve all other filters)
+    roadmapFilters.tags = [...matchingTags];
+    roadmapFilters.tagsExclusionMode = false;
+    roadmapFilters.tagsLogicMode = 'or';
+
+    // Sync checkboxes AFTER render
+    renderRoadmapView();
+    const tagOptionsContainer = document.getElementById('roadmap-tag-options');
+    if (tagOptionsContainer) {
+        tagOptionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = roadmapFilters.tags.includes(cb.value);
+        });
+    }
+}
+```
+
+**Implementation Pattern - Checkbox Value Attribute:**
+When dynamically creating checkbox filters that need to be programmatically synced, always include a `value` attribute:
+```javascript
+// Without value attribute, cb.value returns empty string
+<input type="checkbox" onchange="handleChange('${tagName}', this.checked)">
+
+// With value attribute, cb.value returns the tag name for syncing
+<input type="checkbox" value="${tagName}" onchange="handleChange('${tagName}', this.checked)">
+```
+
+**Implementation Pattern - Multi-Category Detection:**
+```javascript
+// Track features matching multiple OKR categories
+const multiCategoryFeatures = [];
+features.forEach(f => {
+    const matchedCategories = [];
+    strategyCategories.forEach((cat, idx) => {
+        if (tags.some(tag => tag.startsWith(cat.prefix))) {
+            matchedCategories.push(idx);
+        }
+    });
+    if (matchedCategories.length > 1) {
+        multiCategoryFeatures.push({ id: f.id, categories: matchedCategories });
+    }
+});
 ```
 
 ## v75 Summary (December 2024)
