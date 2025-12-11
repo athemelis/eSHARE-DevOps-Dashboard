@@ -1009,6 +1009,9 @@
         results.forEach(r => r.featureIds.forEach(id => matchedFeatureIds.add(id)));
         const unmatchedCount = features.length - matchedFeatureIds.size;
 
+        // Calculate total effort across all categories for percentage calculation
+        const totalEffort = results.reduce((sum, r) => sum + r.effort, 0);
+
         // Build table rows - counts are clickable to filter by that strategy tag
         tbody.innerHTML = `
             <tr>
@@ -1017,7 +1020,12 @@
             </tr>
             <tr>
                 <td class="row-label">Effort</td>
-                ${results.map(r => `<td class="effort-value">${r.effort > 0 ? r.effort.toFixed(1) + 'd' : '0d'}</td>`).join('')}
+                ${results.map(r => {
+                    const pct = totalEffort > 0 ? (r.effort / totalEffort * 100) : 0;
+                    const pctDisplay = pct > 0 ? pct.toFixed(0) + '%' : '0%';
+                    const daysDisplay = r.effort > 0 ? r.effort.toFixed(1) + 'd' : '0d';
+                    return `<td class="effort-value"><span class="effort-pct">${pctDisplay}</span><span class="effort-days">${daysDisplay}</span></td>`;
+                }).join('')}
             </tr>
         `;
 

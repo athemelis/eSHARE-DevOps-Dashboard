@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v76
+## Current Version: v77
 
 ## UI Patterns for All Dashboards
 
@@ -137,6 +137,46 @@ if (roadmapFilters.tags.length > 0) {
             return featureTags.some(tag => roadmapFilters.tags.includes(tag));
         });
     }
+}
+```
+
+## v77 Summary (December 2024)
+**Roadmap Dashboard - OKR Summary Effort Percentage:**
+- Changed OKR Summary table Effort row to show percentage as primary value
+- Percentage calculated as proportion of total effort across all 4 OKR categories
+- Days shown as secondary value in smaller, muted text
+- Percentage is filter-aware: if filters result in all effort in one category, that category shows 100%
+- Example display: "45% 12.5d" where 45% is primary and 12.5d is secondary
+
+**Implementation Pattern - Dual Value Display (Primary % + Secondary Days):**
+```javascript
+// Calculate total effort across all categories
+const totalEffort = results.reduce((sum, r) => sum + r.effort, 0);
+
+// Display percentage as primary, days as secondary
+results.map(r => {
+    const pct = totalEffort > 0 ? (r.effort / totalEffort * 100) : 0;
+    const pctDisplay = pct > 0 ? pct.toFixed(0) + '%' : '0%';
+    const daysDisplay = r.effort > 0 ? r.effort.toFixed(1) + 'd' : '0d';
+    return `<td class="effort-value">
+        <span class="effort-pct">${pctDisplay}</span>
+        <span class="effort-days">${daysDisplay}</span>
+    </td>`;
+});
+```
+
+**CSS Pattern - Primary/Secondary Value Styling:**
+```css
+.effort-value .effort-pct {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.effort-value .effort-days {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 0.4rem;
 }
 ```
 
