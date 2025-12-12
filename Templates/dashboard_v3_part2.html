@@ -23,6 +23,7 @@
                 currentView: currentView,
                 roadmapFilters: typeof roadmapFilters !== 'undefined' ? roadmapFilters : null,
                 roadmapSortState: typeof roadmapSortState !== 'undefined' ? roadmapSortState : null,
+                roadmapTeamSummaryCollapsed: typeof roadmapTeamSummaryCollapsed !== 'undefined' ? roadmapTeamSummaryCollapsed : true,
                 timestamp: Date.now()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -66,6 +67,18 @@
         // Restore roadmap sort state if available
         if (state.roadmapSortState && typeof roadmapSortState !== 'undefined') {
             Object.assign(roadmapSortState, state.roadmapSortState);
+        }
+
+        // Restore Team Summary collapse state
+        if (typeof state.roadmapTeamSummaryCollapsed !== 'undefined' && typeof roadmapTeamSummaryCollapsed !== 'undefined') {
+            roadmapTeamSummaryCollapsed = state.roadmapTeamSummaryCollapsed;
+            // Apply collapse state to DOM after render
+            setTimeout(() => {
+                const section = document.getElementById('roadmap-section-teams');
+                if (section) {
+                    section.classList.toggle('collapsed', roadmapTeamSummaryCollapsed);
+                }
+            }, 0);
         }
 
         // Restore view (will be applied during initialization)

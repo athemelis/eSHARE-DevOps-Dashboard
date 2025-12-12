@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v77
+## Current Version: v78
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v78 | 12/11/2025 | **Roadmap Priority Filter & Column:** Added Priority filter dropdown to sticky header (between Iteration and Release). Added Priority column to Feature Details table (after Customers). Values displayed as P1, P2, etc. **Collapsible Team Summary:** Section 2 is now collapsible and collapsed by default. Click header to expand/collapse. Collapse state persisted via localStorage. |
 | v77 | 12/11/2025 | **Roadmap OKR Summary:** Effort row now shows percentage as primary value (proportion of total effort across all 4 OKR categories), with days shown as secondary value in smaller muted text. Percentages are filter-aware - if filters result in all effort in one category, that category shows 100%. |
 | v76 | 12/10/2025 | **Roadmap view restructure:** Reorganized into 3 sections: (1) OKR Summary - strategy alignment table with 4 columns for OKR categories (tags starting with 1:, 2:, 3:, 4:), showing feature counts and effort sums. Feature counts are clickable to filter by that OKR category. Footer shows count of features without OKR tags. Error message for features in multiple categories. (2) Team Summary - existing team effort cards. (3) Feature Details - feature table with ADO backlog link. All sections respond to header filters. Clicking OKR counts preserves existing filters (only updates Tag filter). |
 | v75 | 12/10/2025 | **Roadmap view:** Added Tags column (after Customers). **State persistence:** View and filter selections now preserved across page refreshes via localStorage. **Filter changes:** Removed default values for Release and Tag filters (all start empty). Added AND/OR toggle to Tag filter dropdown for flexible multi-tag filtering. |

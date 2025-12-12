@@ -825,12 +825,16 @@
         assignees: [],
         teams: [],
         iterations: [],
+        priorities: [],
         releases: [],
         releasesExclusionMode: false,  // Track if we started from "Select All" for release filter
         tags: [],
         tagsExclusionMode: false,  // Track if we started from "Select All" for tag filter
         tagsLogicMode: 'or'  // 'and' or 'or' - controls how multiple tag selections are combined
     };
+
+    // Track collapsed state for collapsible sections
+    let roadmapTeamSummaryCollapsed = true; // Collapsed by default
 
     // Helper to extract last segment from backslash-delimited path
     function getLastPathSegment(path) {
@@ -1178,6 +1182,14 @@
             });
         }
 
+        // Apply priority filter
+        if (roadmapFilters.priorities.length > 0) {
+            features = features.filter(f => {
+                const priority = f.priority ? String(f.priority) : '(No Priority)';
+                return roadmapFilters.priorities.includes(priority);
+            });
+        }
+
         // Apply release version filter
         if (roadmapFilters.releases.length > 0) {
             if (roadmapFilters.releasesExclusionMode) {
@@ -1288,7 +1300,8 @@
         const isFiltered = roadmapFilters.search || roadmapFilters.states.length > 0 ||
                           roadmapFilters.customers.length > 0 || roadmapFilters.assignees.length > 0 ||
                           roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0 ||
-                          roadmapFilters.releases.length > 0 || roadmapFilters.tags.length > 0;
+                          roadmapFilters.priorities.length > 0 || roadmapFilters.releases.length > 0 ||
+                          roadmapFilters.tags.length > 0;
         if (isFiltered) {
             countEl.textContent = `${features.length} of ${allFeatures.length} features`;
         } else {
@@ -1373,12 +1386,13 @@
             ${teamCardsHtml}
         `;
 
-        // Define columns (ID, Title, State, Customers, Tags, Assigned To, Release, Effort)
+        // Define columns (ID, Title, State, Customers, Priority, Tags, Assigned To, Release, Effort)
         const columns = [
             { key: 'id', label: 'ID' },
             { key: 'title', label: 'Title' },
             { key: 'state', label: 'State' },
             { key: 'customers', label: 'Customers' },
+            { key: 'priority', label: 'Priority' },
             { key: 'tags', label: 'Tags' },
             { key: 'assignedTo', label: 'Assigned To' },
             { key: 'releaseVersion', label: 'Release' },
@@ -1479,12 +1493,14 @@
             const featureEffort = featureEffortMap[item.id] || 0;
             // Format tags for display (remove duplicates, sort, join with comma)
             const displayTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t).join(', ');
+            const priorityDisplay = item.priority ? `P${item.priority}` : '';
             return `
             <tr class="clickable-row" data-feature-id="${item.id}" data-feature-title="${(item.title || '').replace(/"/g, '&quot;')}">
                 <td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>
                 <td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>
                 <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
                 <td>${item.customers || ''}</td>
+                <td class="priority-cell">${priorityDisplay}</td>
                 <td class="tags-cell" title="${displayTags}">${displayTags}</td>
                 <td>${item.assignedTo || ''}</td>
                 <td>${item.releaseVersion || ''}</td>
@@ -1494,10 +1510,10 @@
         `;
         }).join('');
 
-        // Add total row (colspan = 7 for columns before Effort: ID, Title, State, Customers, Tags, Assigned To, Release)
+        // Add total row (colspan = 8 for columns before Effort: ID, Title, State, Customers, Priority, Tags, Assigned To, Release)
         tbody.innerHTML += `
             <tr class="total-row">
-                <td colspan="7" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
+                <td colspan="8" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
                 <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalTableEffort.toFixed(1)}d</td>
                 ${showResetBtn ? '<td></td>' : ''}
             </tr>
@@ -1579,6 +1595,20 @@
         });
         const teams = [...teamsSet].sort();
         const iterations = [...iterationsSet].sort();
+
+        // Get unique priorities from features
+        const prioritiesSet = new Set(['(No Priority)']);
+        features.forEach(f => {
+            if (f.priority) {
+                prioritiesSet.add(String(f.priority));
+            }
+        });
+        const priorities = [...prioritiesSet].sort((a, b) => {
+            // Put "(No Priority)" last, then sort numerically
+            if (a === '(No Priority)') return 1;
+            if (b === '(No Priority)') return -1;
+            return parseInt(a) - parseInt(b);
+        });
 
         // Get unique release versions from features
         const releasesSet = new Set(['(No Release)']);  // Always include the "no release" option
@@ -1721,6 +1751,26 @@
             iterationMenu.dataset.populated = 'true';
         }
 
+        // Populate Priority dropdown
+        const priorityMenu = document.getElementById('roadmap-priority-menu');
+        if (priorityMenu && !priorityMenu.dataset.populated) {
+            priorityMenu.innerHTML = `
+                <div class="filter-dropdown-options" id="roadmap-priority-options">
+                    ${priorities.map(p => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.priorities.includes(p) ? 'checked' : ''} onchange="handleRoadmapFilterChange('priority', '${p}', this.checked)">
+                            <span class="option-label">${p === '(No Priority)' ? p : 'P' + p}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('priority')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('priority')">Clear</button>
+                </div>
+            `;
+            priorityMenu.dataset.populated = 'true';
+        }
+
         // Populate Release dropdown
         const releaseMenu = document.getElementById('roadmap-release-menu');
         if (releaseMenu && !releaseMenu.dataset.populated) {
@@ -1787,13 +1837,14 @@
     // Sync all roadmap filter dropdown checkboxes with current filter state
     // Called after state is loaded from localStorage to update UI
     function syncRoadmapFilterDropdowns() {
-        const filterTypes = ['state', 'customer', 'assignee', 'team', 'iteration', 'release', 'tag'];
+        const filterTypes = ['state', 'customer', 'assignee', 'team', 'iteration', 'priority', 'release', 'tag'];
         const filterKeyMap = {
             'state': 'states',
             'customer': 'customers',
             'assignee': 'assignees',
             'team': 'teams',
             'iteration': 'iterations',
+            'priority': 'priorities',
             'release': 'releases',
             'tag': 'tags'
         };
@@ -1884,6 +1935,7 @@
             'assignee': 'assignees',
             'team': 'teams',
             'iteration': 'iterations',
+            'priority': 'priorities',
             'release': 'releases',
             'tag': 'tags'
         };
@@ -1897,6 +1949,7 @@
             'assignee': 'All Assignees',
             'team': 'All Teams',
             'iteration': 'All Iterations',
+            'priority': 'All Priorities',
             'release': 'All Releases',
             'tag': 'All Tags'
         };
@@ -2004,6 +2057,16 @@
         saveStateToStorage(); // Persist filter changes
     }
 
+    // Toggle Team Summary section collapse state
+    function toggleRoadmapTeamSummary() {
+        const section = document.getElementById('roadmap-section-teams');
+        if (section) {
+            section.classList.toggle('collapsed');
+            roadmapTeamSummaryCollapsed = section.classList.contains('collapsed');
+            saveStateToStorage(); // Persist collapse state
+        }
+    }
+
     // Sync the team dropdown checkboxes with roadmapFilters.teams
     function syncRoadmapTeamDropdown() {
         const optionsContainer = document.getElementById('roadmap-team-options');
@@ -2030,6 +2093,7 @@
         roadmapFilters.assignees = [];
         roadmapFilters.teams = [];
         roadmapFilters.iterations = [];
+        roadmapFilters.priorities = [];
         roadmapFilters.releases = [];
         roadmapFilters.releasesExclusionMode = false;
         roadmapFilters.tags = [];
@@ -2037,7 +2101,7 @@
         // Note: tagsLogicMode is not reset - user preference is preserved
 
         // Reset all dropdowns
-        ['state', 'customer', 'assignee', 'team', 'iteration', 'release', 'tag'].forEach(type => {
+        ['state', 'customer', 'assignee', 'team', 'iteration', 'priority', 'release', 'tag'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -2062,6 +2126,7 @@
             'title': 'col-title',
             'state': 'col-state',
             'customers': 'col-customers',
+            'priority': 'col-priority',
             'tags': 'col-tags',
             'assignedTo': 'col-assignee',
             'releaseVersion': 'col-release',

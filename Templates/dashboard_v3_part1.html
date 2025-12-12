@@ -1786,6 +1786,37 @@
             margin-bottom: 1.5rem;
         }
 
+        /* Collapsible section styles */
+        .roadmap-section.collapsible .roadmap-section-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .roadmap-section.collapsible .roadmap-section-header:hover {
+            background: rgba(34, 211, 238, 0.05);
+            margin: 0 -0.5rem;
+            padding: 0.25rem 0.5rem 0.5rem 0.5rem;
+            border-radius: 6px;
+        }
+        .roadmap-section.collapsible .collapse-indicator {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .roadmap-section.collapsible.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+        .roadmap-section.collapsible .section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            max-height: 2000px;
+            opacity: 1;
+        }
+        .roadmap-section.collapsible.collapsed .section-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
         .roadmap-section-header {
             font-size: 1rem;
             font-weight: 600;
@@ -2021,6 +2052,7 @@
         .col-priority { width: 70px; min-width: 60px; }
         .col-tags { width: 150px; min-width: 100px; max-width: 200px; }
         .col-customers { width: 150px; min-width: 100px; }
+        .priority-cell { text-align: center; font-weight: 500; color: var(--text-secondary); }
         .tags-cell {
             max-width: 200px;
             overflow: hidden;
@@ -2694,7 +2726,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v77</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v78</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -2892,6 +2924,17 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="roadmap-iteration-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="roadmap-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-priority-dropdown')">
+                    <span id="roadmap-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-priority-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -3484,14 +3527,17 @@
                 <div id="strategy-error-container"></div>
             </div>
 
-            <!-- Section 2: Team Summary -->
-            <div class="roadmap-section" id="roadmap-section-teams">
-                <div class="roadmap-section-header">
+            <!-- Section 2: Team Summary (Collapsible) -->
+            <div class="roadmap-section collapsible collapsed" id="roadmap-section-teams">
+                <div class="roadmap-section-header" onclick="toggleRoadmapTeamSummary()">
                     <span class="section-number">2</span>
                     <span>Team Summary</span>
+                    <span class="collapse-indicator">▼</span>
                 </div>
-                <div class="roadmap-effort-cards" id="roadmap-effort-cards">
-                    <!-- Populated dynamically -->
+                <div class="section-content">
+                    <div class="roadmap-effort-cards" id="roadmap-effort-cards">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
             </div>
 

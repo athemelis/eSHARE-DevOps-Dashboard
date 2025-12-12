@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v77
+## Current Version: v78
 
 ## UI Patterns for All Dashboards
 
@@ -139,6 +139,87 @@ if (roadmapFilters.tags.length > 0) {
     }
 }
 ```
+
+## v78 Summary (December 2024)
+**Roadmap Dashboard - Priority Filter & Column:**
+- Added Priority filter dropdown to sticky header (between Iteration and Release filters)
+- Priority values displayed as P1, P2, P3, P4 with "(No Priority)" option
+- Priorities sorted numerically (P1 first, "(No Priority)" last)
+- Added Priority column to Feature Details table (after Customers column)
+- Priority column is sortable like other columns
+- Updated total row colspan from 7 to 8
+
+**Roadmap Dashboard - Collapsible Team Summary:**
+- Section 2 "Team Summary" is now collapsible
+- Collapsed by default to save screen space
+- Click header to expand/collapse
+- Visual indicator (▼ arrow) rotates when collapsed
+- Collapse state persisted via localStorage
+
+**Implementation Pattern - Collapsible Section:**
+```html
+<!-- HTML structure for collapsible section -->
+<div class="roadmap-section collapsible collapsed" id="roadmap-section-teams">
+    <div class="roadmap-section-header" onclick="toggleRoadmapTeamSummary()">
+        <span class="section-number">2</span>
+        <span>Team Summary</span>
+        <span class="collapse-indicator">▼</span>
+    </div>
+    <div class="section-content">
+        <!-- Content here -->
+    </div>
+</div>
+```
+
+```css
+/* CSS for collapsible sections */
+.roadmap-section.collapsible .roadmap-section-header {
+    cursor: pointer;
+    user-select: none;
+}
+.roadmap-section.collapsible .collapse-indicator {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+}
+.roadmap-section.collapsible.collapsed .collapse-indicator {
+    transform: rotate(-90deg);
+}
+.roadmap-section.collapsible .section-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+    max-height: 2000px;
+    opacity: 1;
+}
+.roadmap-section.collapsible.collapsed .section-content {
+    max-height: 0;
+    opacity: 0;
+}
+```
+
+```javascript
+// Toggle function with state persistence
+function toggleRoadmapTeamSummary() {
+    const section = document.getElementById('roadmap-section-teams');
+    if (section) {
+        section.classList.toggle('collapsed');
+        roadmapTeamSummaryCollapsed = section.classList.contains('collapsed');
+        saveStateToStorage(); // Persist collapse state
+    }
+}
+```
+
+**Implementation Pattern - Adding a New Filter:**
+When adding a new filter to a dashboard:
+1. Add to filter state object: `roadmapFilters.priorities = []`
+2. Add filter HTML in part1.html (dropdown structure)
+3. Add filter logic in getFilteredRoadmapFeatures()
+4. Update isFiltered check in renderRoadmapView()
+5. Add to populateRoadmapFilterDropdowns() - extract unique values and build dropdown
+6. Add to getFilterKey() and getFilterLabel() mappings
+7. Add to syncRoadmapFilterDropdowns() and clearAllRoadmapFilters()
+8. Add CSS for column (.col-priority) if adding table column
 
 ## v77 Summary (December 2024)
 **Roadmap Dashboard - OKR Summary Effort Percentage:**
