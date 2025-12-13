@@ -655,10 +655,26 @@
         }
         
         .state-done, .state-closed { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
-        .state-inprogress { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
-        .state-new, .state-todo { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+        .state-inprogress, .state-in-progress { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
+        .state-new, .state-todo, .state-to-do { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
         .state-triaged { background: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
         .state-removed { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+        .state-ready-for-review { background: rgba(167, 139, 250, 0.2); color: var(--accent-purple); }
+
+        /* Aging badges */
+        .aging-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .aging-1-day { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
+        .aging-1-week { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
+        .aging-2-weeks { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .aging-4-weeks { background: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
+        .aging-Older { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+        .aging-TBD { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
         
         .table-container {
             max-height: 500px;
@@ -666,10 +682,20 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
         }
-        
+
         #release-items-table.table-container {
             max-height: none;
             overflow-y: visible;
+        }
+
+        /* Auto-adjusting table height for Customers view */
+        #customer-issues-table.table-container {
+            max-height: none;
+            overflow-y: visible;
+        }
+        #customer-issues-table.table-container.scroll-mode {
+            max-height: 600px;
+            overflow-y: auto;
         }
         
         .stats-grid {
@@ -894,6 +920,14 @@
         .insight-item.warning { color: var(--accent-orange); }
         .insight-item.success { color: var(--accent-green); }
         .insight-item.info { color: var(--accent-blue); }
+        .insight-item.clickable {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .insight-item.clickable:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
         
         .insights-grid .insights-title {
             margin-bottom: 0.75rem;
@@ -927,7 +961,94 @@
             margin-bottom: 0;
             margin-right: 1rem;
         }
-        
+
+        /* Aging Histogram Section */
+        .aging-histogram-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .aging-histogram-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        .aging-histogram-wrapper {
+            display: flex;
+            align-items: stretch;
+        }
+        .aging-histogram-yaxis {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-right: 0.5rem;
+            padding-bottom: 1.5rem;
+            min-width: 30px;
+        }
+        .aging-yaxis-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+        .aging-histogram-chart {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .aging-histogram-bars {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            height: 120px;
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-left: 0.5rem;
+            padding-bottom: 0;
+        }
+        .aging-bar-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .aging-bar {
+            width: 100%;
+            max-width: 50px;
+            background: linear-gradient(to top, var(--accent-cyan), rgba(34, 211, 238, 0.6));
+            border-radius: 4px 4px 0 0;
+            min-height: 2px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .aging-bar:hover {
+            filter: brightness(1.2);
+        }
+        .aging-bar-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .aging-bar-count {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+        .aging-bar.bar-1-day { background: linear-gradient(to top, rgba(52, 211, 153, 1), rgba(52, 211, 153, 0.6)); }
+        .aging-bar.bar-1-week { background: linear-gradient(to top, rgba(96, 165, 250, 1), rgba(96, 165, 250, 0.6)); }
+        .aging-bar.bar-2-weeks { background: linear-gradient(to top, #fbbf24, rgba(251, 191, 36, 0.6)); }
+        .aging-bar.bar-4-weeks { background: linear-gradient(to top, rgba(251, 146, 60, 1), rgba(251, 146, 60, 0.6)); }
+        .aging-bar.bar-Older { background: linear-gradient(to top, rgba(248, 113, 113, 1), rgba(248, 113, 113, 0.6)); }
+        .aging-bar.bar-TBD { background: linear-gradient(to top, rgba(148, 163, 184, 1), rgba(148, 163, 184, 0.6)); }
+
         .team-cta {
             text-align: center;
             color: var(--text-muted);
@@ -2018,7 +2139,24 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        
+
+        .table-footer {
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-align: right;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
+        .table-header {
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
         /* Resizable columns */
         .resizable-header {
             position: relative;
@@ -2052,6 +2190,7 @@
         .col-priority { width: 70px; min-width: 60px; }
         .col-tags { width: 150px; min-width: 100px; max-width: 200px; }
         .col-customers { width: 150px; min-width: 100px; }
+        .col-csowner { width: 130px; min-width: 100px; }
         .priority-cell { text-align: center; font-weight: 500; color: var(--text-secondary); }
         .tags-cell {
             max-width: 200px;
@@ -2726,7 +2865,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v79</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v80</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -2971,6 +3110,90 @@
                     <p>• Tag: "Candidate" - Features tagged as Candidate</p>
                     <p><strong>Default order:</strong> Backlog Priority (lower = higher priority)</p>
                     <p>Click any column header to sort. Use "Reset to Backlog Priority" to restore default order.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers filter row -->
+        <div class="filter-row" id="filter-row-customers">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="customers-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyCustomersFilters()">
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="customers-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-customer-dropdown')">
+                    <span id="customers-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Category:</span>
+            <div class="filter-dropdown" id="customers-category-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-category-dropdown')">
+                    <span id="customers-category-display">All Categories</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-category-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="customers-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-state-dropdown')">
+                    <span id="customers-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="customers-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-priority-dropdown')">
+                    <span id="customers-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="customers-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-release-dropdown')">
+                    <span id="customers-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-release-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Aging:</span>
+            <div class="filter-dropdown" id="customers-aging-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-aging-dropdown')">
+                    <span id="customers-aging-display">All Ages</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-aging-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="customers-clear-filters-btn" onclick="clearAllCustomersFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('customers-info-panel')">ℹ️ Info</span>
+                <div class="info-panel" id="customers-info-panel">
+                    <p><strong>Customer Issues:</strong> Work items of type "Issue" with customer information.</p>
+                    <p><strong>Ticket Category:</strong> Enhancement Request, Bug, Task, or (Not Set).</p>
+                    <p><strong>CS Owner:</strong> Customer Success team member assigned to the issue.</p>
+                    <p><strong>Multi-Customer Items:</strong> Issues affecting multiple customers (semicolon-separated in the Customers field).</p>
                 </div>
             </div>
         </div>
@@ -3283,57 +3506,10 @@
         
         <!-- Customers View -->
         <div class="dashboard-view" id="view-customers">
-            <div class="filter-bar" id="customer-filters">
-                <div class="filter-group">
-                    <label>Team:</label>
-                    <select id="customer-team-filter" onchange="applyCustomerFilters()">
-                        <option value="all">All Teams</option>
-                        <option value="Frontend">Frontend</option>
-                        <option value="Backend">Backend</option>
-                        <option value="QA">QA</option>
-                        <option value="DevOps">DevOps</option>
-                        <option value="Analytics">Analytics</option>
-                        <option value="Govern">Govern</option>
-                        <option value="Customer Success">Customer Success</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>State:</label>
-                    <div class="multi-select-dropdown" id="customer-state-dropdown">
-                        <div class="multi-select-display" onclick="toggleCustomerStateDropdown()">
-                            <span id="customer-state-display">All States</span>
-                            <span class="dropdown-arrow">▼</span>
-                        </div>
-                        <div class="multi-select-options" id="customer-state-options">
-                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-state-select-all" onchange="toggleAllCustomerStates(this.checked)"> <strong>Select All</strong></label>
-                            <div class="checkbox-divider"></div>
-                            <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateCustomerStateFilter()"> New</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateCustomerStateFilter()"> Triaged</label>
-                            <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateCustomerStateFilter()"> To Do</label>
-                            <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateCustomerStateFilter()"> In Progress</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateCustomerStateFilter()"> Ready For Review</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateCustomerStateFilter()"> Done</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateCustomerStateFilter()"> Closed</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateCustomerStateFilter()"> Removed</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="calculation-definition" id="customers-definition">
-                <div class="definition-toggle" onclick="toggleDefinition('customers-definition')">
-                    <span>📖 How is customer impact tracked?</span>
-                    <span class="toggle-icon">▼</span>
-                </div>
-                <div class="definition-content" style="display: none;">
-                    <p><strong>Customer Work Items:</strong> Issues and Bugs with the "Customers" field populated.</p>
-                    <p><strong>Customer Count:</strong> Each unique value in the Customers field is counted separately.</p>
-                    <p><strong>Multi-Customer Items:</strong> Work items affecting multiple customers (comma-separated in the Customers field).</p>
-                    <p><strong>Resolution Time:</strong> Time from Created Date to Closed Date for resolved items.</p>
-                </div>
-            </div>
             <div class="stats-grid" id="customer-stats"></div>
-            <div class="insights-panel" id="customer-insights"></div>
-            <div class="charts-grid" id="customer-charts"></div>
+            <div class="insights-panel insights-horizontal" id="customer-insights"></div>
+            <div class="aging-histogram-section" id="customer-aging-histogram"></div>
+            <div class="table-container" id="customer-issues-table"></div>
         </div>
         
         <!-- Bugs View (renamed from Quality) -->

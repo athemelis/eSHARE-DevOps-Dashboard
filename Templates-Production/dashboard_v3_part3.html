@@ -1,0 +1,2929 @@
+<script>
+    // Executive View filter helper
+    function getFilteredExecItems() {
+        const teamFilter = document.getElementById('exec-team-filter')?.value || 'all';
+        const typeFilter = document.getElementById('exec-type-filter')?.value || 'all';
+        
+        let items = workItems;
+        
+        if (teamFilter !== 'all') {
+            items = items.filter(w => w.team === teamFilter);
+        }
+        
+        if (typeFilter !== 'all') {
+            items = items.filter(w => w.type === typeFilter);
+        }
+        
+        return items;
+    }
+    
+    function applyExecFilters() {
+        saveStateToStorage();
+        renderExecutiveView();
+    }
+    
+    // Executive View
+    function renderExecutiveView() {
+        const stats = document.getElementById('exec-stats');
+        const insights = document.getElementById('exec-insights');
+        const charts = document.getElementById('exec-charts');
+        
+        const filteredItems = getFilteredExecItems();
+        const teamFilter = document.getElementById('exec-team-filter')?.value || 'all';
+        const typeFilter = document.getElementById('exec-type-filter')?.value || 'all';
+        const isFiltered = teamFilter !== 'all' || typeFilter !== 'all';
+        
+        // Calculate metrics
+        const total = filteredItems.length;
+        const done = filteredItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+        const inProgress = filteredItems.filter(w => w.state === 'In Progress').length;
+        const bugs = filteredItems.filter(w => w.type === 'Bug');
+        const openBugs = bugs.filter(b => b.state !== 'Done' && b.state !== 'Closed' && b.state !== 'Removed');
+        const blocked = filteredItems.filter(w => (w.tags || '').toLowerCase().includes('blocked'));
+        const unassigned = filteredItems.filter(w => !w.assignedTo && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+        
+        const filterNote = isFiltered ? ' (filtered)' : '';
+        
+        stats.innerHTML = `
+            <div class="stat-card clickable" onclick="drilldownStat('total')">
+                <div class="stat-label">Total Work Items${filterNote}</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${total}</div>
+                <div class="stat-subtitle">${done} completed (${total > 0 ? Math.round(done/total*100) : 0}%)</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('inProgress')">
+                <div class="stat-label">In Progress</div>
+                <div class="stat-value" style="color: var(--accent-blue)">${inProgress}</div>
+                <div class="stat-subtitle">Active work items</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('openBugs')">
+                <div class="stat-label">Open Bugs</div>
+                <div class="stat-value" style="color: var(--accent-red)">${openBugs.length}</div>
+                <div class="stat-subtitle">${bugs.length} total bugs</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('blocked')">
+                <div class="stat-label">Blocked Items</div>
+                <div class="stat-value" style="color: var(--accent-orange)">${blocked.length}</div>
+                <div class="stat-subtitle">Need attention</div>
+            </div>
+            <div class="stat-card clickable" onclick="drilldownStat('unassigned')">
+                <div class="stat-label">Unassigned</div>
+                <div class="stat-value" style="color: var(--text-muted)">${unassigned.length}</div>
+                <div class="stat-subtitle">Active items without owner</div>
+            </div>
+        `;
+        
+        // Key insights
+        const novemberItems = filteredItems.filter(w => (w.iterationPath || '').includes('CY2025Q4-Nov'));
+        const novemberDone = novemberItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+        const novemberPct = novemberItems.length > 0 ? Math.round(novemberDone / novemberItems.length * 100) : 0;
+        const novemberRemaining = novemberItems.length - novemberDone;
+        
+        // Find most loaded person
+        const assigneeCounts = countBy(filteredItems.filter(w => w.assignedTo && w.state !== 'Done' && w.state !== 'Closed'), 'assignedTo');
+        const topAssignee = Object.entries(assigneeCounts).sort((a, b) => b[1] - a[1])[0];
+        
+        insights.innerHTML = `
+            <div class="insights-title">⚡ Key Insights${filterNote}</div>
+            ${novemberItems.length > 0 ? `
+            <div class="insight-item ${novemberPct < 60 ? 'warning' : ''}">
+                <span class="insight-icon">${novemberPct < 60 ? '⚠️' : '📊'}</span> 
+                November completion at ${novemberPct}% (${novemberRemaining} items remaining of ${novemberItems.length})
+            </div>
+            ` : ''}
+            <div class="insight-item critical"><span class="insight-icon">🔴</span> ${openBugs.length} open bugs need resolution</div>
+            <div class="insight-item warning"><span class="insight-icon">👤</span> ${unassigned.length} active items without owners</div>
+            <div class="insight-item warning"><span class="insight-icon">🚫</span> ${blocked.length} items are blocked</div>
+            ${topAssignee ? `<div class="insight-item info"><span class="insight-icon">📋</span> ${topAssignee[0]} has ${topAssignee[1]} active items assigned</div>` : ''}
+        `;
+        
+        // Charts - sorted by value
+        const byType = sortObjectByValue(countBy(filteredItems, 'type'));
+        const byState = sortObjectByValue(countBy(filteredItems, 'state'));
+        const byTeam = sortObjectByValue(countBy(filteredItems.filter(w => w.team && w.team !== 'eShare'), 'team'));
+        
+        // Get all unique values for filters
+        const allTypes = Object.keys(byType);
+        const allStates = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allTeams = Object.keys(byTeam);
+        
+        // Apply chart filters
+        const chartFilteredItems = getExecChartFilteredItems(filteredItems);
+        const filteredByType = sortObjectByValue(countBy(chartFilteredItems, 'type'));
+        const filteredByState = sortObjectByValue(countBy(chartFilteredItems, 'state'));
+        const filteredByTeam = sortObjectByValue(countBy(chartFilteredItems.filter(w => w.team && w.team !== 'eShare'), 'team'));
+        
+        charts.innerHTML = `
+            <div class="chart-card">
+                <div class="chart-title">Work Items by Type</div>
+                <div class="chart-container"><canvas id="exec-type-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="exec-chart-type-dropdown">
+                        <div class="multi-select-display" onclick="toggleExecFilter('type')">
+                            <span id="exec-chart-type-display">All Types</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="exec-chart-type-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="exec-chart-type-select-all" onchange="toggleAllExecFilter('type', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allTypes.map(t => `<label class="checkbox-option"><input type="checkbox" value="${t}" onchange="updateExecFilter('type')"> ${t}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Work Items by State</div>
+                <div class="chart-container"><canvas id="exec-state-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="exec-chart-state-dropdown">
+                        <div class="multi-select-display" onclick="toggleExecFilter('state')">
+                            <span id="exec-chart-state-display">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="exec-chart-state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="exec-chart-state-select-all" onchange="toggleAllExecFilter('state', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allStates.map(s => `<label class="checkbox-option"><input type="checkbox" value="${s}" onchange="updateExecFilter('state')"> ${s}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Work Items by Team</div>
+                <div class="chart-container"><canvas id="exec-team-chart"></canvas></div>
+                <div class="chart-filter">
+                    <div class="multi-select-dropdown" id="exec-chart-team-dropdown">
+                        <div class="multi-select-display" onclick="toggleExecFilter('team')">
+                            <span id="exec-chart-team-display">All Teams</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="exec-chart-team-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="exec-chart-team-select-all" onchange="toggleAllExecFilter('team', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            ${allTeams.map(t => `<label class="checkbox-option"><input type="checkbox" value="${t}" onchange="updateExecFilter('team')"> ${t}</label>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Restore filter states after HTML rebuild
+        restoreExecFilterStates();
+        
+        setTimeout(() => {
+            createClickableChart('exec-type-chart', 'doughnut', filteredByType, 'type', null, chartFilteredItems);
+            createClickableChart('exec-state-chart', 'doughnut', filteredByState, 'state', colors.states, chartFilteredItems);
+            createClickableChart('exec-team-chart', 'bar', filteredByTeam, 'team', colors.teams, chartFilteredItems);
+        }, 50);
+    }
+    
+    function drilldownStat(statType) {
+        const filteredItems = getFilteredExecItems();
+        let items, title;
+        
+        switch(statType) {
+            case 'total':
+                items = filteredItems;
+                title = 'All Work Items';
+                break;
+            case 'inProgress':
+                items = filteredItems.filter(w => w.state === 'In Progress');
+                title = 'In Progress Items';
+                break;
+            case 'openBugs':
+                items = filteredItems.filter(w => w.type === 'Bug' && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+                title = 'Open Bugs';
+                break;
+            case 'blocked':
+                items = filteredItems.filter(w => (w.tags || '').toLowerCase().includes('blocked'));
+                title = 'Blocked Items';
+                break;
+            case 'unassigned':
+                items = filteredItems.filter(w => !w.assignedTo && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+                title = 'Unassigned Active Items';
+                break;
+            default:
+                return;
+        }
+        
+        showDrilldown(title, items, getSliceFields(items));
+    }
+    
+    // Team Lead View
+    function renderTeamLeadView() {
+        const stats = document.getElementById('team-stats');
+        const insights = document.getElementById('team-insights');
+        const charts = document.getElementById('team-charts');
+        
+        const teams = ['Frontend', 'Backend', 'QA', 'DevOps', 'Analytics', 'Govern', 'SCG', 'Staff'];
+        
+        // Team leads mapping (based on Org Chart)
+        const teamLeads = {
+            'Frontend': 'Andreas Davros',
+            'Backend': 'Thanos Terzis',
+            'QA': 'Kostas Tzoulas',
+            'DevOps': 'Christos Sidiropoulos',
+            'Analytics': 'Maya Dahan',
+            'Govern': 'Maya Dahan',
+            'SCG': 'Alexandros Papadakis',
+            'Staff': 'John Paglierani',
+            'Security & Compliance': 'Chakra Bokissam',
+            'Customer Success': ''
+        };
+        
+        // Get time-filtered items, then apply dropdown filters
+        const timeFilteredItems = getActiveWorkItemsForPeriod(workItems, selectedTimePeriod);
+        const filteredItems = getTeamLeadChartFilteredItems(timeFilteredItems);
+        
+        // Calculate stats based on fully filtered items
+        const teamStats = teams.map(team => {
+            const teamItems = filteredItems.filter(w => w.team === team);
+            
+            // Completed = items in Done/Closed state
+            const completed = teamItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+            const active = teamItems.filter(w => w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed').length;
+            const total = teamItems.length;
+            const pct = total > 0 ? Math.round(completed / total * 100) : 0;
+            
+            // Calculate effort from filtered items
+            const effort = teamItems.reduce((sum, w) => sum + (w.effort || 0), 0);
+            
+            // Count by type from filtered items
+            const byType = {};
+            teamItems.forEach(w => {
+                byType[w.type] = (byType[w.type] || 0) + 1;
+            });
+            
+            return { team, total, completed, active, pct, effort, byType, lead: teamLeads[team] };
+        });
+        
+        const periodLabel = {
+            'all': 'All Time',
+            'quarter': 'This Quarter',
+            'lastmonth': 'Last Month',
+            'month': 'This Month',
+            'lastweek': 'Last Week',
+            'week': 'This Week'
+        }[selectedTimePeriod];
+        
+        // Calculate "All Teams" totals
+        const allTeamsTotal = teamStats.reduce((sum, t) => sum + t.total, 0);
+        const allTeamsCompleted = teamStats.reduce((sum, t) => sum + t.completed, 0);
+        const allTeamsActive = teamStats.reduce((sum, t) => sum + t.active, 0);
+        const allTeamsEffort = teamStats.reduce((sum, t) => sum + t.effort, 0);
+        const allTeamsPct = allTeamsTotal > 0 ? Math.round(allTeamsCompleted / allTeamsTotal * 100) : 0;
+        
+        // Aggregate type breakdown for All Teams
+        const allTeamsByType = {};
+        teamStats.forEach(t => {
+            Object.entries(t.byType).forEach(([type, count]) => {
+                allTeamsByType[type] = (allTeamsByType[type] || 0) + count;
+            });
+        });
+        const allTeamsTypeBreakdown = Object.entries(allTeamsByType)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+            .join(', ');
+        
+        // Get lead photos from leadPhotos object (defined in part4)
+        const allTeamsCard = `
+            <div class="stat-card team-stat-card clickable all-teams-card" onclick="expandTeamDetails('All Teams')">
+                <div class="stat-label">All Teams</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${allTeamsTotal}</div>
+                <div class="stat-subtitle">${allTeamsCompleted} done • ${allTeamsActive} active</div>
+                <div class="stat-subtitle" style="font-size: 0.65rem; color: var(--text-muted);">${allTeamsTypeBreakdown}</div>
+            </div>
+        `;
+        
+        stats.innerHTML = allTeamsCard + teamStats.map(t => {
+            const leadPhoto = typeof leadPhotos !== 'undefined' && leadPhotos[t.lead] ? 
+                `<img src="data:image/jpeg;base64,${leadPhotos[t.lead]}" class="team-lead-photo" alt="${t.lead}">` : 
+                '';
+            const typeBreakdown = Object.entries(t.byType)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+                .join(', ');
+            
+            return `
+                <div class="stat-card team-stat-card clickable" onclick="expandTeamDetails('${t.team}')">
+                    <div class="stat-label">${t.team}</div>
+                    <div class="stat-value" style="color: ${colors.teams[t.team] || 'var(--accent-cyan)'}">${t.total}</div>
+                    <div class="stat-subtitle">${t.completed} done • ${t.active} active</div>
+                    <div class="stat-subtitle" style="font-size: 0.65rem; color: var(--text-muted);">${typeBreakdown}</div>
+                    ${t.lead ? `
+                        <div class="team-lead-info">
+                            ${leadPhoto}
+                            <span class="team-lead-name">${t.lead}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+        
+        // Key insights for Team Lead (use filtered items)
+        const mostLoadedTeam = teamStats.sort((a, b) => b.active - a.active)[0];
+        const lowestCompletion = [...teamStats].sort((a, b) => a.pct - b.pct)[0];
+        
+        // Find individual with most items (from filtered items)
+        const activeFilteredItems = filteredItems.filter(w => w.assignedTo && w.state !== 'Done' && w.state !== 'Closed' && w.state !== 'Removed');
+        const byAssignee = countBy(activeFilteredItems, 'assignedTo');
+        const sortedAssignees = Object.entries(byAssignee).sort((a, b) => b[1] - a[1]);
+        const topAssignees = sortedAssignees.slice(0, 3);
+        
+        // Items completed this week (from filtered items based on period)
+        const completedInPeriod = filteredItems.filter(w => w.state === 'Done' || w.state === 'Closed').length;
+        
+        insights.innerHTML = `
+            <div class="insights-title">⚡ Team Insights (${periodLabel})</div>
+            <div class="insights-content">
+                <div class="insight-item info"><span class="insight-icon">📈</span> ${completedInPeriod} items completed in ${periodLabel.toLowerCase()}</div>
+                <div class="insight-item warning"><span class="insight-icon">⚠️</span> ${mostLoadedTeam.team} has the most active work (${mostLoadedTeam.active} items)</div>
+                <div class="insight-item ${lowestCompletion.pct < 50 ? 'critical' : 'warning'}">
+                    <span class="insight-icon">${lowestCompletion.pct < 50 ? '🔴' : '📊'}</span> 
+                    ${lowestCompletion.team} has lowest completion rate (${lowestCompletion.pct}%)
+                </div>
+                ${topAssignees.map((a, i) => `
+                    <div class="insight-item ${a[1] > 100 ? 'critical' : a[1] > 50 ? 'warning' : 'info'}">
+                        <span class="insight-icon">${a[1] > 100 ? '🚨' : '👤'}</span> 
+                        ${a[0]} has ${a[1]} active items ${a[1] > 100 ? '(overloaded!)' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        charts.innerHTML = `
+            <div class="chart-card">
+                <div class="chart-title">Team Completion Rates (${periodLabel})</div>
+                <div class="chart-container"><canvas id="team-completion-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Active Work by Team (${periodLabel})</div>
+                <div class="chart-container"><canvas id="team-active-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Effort by Team (${periodLabel})</div>
+                <div class="chart-container"><canvas id="team-effort-chart"></canvas></div>
+            </div>
+        `;
+        
+        // Get unique values for distribution chart filters (from all items for filter options)
+        const allTypes = [...new Set(workItems.map(w => w.type))].sort();
+        const allStatesForTeam = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allAssignees = [...new Set(workItems.map(w => w.assignedTo || '(Unassigned)'))].sort();
+        const allPriorities = [...new Set(workItems.map(w => String(w.priority || '(Not Set)')))].sort();
+        const allIterations = [...new Set(workItems.map(w => w.iterationPath || '(Not Set)'))].sort();
+        
+        // Use the same filtered items for distribution charts
+        const chartFilteredItems = filteredItems;
+        
+        // Add distribution charts section
+        const iterationOptionsHtml = allIterations.slice(0, 15).map(function(i) { const label = i.includes("\\") ? i.split("\\").pop() : i; return '<label class="checkbox-option"><input type="checkbox" value="' + i + '" onchange="updateTeamLeadChartFilter(\'iteration\')"> ' + label + '</label>'; }).join("");
+        const distributionChartsHtml = `
+            <div class="section-divider" style="margin-top: 2rem;">
+                <h3>Work Item Distribution</h3>
+            </div>
+            <div class="charts-grid" id="team-distribution-charts">
+                <div class="chart-card">
+                    <div class="chart-title">Items by Type</div>
+                    <div class="chart-container"><canvas id="teamlead-type-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-type-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('type')">
+                                <span id="teamlead-chart-type-display">All Types</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-type-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-type-select-all" onchange="toggleAllTeamLeadChartFilter('type', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allTypes.map(t => `<label class="checkbox-option"><input type="checkbox" value="${t}" onchange="updateTeamLeadChartFilter('type')"> ${t}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by State</div>
+                    <div class="chart-container"><canvas id="teamlead-state-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-state-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('state')">
+                                <span id="teamlead-chart-state-display">All States</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-state-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-state-select-all" onchange="toggleAllTeamLeadChartFilter('state', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allStatesForTeam.map(s => `<label class="checkbox-option"><input type="checkbox" value="${s}" onchange="updateTeamLeadChartFilter('state')"> ${s}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by Assignee</div>
+                    <div class="chart-container"><canvas id="teamlead-assignee-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-assignee-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('assignee')">
+                                <span id="teamlead-chart-assignee-display">All Assignees</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-assignee-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-assignee-select-all" onchange="toggleAllTeamLeadChartFilter('assignee', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allAssignees.slice(0, 20).map(a => `<label class="checkbox-option"><input type="checkbox" value="${a}" onchange="updateTeamLeadChartFilter('assignee')"> ${a}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by Priority</div>
+                    <div class="chart-container"><canvas id="teamlead-priority-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-priority-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('priority')">
+                                <span id="teamlead-chart-priority-display">All Priorities</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-priority-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-priority-select-all" onchange="toggleAllTeamLeadChartFilter('priority', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${allPriorities.map(p => `<label class="checkbox-option"><input type="checkbox" value="${p}" onchange="updateTeamLeadChartFilter('priority')"> ${p}</label>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Items by Iteration</div>
+                    <div class="chart-container"><canvas id="teamlead-iteration-chart"></canvas></div>
+                    <div class="chart-filter">
+                        <div class="multi-select-dropdown" id="teamlead-chart-iteration-dropdown">
+                            <div class="multi-select-display" onclick="toggleTeamLeadChartFilter('iteration')">
+                                <span id="teamlead-chart-iteration-display">All Iterations</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="teamlead-chart-iteration-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="teamlead-chart-iteration-select-all" onchange="toggleAllTeamLeadChartFilter('iteration', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                ${iterationOptionsHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('team-distribution-section').innerHTML = distributionChartsHtml;
+        
+        // Restore filter states
+        restoreTeamLeadChartFilterStates();
+        
+        setTimeout(() => {
+            // Sort by completion rate for display
+            const sortedByCompletion = [...teamStats].sort((a, b) => b.pct - a.pct);
+            
+            createChart('team-completion-chart', 'bar', {
+                labels: sortedByCompletion.map(t => t.team),
+                datasets: [{
+                    label: 'Completion %',
+                    data: sortedByCompletion.map(t => t.pct),
+                    backgroundColor: sortedByCompletion.map(t => colors.teams[t.team] || colors.primary[0])
+                }]
+            }, {
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: '#334155' }, 
+                        max: 100,
+                        title: { display: true, text: 'Completion %', color: '#94a3b8' }
+                    }
+                }
+            });
+            
+            const sortedByActive = [...teamStats].sort((a, b) => b.active - a.active);
+            createChart('team-active-chart', 'bar', {
+                labels: sortedByActive.map(t => t.team),
+                datasets: [{
+                    label: 'Active Items',
+                    data: sortedByActive.map(t => t.active),
+                    backgroundColor: sortedByActive.map(t => colors.teams[t.team] || colors.primary[0])
+                }]
+            }, {
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: '#334155' },
+                        title: { display: true, text: 'Count', color: '#94a3b8' }
+                    }
+                }
+            });
+            
+            const sortedByEffort = [...teamStats].sort((a, b) => b.effort - a.effort);
+            createChart('team-effort-chart', 'bar', {
+                labels: sortedByEffort.map(t => t.team),
+                datasets: [{
+                    label: 'Effort (days)',
+                    data: sortedByEffort.map(t => t.effort.toFixed(1)),
+                    backgroundColor: sortedByEffort.map(t => colors.teams[t.team] || colors.primary[0])
+                }]
+            }, {
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                    y: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: '#334155' },
+                        title: { display: true, text: 'Days', color: '#94a3b8' }
+                    }
+                }
+            });
+            
+            // Distribution charts
+            const byType = sortObjectByValue(countBy(chartFilteredItems, 'type'));
+            createChart('teamlead-type-chart', 'doughnut', {
+                labels: Object.keys(byType),
+                datasets: [{ data: Object.values(byType), backgroundColor: colors.primary }]
+            });
+            
+            const byState = sortObjectByValue(countBy(chartFilteredItems, 'state'));
+            createChart('teamlead-state-chart', 'doughnut', {
+                labels: Object.keys(byState),
+                datasets: [{ data: Object.values(byState), backgroundColor: Object.keys(byState).map(s => colors.states[s] || colors.primary[0]) }]
+            });
+            
+            const byAssignee = sortObjectByValue(countBy(chartFilteredItems.filter(w => w.assignedTo), 'assignedTo'));
+            const topAssigneesChart = Object.fromEntries(Object.entries(byAssignee).slice(0, 10));
+            createChart('teamlead-assignee-chart', 'doughnut', {
+                labels: Object.keys(topAssigneesChart),
+                datasets: [{ data: Object.values(topAssigneesChart), backgroundColor: colors.primary }]
+            });
+            
+            const byPriority = sortObjectByValue(countBy(chartFilteredItems, 'priority'));
+            createChart('teamlead-priority-chart', 'doughnut', {
+                labels: Object.keys(byPriority).map(p => p ? `Priority ${p}` : '(Not Set)'),
+                datasets: [{ data: Object.values(byPriority), backgroundColor: [colors.priority['1'], colors.priority['2'], colors.priority['3'], colors.priority['4'], '#64748b'] }]
+            });
+            
+            const byIteration = sortObjectByValue(countBy(chartFilteredItems, 'iterationPath'));
+            const topIterations = Object.fromEntries(Object.entries(byIteration).slice(0, 8));
+            const iterationLabels = Object.keys(topIterations).map(i => {
+                if (!i) return '(Not Set)';
+                const parts = i.split('\\');
+                return parts[parts.length - 1] || i;
+            });
+            createChart('teamlead-iteration-chart', 'doughnut', {
+                labels: iterationLabels,
+                datasets: [{ data: Object.values(topIterations), backgroundColor: colors.primary }]
+            });
+        }, 50);
+    }
+    
+    function drilldownTeam(team) {
+        const items = workItems.filter(w => w.team === team);
+        showDrilldown(`Team: ${team}`, items, getSliceFields(items));
+    }
+    
+    // ==================== CUSTOMERS VIEW (Issues Only) ====================
+
+    // Customers View filter state
+    let customersFilters = {
+        search: '',
+        customers: [],
+        categories: [],
+        states: [],
+        priorities: [],
+        releases: [],
+        aging: []
+    };
+
+    // Customers View sort state
+    let customersSortState = {
+        column: 'id',
+        direction: 'desc'
+    };
+
+    // Aging buckets in display order
+    const AGING_BUCKETS = ['1 day', '1 week', '2 weeks', '4 weeks', 'Older', 'TBD'];
+
+    // Calculate aging bucket for an issue (based on DAX logic)
+    function calculateAgingBucket(issue) {
+        const state = issue.state;
+        const createdDate = issue.createdDate;
+        const closedDate = issue.closedDate;
+
+        // Check for null/missing values
+        const hasError = !state || !createdDate ||
+            ((state === 'Closed' || state === 'Done') && !closedDate);
+
+        if (hasError) return 'TBD';
+
+        // Calculate age in days
+        let ageDays;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (state === 'New' || state === 'To Do' || state === 'In Progress' || state === 'Triaged' || state === 'Ready For Review') {
+            // Open states: days since created
+            const created = new Date(createdDate);
+            ageDays = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+        } else if (state === 'Closed' || state === 'Done') {
+            // Closed states: days from created to closed
+            const created = new Date(createdDate);
+            const closed = new Date(closedDate);
+            ageDays = Math.floor((closed - created) / (1000 * 60 * 60 * 24));
+        } else {
+            // Unexpected state (Removed, etc.)
+            return 'TBD';
+        }
+
+        // Return the appropriate bucket
+        if (ageDays <= 1) return '1 day';
+        if (ageDays <= 7) return '1 week';
+        if (ageDays <= 14) return '2 weeks';
+        if (ageDays <= 28) return '4 weeks';
+        return 'Older';
+    }
+
+    // Calculate age in days for sorting
+    function calculateAgeDays(issue) {
+        const state = issue.state;
+        const createdDate = issue.createdDate;
+        const closedDate = issue.closedDate;
+
+        if (!state || !createdDate) return -1;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (state === 'Closed' || state === 'Done') {
+            if (!closedDate) return -1;
+            const created = new Date(createdDate);
+            const closed = new Date(closedDate);
+            return Math.floor((closed - created) / (1000 * 60 * 60 * 24));
+        } else if (state === 'Removed') {
+            return -1;
+        } else {
+            const created = new Date(createdDate);
+            return Math.floor((today - created) / (1000 * 60 * 60 * 24));
+        }
+    }
+
+    // Get all Issues (the base dataset for Customers view)
+    function getAllIssues() {
+        return workItems.filter(w => w.type === 'Issue');
+    }
+
+    // Get filtered Issues based on current filter state
+    function getFilteredIssues() {
+        let issues = getAllIssues();
+
+        // Apply search filter
+        if (customersFilters.search) {
+            const searchLower = customersFilters.search.toLowerCase();
+            issues = issues.filter(i => {
+                const titleMatch = (i.title || '').toLowerCase().includes(searchLower);
+                const idMatch = String(i.id).includes(customersFilters.search);
+                return titleMatch || idMatch;
+            });
+        }
+
+        // Apply customer filter
+        if (customersFilters.customers.length > 0) {
+            issues = issues.filter(i => {
+                if (!i.customers) return customersFilters.customers.includes('(No Customer)');
+                const itemCustomers = i.customers.split(';').map(c => c.trim());
+                return itemCustomers.some(c => customersFilters.customers.includes(c));
+            });
+        }
+
+        // Apply category filter
+        if (customersFilters.categories.length > 0) {
+            issues = issues.filter(i => {
+                const category = i.ticketCategory || '(Not Set)';
+                return customersFilters.categories.includes(category);
+            });
+        }
+
+        // Apply state filter
+        if (customersFilters.states.length > 0) {
+            issues = issues.filter(i => customersFilters.states.includes(i.state));
+        }
+
+        // Apply priority filter
+        if (customersFilters.priorities.length > 0) {
+            issues = issues.filter(i => {
+                const priority = i.priority ? 'P' + i.priority : '(No Priority)';
+                return customersFilters.priorities.includes(priority);
+            });
+        }
+
+        // Apply release filter
+        if (customersFilters.releases.length > 0) {
+            issues = issues.filter(i => {
+                const release = i.releaseVersion || '(No Release)';
+                return customersFilters.releases.includes(release);
+            });
+        }
+
+        // Apply aging filter
+        if (customersFilters.aging.length > 0) {
+            issues = issues.filter(i => {
+                const aging = calculateAgingBucket(i);
+                return customersFilters.aging.includes(aging);
+            });
+        }
+
+        return issues;
+    }
+
+    // Check if any filters are active
+    function hasActiveCustomersFilters() {
+        return customersFilters.search !== '' ||
+               customersFilters.customers.length > 0 ||
+               customersFilters.categories.length > 0 ||
+               customersFilters.states.length > 0 ||
+               customersFilters.priorities.length > 0 ||
+               customersFilters.releases.length > 0 ||
+               customersFilters.aging.length > 0;
+    }
+
+    // Apply filters and re-render
+    function applyCustomersFilters() {
+        customersFilters.search = document.getElementById('customers-search-input')?.value || '';
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Clear all filters
+    function clearAllCustomersFilters() {
+        customersFilters = {
+            search: '',
+            customers: [],
+            categories: [],
+            states: [],
+            priorities: [],
+            releases: [],
+            aging: []
+        };
+        document.getElementById('customers-search-input').value = '';
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+    }
+
+    // Update clear button visibility
+    function updateCustomersClearButton() {
+        const clearBtn = document.getElementById('customers-clear-filters-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !hasActiveCustomersFilters());
+        }
+    }
+
+    // Filter dropdown search helper
+    function filterCustomersDropdownOptions(inputEl, menuId) {
+        const searchValue = inputEl.value.toLowerCase();
+        const options = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all)`);
+        options.forEach(opt => {
+            const label = opt.textContent.toLowerCase();
+            opt.style.display = label.includes(searchValue) ? '' : 'none';
+        });
+    }
+
+    // Build dropdown HTML with search, options, and action buttons
+    function buildCustomersDropdownHtml(filterType, items, selectedItems) {
+        const menuId = getCustomersMenuId(filterType);
+        const selectAllId = getCustomersSelectAllId(filterType);
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search..." oninput="filterCustomersDropdownOptions(this, '${menuId}')" onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${menuId}-options">
+        `;
+
+        items.forEach(item => {
+            const isChecked = selectedItems.includes(item);
+            const escapedItem = item.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${item.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${escapedItem}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('${filterType}')">
+                    <span class="option-label">${item}</span>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllCustomersFilter('${filterType}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearCustomersFilter('${filterType}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    // Build release dropdown HTML with version + date (like Releases dashboard)
+    function buildCustomersReleaseDropdownHtml(releaseInfo, releases, noReleaseCount, selectedItems) {
+        const menuId = 'customers-release-menu';
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search..." oninput="filterCustomersDropdownOptions(this, '${menuId}')" onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${menuId}-options">
+        `;
+
+        // (No Release) option at the TOP
+        if (noReleaseCount > 0) {
+            const isChecked = selectedItems.includes('(No Release)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="no release" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('releases')">
+                    <span class="option-label">(No Release)</span>
+                    <span class="option-meta">${noReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // Regular releases with dates
+        releases.forEach(r => {
+            const info = releaseInfo[r];
+            const isChecked = selectedItems.includes(r);
+            let dateDisplay;
+            if (info.dates.size === 1) {
+                dateDisplay = [...info.dates][0];
+            } else if (info.dates.size > 1) {
+                dateDisplay = 'Multiple dates';
+            } else {
+                dateDisplay = 'No date';
+            }
+
+            const escapedRelease = r.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${r.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${escapedRelease}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('releases')">
+                    <span class="option-label">${r}</span>
+                    <span class="option-meta">${dateDisplay}</span>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllCustomersFilter('releases', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearCustomersFilter('releases', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    // Helper to get menu ID
+    function getCustomersMenuId(filterType) {
+        const menuIds = {
+            customers: 'customers-customer-menu',
+            categories: 'customers-category-menu',
+            states: 'customers-state-menu',
+            priorities: 'customers-priority-menu',
+            releases: 'customers-release-menu',
+            aging: 'customers-aging-menu'
+        };
+        return menuIds[filterType];
+    }
+
+    // Helper to get select all checkbox ID
+    function getCustomersSelectAllId(filterType) {
+        const ids = {
+            customers: 'customers-customer-select-all',
+            categories: 'customers-category-select-all',
+            states: 'customers-state-select-all',
+            priorities: 'customers-priority-select-all',
+            releases: 'customers-release-select-all',
+            aging: 'customers-aging-select-all'
+        };
+        return ids[filterType];
+    }
+
+    // Helper to get display element ID
+    function getCustomersDisplayId(filterType) {
+        const ids = {
+            customers: 'customers-customer-display',
+            categories: 'customers-category-display',
+            states: 'customers-state-display',
+            priorities: 'customers-priority-display',
+            releases: 'customers-release-display',
+            aging: 'customers-aging-display'
+        };
+        return ids[filterType];
+    }
+
+    // Populate filter dropdowns
+    function populateCustomersFilterDropdowns() {
+        const issues = getAllIssues();
+
+        // Get unique customers
+        const customersSet = new Set();
+        issues.forEach(i => {
+            if (i.customers) {
+                i.customers.split(';').forEach(c => {
+                    const trimmed = c.trim();
+                    if (trimmed) customersSet.add(trimmed);
+                });
+            } else {
+                customersSet.add('(No Customer)');
+            }
+        });
+        const allCustomers = [...customersSet].sort((a, b) => {
+            if (a === '(No Customer)') return 1;
+            if (b === '(No Customer)') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique categories
+        const categoriesSet = new Set();
+        issues.forEach(i => {
+            categoriesSet.add(i.ticketCategory || '(Not Set)');
+        });
+        const allCategories = [...categoriesSet].sort((a, b) => {
+            if (a === '(Not Set)') return 1;
+            if (b === '(Not Set)') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique states
+        const statesSet = new Set();
+        issues.forEach(i => {
+            if (i.state) statesSet.add(i.state);
+        });
+        const stateOrder = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allStates = [...statesSet].sort((a, b) => {
+            const aIdx = stateOrder.indexOf(a);
+            const bIdx = stateOrder.indexOf(b);
+            if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+            if (aIdx === -1) return 1;
+            if (bIdx === -1) return -1;
+            return aIdx - bIdx;
+        });
+
+        // Get unique priorities
+        const prioritiesSet = new Set();
+        issues.forEach(i => {
+            prioritiesSet.add(i.priority ? 'P' + i.priority : '(No Priority)');
+        });
+        const allPriorities = [...prioritiesSet].sort((a, b) => {
+            if (a === '(No Priority)') return 1;
+            if (b === '(No Priority)') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique releases with their target dates
+        const releaseInfo = {};
+        let noReleaseCount = 0;
+        issues.forEach(i => {
+            if (!i.releaseVersion) {
+                noReleaseCount++;
+                return;
+            }
+            const rv = i.releaseVersion;
+            if (!releaseInfo[rv]) {
+                releaseInfo[rv] = { dates: new Set(), count: 0 };
+            }
+            if (i.targetDate) {
+                releaseInfo[rv].dates.add(i.targetDate.split(' ')[0]); // Just the date part
+            }
+            releaseInfo[rv].count++;
+        });
+        const allReleases = Object.keys(releaseInfo).sort();
+
+        // Populate dropdowns
+        const customerMenu = document.getElementById('customers-customer-menu');
+        if (customerMenu) {
+            customerMenu.innerHTML = buildCustomersDropdownHtml('customers', allCustomers, customersFilters.customers);
+        }
+
+        const categoryMenu = document.getElementById('customers-category-menu');
+        if (categoryMenu) {
+            categoryMenu.innerHTML = buildCustomersDropdownHtml('categories', allCategories, customersFilters.categories);
+        }
+
+        const stateMenu = document.getElementById('customers-state-menu');
+        if (stateMenu) {
+            stateMenu.innerHTML = buildCustomersDropdownHtml('states', allStates, customersFilters.states);
+        }
+
+        const priorityMenu = document.getElementById('customers-priority-menu');
+        if (priorityMenu) {
+            priorityMenu.innerHTML = buildCustomersDropdownHtml('priorities', allPriorities, customersFilters.priorities);
+        }
+
+        // Build release dropdown with dates (special handling)
+        const releaseMenu = document.getElementById('customers-release-menu');
+        if (releaseMenu) {
+            releaseMenu.innerHTML = buildCustomersReleaseDropdownHtml(releaseInfo, allReleases, noReleaseCount, customersFilters.releases);
+        }
+
+        // Aging filter dropdown - use AGING_BUCKETS constant for consistent order
+        const agingMenu = document.getElementById('customers-aging-menu');
+        if (agingMenu) {
+            agingMenu.innerHTML = buildCustomersDropdownHtml('aging', AGING_BUCKETS, customersFilters.aging);
+        }
+
+        // Update display text for all filters
+        ['customers', 'categories', 'states', 'priorities', 'releases', 'aging'].forEach(ft => {
+            updateCustomersFilterDisplay(ft);
+        });
+    }
+
+    // Select all in a filter
+    function selectAllCustomersFilter(filterType, event) {
+        event.stopPropagation();
+        const menuId = getCustomersMenuId(filterType);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = true);
+        customersFilters[filterType] = Array.from(checkboxes).map(cb => cb.value);
+        updateCustomersFilterDisplay(filterType);
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Clear a filter
+    function clearCustomersFilter(filterType, event) {
+        event.stopPropagation();
+        const menuId = getCustomersMenuId(filterType);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+        customersFilters[filterType] = [];
+        updateCustomersFilterDisplay(filterType);
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Update filter when checkbox changes
+    function updateCustomersFilter(filterType) {
+        const menuId = getCustomersMenuId(filterType);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        customersFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        updateCustomersFilterDisplay(filterType);
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Update filter display text
+    function updateCustomersFilterDisplay(filterType) {
+        const displayId = getCustomersDisplayId(filterType);
+        const menuId = getCustomersMenuId(filterType);
+        const allLabels = {
+            customers: 'All Customers',
+            categories: 'All Categories',
+            states: 'All States',
+            priorities: 'All Priorities',
+            releases: 'All Releases',
+            aging: 'All Ages'
+        };
+
+        const displayEl = document.getElementById(displayId);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        const selected = customersFilters[filterType];
+
+        if (displayEl) {
+            if (selected.length === 0 || selected.length === checkboxes.length) {
+                displayEl.textContent = allLabels[filterType];
+            } else if (selected.length === 1) {
+                displayEl.textContent = selected[0];
+            } else {
+                displayEl.textContent = `${selected.length} selected`;
+            }
+        }
+    }
+
+    // Filter by card click (Ticket Category)
+    function filterCustomersByCategory(category) {
+        // Clear all filters first, then set category
+        customersFilters = {
+            search: '',
+            customers: [],
+            categories: category ? [category] : [],
+            states: [],
+            priorities: [],
+            releases: [],
+            aging: []
+        };
+        document.getElementById('customers-search-input').value = '';
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+    }
+
+    // Filter by aging bucket click (from histogram)
+    function filterByAgingBucket(bucket) {
+        // Set aging filter to the clicked bucket
+        customersFilters.aging = [bucket];
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    // Filter by state click (from Insights)
+    function filterCustomersByState(stateOrType) {
+        if (stateOrType === 'open') {
+            // "Open issues" = all states except Done, Closed, Removed
+            const openStates = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review'];
+            customersFilters.states = openStates;
+        } else {
+            // Single state filter
+            customersFilters.states = [stateOrType];
+        }
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    // Sort Issues for table
+    function sortCustomersIssues(issues) {
+        const { column, direction } = customersSortState;
+        const multiplier = direction === 'asc' ? 1 : -1;
+
+        return [...issues].sort((a, b) => {
+            let aVal, bVal;
+            switch (column) {
+                case 'id':
+                    return (a.id - b.id) * multiplier;
+                case 'title':
+                    return (a.title || '').localeCompare(b.title || '') * multiplier;
+                case 'state':
+                    const stateOrder = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+                    return (stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state)) * multiplier;
+                case 'customers':
+                    return (a.customers || '').localeCompare(b.customers || '') * multiplier;
+                case 'priority':
+                    aVal = a.priority || 999;
+                    bVal = b.priority || 999;
+                    return (aVal - bVal) * multiplier;
+                case 'aging':
+                    aVal = calculateAgeDays(a);
+                    bVal = calculateAgeDays(b);
+                    return (aVal - bVal) * multiplier;
+                case 'tags':
+                    return (a.tags || '').localeCompare(b.tags || '') * multiplier;
+                case 'csOwner':
+                    return (a.csOwner || '').localeCompare(b.csOwner || '') * multiplier;
+                case 'release':
+                    return (a.releaseVersion || '').localeCompare(b.releaseVersion || '') * multiplier;
+                case 'targetDate':
+                    return (a.targetDate || '').localeCompare(b.targetDate || '') * multiplier;
+                case 'category':
+                    return (a.ticketCategory || '').localeCompare(b.ticketCategory || '') * multiplier;
+                default:
+                    return 0;
+            }
+        });
+    }
+
+    // Handle column header click for sorting
+    function sortCustomersTable(column) {
+        if (customersSortState.column === column) {
+            customersSortState.direction = customersSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            customersSortState.column = column;
+            customersSortState.direction = 'asc';
+        }
+        saveStateToStorage();
+        renderCustomersView();
+    }
+
+    // Customers View
+    function renderCustomersView() {
+        const stats = document.getElementById('customer-stats');
+        const insights = document.getElementById('customer-insights');
+        const histogramContainer = document.getElementById('customer-aging-histogram');
+        const tableContainer = document.getElementById('customer-issues-table');
+
+        // Get all issues and filtered issues
+        const allIssues = getAllIssues();
+        const filteredIssues = getFilteredIssues();
+        const isFiltered = hasActiveCustomersFilters();
+        const filterNote = isFiltered ? ' (filtered)' : '';
+
+        // Calculate stats by Ticket Category
+        const enhancementRequests = filteredIssues.filter(i => i.ticketCategory === 'Enhancement Request');
+        const bugs = filteredIssues.filter(i => i.ticketCategory === 'Bug');
+        const tasks = filteredIssues.filter(i => i.ticketCategory === 'Task');
+
+        // Stats cards - clickable
+        stats.innerHTML = `
+            <div class="stat-card clickable" onclick="filterCustomersByCategory(null)">
+                <div class="stat-label">Total Issues${filterNote}</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${filteredIssues.length}</div>
+                <div class="stat-subtitle">${allIssues.length} total in system</div>
+            </div>
+            <div class="stat-card clickable" onclick="filterCustomersByCategory('Enhancement Request')">
+                <div class="stat-label">Enhancement Requests</div>
+                <div class="stat-value" style="color: var(--accent-blue)">${enhancementRequests.length}</div>
+                <div class="stat-subtitle">${filteredIssues.length > 0 ? Math.round(enhancementRequests.length / filteredIssues.length * 100) : 0}% of issues</div>
+            </div>
+            <div class="stat-card clickable" onclick="filterCustomersByCategory('Bug')">
+                <div class="stat-label">Bugs</div>
+                <div class="stat-value" style="color: var(--accent-orange)">${bugs.length}</div>
+                <div class="stat-subtitle">${filteredIssues.length > 0 ? Math.round(bugs.length / filteredIssues.length * 100) : 0}% of issues</div>
+            </div>
+            <div class="stat-card clickable" onclick="filterCustomersByCategory('Task')">
+                <div class="stat-label">Tasks</div>
+                <div class="stat-value" style="color: var(--accent-purple)">${tasks.length}</div>
+                <div class="stat-subtitle">${filteredIssues.length > 0 ? Math.round(tasks.length / filteredIssues.length * 100) : 0}% of issues</div>
+            </div>
+        `;
+
+        // Insights - horizontal format
+        const openIssues = filteredIssues.filter(i => i.state !== 'Done' && i.state !== 'Closed' && i.state !== 'Removed');
+        const triaged = filteredIssues.filter(i => i.state === 'Triaged');
+        const inProgress = filteredIssues.filter(i => i.state === 'In Progress');
+        const newIssues = filteredIssues.filter(i => i.state === 'New');
+
+        insights.innerHTML = `
+            <div class="insights-content">
+                <span class="insights-title">⚡ Insights${filterNote}</span>
+                <span class="insight-item info clickable" onclick="filterCustomersByState('open')"><span class="insight-icon">📊</span> ${openIssues.length} open issues</span>
+                <span class="insight-item ${newIssues.length > 10 ? 'warning' : 'info'} clickable" onclick="filterCustomersByState('New')"><span class="insight-icon">🆕</span> ${newIssues.length} new (awaiting triage)</span>
+                <span class="insight-item info clickable" onclick="filterCustomersByState('Triaged')"><span class="insight-icon">📋</span> ${triaged.length} triaged</span>
+                <span class="insight-item info clickable" onclick="filterCustomersByState('In Progress')"><span class="insight-icon">🔄</span> ${inProgress.length} in progress</span>
+            </div>
+        `;
+
+        // Aging histogram
+        const agingCounts = {};
+        AGING_BUCKETS.forEach(bucket => agingCounts[bucket] = 0);
+        filteredIssues.forEach(issue => {
+            const bucket = calculateAgingBucket(issue);
+            agingCounts[bucket]++;
+        });
+        const maxCount = Math.max(...Object.values(agingCounts), 1);
+
+        // Calculate nice Y-axis tick values
+        const yAxisTicks = [];
+        const tickCount = 4;
+        const tickStep = Math.ceil(maxCount / tickCount);
+        for (let i = tickCount; i >= 0; i--) {
+            yAxisTicks.push(Math.min(i * tickStep, maxCount));
+        }
+
+        histogramContainer.innerHTML = `
+            <div class="aging-histogram-title">📊 Issue Aging Distribution${filterNote}</div>
+            <div class="aging-histogram-wrapper">
+                <div class="aging-histogram-yaxis">
+                    ${yAxisTicks.map(tick => `<span class="aging-yaxis-label">${tick}</span>`).join('')}
+                </div>
+                <div class="aging-histogram-chart">
+                    <div class="aging-histogram-bars">
+                        ${AGING_BUCKETS.map(bucket => {
+                            const count = agingCounts[bucket];
+                            const heightPct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                            const barClass = 'bar-' + bucket.replace(/\s+/g, '-');
+                            return `
+                                <div class="aging-bar-container">
+                                    <div class="aging-bar-count">${count}</div>
+                                    <div class="aging-bar ${barClass}" style="height: ${Math.max(heightPct, 2)}%" onclick="filterByAgingBucket('${bucket}')" title="${bucket}: ${count} issues"></div>
+                                    <div class="aging-bar-label">${bucket}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Sort and render table
+        const sortedIssues = sortCustomersIssues(filteredIssues);
+        const sortIcon = (col) => {
+            if (customersSortState.column !== col) return '';
+            return customersSortState.direction === 'asc' ? ' ▲' : ' ▼';
+        };
+
+        // Helper to format target date
+        const formatTargetDate = (dateStr) => {
+            if (!dateStr) return '';
+            // dateStr is in format "YYYY-MM-DD HH:MM:SS" or similar
+            const datePart = dateStr.split(' ')[0];
+            return datePart;
+        };
+
+        tableContainer.innerHTML = `
+            <div class="table-header">
+                <span>Showing ${sortedIssues.length} issues</span>
+            </div>
+            <table class="work-items-table">
+                <thead>
+                    <tr>
+                        <th class="sortable col-id" onclick="sortCustomersTable('id')">ID${sortIcon('id')}</th>
+                        <th class="sortable col-title" onclick="sortCustomersTable('title')">Title${sortIcon('title')}</th>
+                        <th class="sortable col-state" onclick="sortCustomersTable('state')">State${sortIcon('state')}</th>
+                        <th class="sortable col-customers" onclick="sortCustomersTable('customers')">Customers${sortIcon('customers')}</th>
+                        <th class="sortable col-priority" onclick="sortCustomersTable('priority')">Priority${sortIcon('priority')}</th>
+                        <th class="sortable col-aging" onclick="sortCustomersTable('aging')">Aging${sortIcon('aging')}</th>
+                        <th class="sortable col-tags" onclick="sortCustomersTable('tags')">Tags${sortIcon('tags')}</th>
+                        <th class="sortable col-csowner" onclick="sortCustomersTable('csOwner')">CS Owner${sortIcon('csOwner')}</th>
+                        <th class="sortable col-release" onclick="sortCustomersTable('release')">Release Version${sortIcon('release')}</th>
+                        <th class="sortable col-date" onclick="sortCustomersTable('targetDate')">Target Date${sortIcon('targetDate')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sortedIssues.map(issue => `
+                        <tr>
+                            <td class="col-id"><a href="${issue.url}" target="_blank">${issue.id}</a></td>
+                            <td class="col-title" title="${(issue.title || '').replace(/"/g, '&quot;')}">${issue.title || ''}</td>
+                            <td class="col-state"><span class="state-badge state-${(issue.state || '').toLowerCase().replace(/\s+/g, '-')}">${issue.state || ''}</span></td>
+                            <td class="col-customers" title="${(issue.customers || '').replace(/"/g, '&quot;')}">${issue.customers || ''}</td>
+                            <td class="col-priority">${issue.priority ? 'P' + issue.priority : ''}</td>
+                            <td class="col-aging"><span class="aging-badge aging-${calculateAgingBucket(issue).replace(/\s+/g, '-')}">${calculateAgingBucket(issue)}</span></td>
+                            <td class="col-tags" title="${(issue.tags || '').replace(/"/g, '&quot;')}">${issue.tags || ''}</td>
+                            <td class="col-csowner">${issue.csOwner || ''}</td>
+                            <td class="col-release">${issue.releaseVersion || ''}</td>
+                            <td class="col-date">${formatTargetDate(issue.targetDate)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        // Auto-adjust table height: enable scroll mode if more than 20 items
+        const SCROLL_THRESHOLD = 20;
+        if (sortedIssues.length > SCROLL_THRESHOLD) {
+            tableContainer.classList.add('scroll-mode');
+        } else {
+            tableContainer.classList.remove('scroll-mode');
+        }
+
+        // Populate filter dropdowns on first render
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    // ==================== FEATURE ROADMAP VIEW ====================
+
+    // Roadmap state
+    let roadmapSortState = {
+        column: null,  // null means use default backlog priority order
+        direction: 'asc'
+    };
+
+    // Roadmap filter state
+    // Roadmap filters - all filters start empty (no defaults)
+    let roadmapFilters = {
+        search: '',
+        states: [],
+        customers: [],
+        assignees: [],
+        teams: [],
+        iterations: [],
+        priorities: [],
+        releases: [],
+        releasesExclusionMode: false,  // Track if we started from "Select All" for release filter
+        tags: [],
+        tagsExclusionMode: false,  // Track if we started from "Select All" for tag filter
+        tagsLogicMode: 'or'  // 'and' or 'or' - controls how multiple tag selections are combined
+    };
+
+    // Track collapsed state for collapsible sections
+    let roadmapTeamSummaryCollapsed = true; // Collapsed by default
+
+    // Helper to extract last segment from backslash-delimited path
+    function getLastPathSegment(path) {
+        if (!path) return '';
+        const parts = path.split('\\');
+        return parts[parts.length - 1].trim();
+    }
+
+    // Get all Delivery Slices that are children of the given feature IDs
+    function getDeliverySlicesForFeatures(featureIds) {
+        const featureIdSet = new Set(featureIds.map(id => String(id)));
+        return workItems.filter(w => {
+            if (w.type !== 'Delivery Slice') return false;
+            // Check if parent is one of our features
+            return w.parentId && featureIdSet.has(String(w.parentId));
+        });
+    }
+
+    // Calculate effort by team from delivery slices
+    function calculateEffortByTeam(deliverySlices) {
+        const effortByTeam = {};
+        let totalEffort = 0;
+
+        deliverySlices.forEach(ds => {
+            const effort = ds.effort || 0;
+            const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+
+            if (!effortByTeam[team]) {
+                effortByTeam[team] = 0;
+            }
+            effortByTeam[team] += effort;
+            totalEffort += effort;
+        });
+
+        return { effortByTeam, totalEffort };
+    }
+
+    // Team leads mapping
+    const roadmapTeamLeads = {
+        'Frontend': 'Andreas Davros',
+        'Backend': 'Thanos Terzis',
+        'QA': 'Kostas Tzoulas',
+        'DevOps': 'Christos Sidiropoulos',
+        'Analytics': 'Maya Dahan',
+        'Govern': 'Maya Dahan',
+        'SCG': 'Alexandros Papadakis',
+        'Staff': 'John Paglierani',
+        'Security & Compliance': 'Chakra Bokissam',
+        'Customer Success': ''
+    };
+
+    // Get team member count for capacity calculation
+    function getRoadmapTeamMemberCount(teamName) {
+        if (typeof orgChartData === 'undefined') return 0;
+
+        // Find the org chart entry that contains this team
+        // Note: t.team may be "Analytics & Govern" for leads who manage multiple teams
+        const teamData = orgChartData.find(t => {
+            // Split combined team names and check if any matches
+            const teams = t.team.split(' & ').map(name => name.split(' (')[0].trim());
+            return teams.includes(teamName) || t.team === teamName;
+        });
+
+        if (!teamData) return 0;
+
+        // Count only members from this specific team (plus lead if they manage just this team)
+        let count = 0;
+
+        // Check if lead manages only this team (not multiple teams)
+        const leadTeams = teamData.team.split(' & ').map(name => name.split(' (')[0].trim());
+        if (leadTeams.length === 1 && leadTeams[0] === teamName) {
+            count = 1; // Include the lead
+        }
+
+        // Count active members from this specific team
+        teamData.members.forEach(m => {
+            if (m.status !== 'Former' && m.team === teamName) {
+                count++;
+            }
+        });
+
+        return count;
+    }
+
+    // Get initials from name
+    function getInitials(name) {
+        if (!name) return '?';
+        const parts = name.trim().split(' ');
+        if (parts.length === 1) return parts[0][0].toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    // Count features and delivery slices by team
+    function countItemsByTeam(features, slices, team) {
+        // Count features that have at least one slice from this team
+        const featureIdsWithTeam = new Set();
+        slices.forEach(ds => {
+            const dsTeam = getLastPathSegment(ds.areaPath) || '(No Team)';
+            if (dsTeam === team && ds.parentId) {
+                featureIdsWithTeam.add(String(ds.parentId));
+            }
+        });
+        const featureCount = features.filter(f => featureIdsWithTeam.has(String(f.id))).length;
+
+        // Count slices from this team
+        const sliceCount = slices.filter(ds => {
+            const dsTeam = getLastPathSegment(ds.areaPath) || '(No Team)';
+            return dsTeam === team;
+        }).length;
+
+        return { featureCount, sliceCount };
+    }
+
+    // Strategy categories for Summary View (Section 1)
+    const strategyCategories = [
+        { prefix: '1:', label: 'eSHARE is must-have' },
+        { prefix: '2:', label: 'eSHARE is the collaboration standard' },
+        { prefix: '3:', label: 'eSHARE deployability' },
+        { prefix: '4:', label: 'eSHARE is customer-focused, stable and secure' }
+    ];
+
+    // Calculate strategy summary for filtered features
+    function calculateStrategySummary(features, featureEffortMap) {
+        // Initialize results for each category
+        const results = strategyCategories.map(cat => ({
+            prefix: cat.prefix,
+            label: cat.label,
+            count: 0,
+            effort: 0,
+            featureIds: []
+        }));
+
+        // Track features that match multiple categories (for error detection)
+        const multiCategoryFeatures = [];
+
+        features.forEach(f => {
+            const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            const featureEffort = featureEffortMap[f.id] || 0;
+
+            // Check which categories this feature matches
+            const matchedCategories = [];
+            results.forEach((cat, idx) => {
+                const hasMatchingTag = tags.some(tag => tag.startsWith(cat.prefix));
+                if (hasMatchingTag) {
+                    matchedCategories.push(idx);
+                    cat.count++;
+                    cat.effort += featureEffort;
+                    cat.featureIds.push(f.id);
+                }
+            });
+
+            // If feature matches more than one category, track it
+            if (matchedCategories.length > 1) {
+                multiCategoryFeatures.push({
+                    id: f.id,
+                    title: f.title,
+                    categories: matchedCategories.map(idx => results[idx].prefix)
+                });
+            }
+        });
+
+        return { results, multiCategoryFeatures };
+    }
+
+    // Render strategy summary (Section 1)
+    function renderStrategySummary(features, featureEffortMap) {
+        const tbody = document.getElementById('strategy-summary-body');
+        const errorContainer = document.getElementById('strategy-error-container');
+        const unmatchedNote = document.getElementById('strategy-unmatched-note');
+        if (!tbody || !errorContainer) return;
+
+        const { results, multiCategoryFeatures } = calculateStrategySummary(features, featureEffortMap);
+
+        // Calculate features that don't match any category
+        const matchedFeatureIds = new Set();
+        results.forEach(r => r.featureIds.forEach(id => matchedFeatureIds.add(id)));
+        const unmatchedCount = features.length - matchedFeatureIds.size;
+
+        // Calculate total effort across all categories for percentage calculation
+        const totalEffort = results.reduce((sum, r) => sum + r.effort, 0);
+
+        // Build table rows - counts are clickable to filter by that strategy tag
+        tbody.innerHTML = `
+            <tr>
+                <td class="row-label">Features</td>
+                ${results.map((r, idx) => `<td class="count-value clickable" onclick="filterByOkrCategory('${r.prefix}')" title="Click to filter by ${r.prefix}* tags">${r.count}</td>`).join('')}
+            </tr>
+            <tr>
+                <td class="row-label">Effort</td>
+                ${results.map(r => {
+                    const pct = totalEffort > 0 ? (r.effort / totalEffort * 100) : 0;
+                    const pctDisplay = pct > 0 ? pct.toFixed(0) + '%' : '0%';
+                    const daysDisplay = r.effort > 0 ? r.effort.toFixed(1) + 'd' : '0d';
+                    return `<td class="effort-value"><span class="effort-pct">${pctDisplay}</span><span class="effort-days">${daysDisplay}</span></td>`;
+                }).join('')}
+            </tr>
+        `;
+
+        // Show note about features without matching tags
+        if (unmatchedNote) {
+            if (unmatchedCount > 0) {
+                unmatchedNote.textContent = `${unmatchedCount} feature${unmatchedCount !== 1 ? 's' : ''} without OKR tags`;
+            } else {
+                unmatchedNote.textContent = '';
+            }
+        }
+
+        // Show error message if any features match multiple categories
+        if (multiCategoryFeatures.length > 0) {
+            const featureIdList = multiCategoryFeatures.map(f => f.id).join(',');
+            errorContainer.innerHTML = `
+                <div class="strategy-error-message">
+                    <span class="error-icon">⚠️</span>
+                    <span>${multiCategoryFeatures.length} feature${multiCategoryFeatures.length !== 1 ? 's have' : ' has'} tags in multiple OKR categories.
+                    <a onclick="filterMultiCategoryFeatures('${featureIdList}')">Show in table</a></span>
+                </div>
+            `;
+        } else {
+            errorContainer.innerHTML = '';
+        }
+    }
+
+    // Filter by OKR category (e.g., "1:", "2:", etc.)
+    // Preserves all existing filters except tags - only updates the tag filter
+    function filterByOkrCategory(prefix) {
+        // Get all tags that start with this prefix from the current features
+        const allFeatures = getRoadmapFeatures();
+        const matchingTags = new Set();
+        allFeatures.forEach(f => {
+            const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            tags.forEach(tag => {
+                if (tag.startsWith(prefix)) {
+                    matchingTags.add(tag);
+                }
+            });
+        });
+
+        // Update only the tag filter (preserve all other filters)
+        roadmapFilters.tags = [...matchingTags];
+        roadmapFilters.tagsExclusionMode = false;
+        roadmapFilters.tagsLogicMode = 'or'; // Show features with ANY of these tags
+
+        // Update display (use 'tag' not 'tags')
+        updateRoadmapFilterDisplay('tag');
+
+        // Save state and re-render
+        saveStateToStorage();
+        renderRoadmapView();
+
+        // Sync the tag dropdown checkboxes AFTER render (since render may rebuild the dropdown)
+        const tagOptionsContainer = document.getElementById('roadmap-tag-options');
+        if (tagOptionsContainer) {
+            tagOptionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = roadmapFilters.tags.includes(cb.value);
+            });
+        }
+    }
+
+    // Filter table to show only multi-category features
+    function filterMultiCategoryFeatures(featureIdList) {
+        const ids = featureIdList.split(',').map(id => id.trim());
+        // Set search filter to show these IDs
+        // We'll use a special search that matches these specific IDs
+        const searchInput = document.getElementById('roadmap-search-input');
+        if (searchInput) {
+            // Use a regex-like pattern that the search can handle: ID1|ID2|ID3
+            searchInput.value = ids.join('|');
+            roadmapFilters.search = ids.join('|');
+            saveStateToStorage();
+            renderRoadmapView();
+
+            // Scroll to the table section
+            const tableSection = document.getElementById('roadmap-section-details');
+            if (tableSection) {
+                tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    }
+
+    function getRoadmapFeatures() {
+        // Return all Features - release version filtering is now handled by the Release filter dropdown
+        // Tag filtering (including Candidate) is handled by the Tag filter dropdown
+        return workItems.filter(w => w.type === 'Feature');
+    }
+
+    function getFilteredRoadmapFeatures() {
+        let features = getRoadmapFeatures();
+
+        // Apply search filter (searches both Title and ID)
+        // Supports pipe-separated ID list (e.g., "123|456|789") for multi-category feature filter
+        if (roadmapFilters.search) {
+            const searchTerm = roadmapFilters.search;
+            if (searchTerm.includes('|')) {
+                // Pipe-separated ID list - match exact IDs
+                const ids = searchTerm.split('|').map(id => id.trim());
+                features = features.filter(f => ids.includes(String(f.id)));
+            } else {
+                // Regular search - searches both Title and ID
+                const searchLower = searchTerm.toLowerCase();
+                features = features.filter(f =>
+                    (f.title || '').toLowerCase().includes(searchLower) ||
+                    String(f.id).includes(searchTerm)
+                );
+            }
+        }
+
+        // Apply state filter
+        if (roadmapFilters.states.length > 0) {
+            features = features.filter(f => roadmapFilters.states.includes(f.state));
+        }
+
+        // Apply customer filter
+        if (roadmapFilters.customers.length > 0) {
+            features = features.filter(f => {
+                if (!f.customers) return roadmapFilters.customers.includes('(No Customer)');
+                return roadmapFilters.customers.some(c => f.customers.includes(c));
+            });
+        }
+
+        // Apply assignee filter
+        if (roadmapFilters.assignees.length > 0) {
+            features = features.filter(f => {
+                const assignee = f.assignedTo || '(Unassigned)';
+                return roadmapFilters.assignees.includes(assignee);
+            });
+        }
+
+        // Apply team and iteration filters together (based on delivery slices)
+        // When both are active, a feature must have at least one slice that matches BOTH filters
+        if (roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0) {
+            features = features.filter(f => {
+                const slices = getDeliverySlicesForFeatures([f.id]);
+                return slices.some(ds => {
+                    const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+                    const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+
+                    // Check team filter (if active)
+                    const teamMatch = roadmapFilters.teams.length === 0 || roadmapFilters.teams.includes(team);
+                    // Check iteration filter (if active)
+                    const iterationMatch = roadmapFilters.iterations.length === 0 || roadmapFilters.iterations.includes(iteration);
+
+                    // Slice must match both filters (when active)
+                    return teamMatch && iterationMatch;
+                });
+            });
+        }
+
+        // Apply priority filter
+        if (roadmapFilters.priorities.length > 0) {
+            features = features.filter(f => {
+                const priority = f.priority ? String(f.priority) : '(No Priority)';
+                return roadmapFilters.priorities.includes(priority);
+            });
+        }
+
+        // Apply release version filter
+        if (roadmapFilters.releases.length > 0) {
+            if (roadmapFilters.releasesExclusionMode) {
+                // Exclusion mode: Started from "Select All", now excluding unchecked releases
+                // Get all available releases to determine what's unchecked
+                const allAvailableReleases = new Set(['(No Release)']);
+                getRoadmapFeatures().forEach(f => {
+                    if (f.releaseVersion && f.releaseVersion.trim()) {
+                        allAvailableReleases.add(f.releaseVersion.trim());
+                    }
+                });
+                const uncheckedReleases = [...allAvailableReleases].filter(r => !roadmapFilters.releases.includes(r));
+
+                features = features.filter(f => {
+                    const featureRelease = (f.releaseVersion && f.releaseVersion.trim()) || '(No Release)';
+                    // Exclude features that have any unchecked release
+                    return !uncheckedReleases.includes(featureRelease);
+                });
+            } else {
+                // Inclusion mode: Show features that have any of the selected releases
+                features = features.filter(f => {
+                    const featureRelease = (f.releaseVersion && f.releaseVersion.trim()) || '(No Release)';
+                    return roadmapFilters.releases.includes(featureRelease);
+                });
+            }
+        }
+
+        // Apply tag filter
+        if (roadmapFilters.tags.length > 0) {
+            if (roadmapFilters.tagsExclusionMode) {
+                // Exclusion mode: Started from "Select All", now excluding unchecked tags
+                // Get all available tags to determine what's unchecked
+                const allAvailableTags = new Set();
+                getRoadmapFeatures().forEach(f => {
+                    if (f.tags) {
+                        f.tags.split(';').forEach(t => {
+                            const trimmed = t.trim();
+                            if (trimmed) allAvailableTags.add(trimmed);
+                        });
+                    }
+                });
+                const uncheckedTags = [...allAvailableTags].filter(t => !roadmapFilters.tags.includes(t));
+
+                features = features.filter(f => {
+                    const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    // Exclude features that have any unchecked tag
+                    return !featureTags.some(tag => uncheckedTags.includes(tag));
+                });
+            } else {
+                // Inclusion mode: logic depends on tagsLogicMode setting
+                features = features.filter(f => {
+                    const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    if (roadmapFilters.tagsLogicMode === 'and') {
+                        // AND logic: feature must have ALL selected tags
+                        return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+                    } else {
+                        // OR logic (default): feature must have ANY selected tag
+                        return roadmapFilters.tags.some(selectedTag => featureTags.includes(selectedTag));
+                    }
+                });
+            }
+        }
+
+        return features;
+    }
+
+    // Get delivery slices filtered by current team/iteration filters
+    function getFilteredDeliverySlices(featureIds) {
+        let slices = getDeliverySlicesForFeatures(featureIds);
+
+        // Apply team filter
+        if (roadmapFilters.teams.length > 0) {
+            slices = slices.filter(ds => {
+                const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+                return roadmapFilters.teams.includes(team);
+            });
+        }
+
+        // Apply iteration filter
+        if (roadmapFilters.iterations.length > 0) {
+            slices = slices.filter(ds => {
+                const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                return roadmapFilters.iterations.includes(iteration);
+            });
+        }
+
+        return slices;
+    }
+
+    function renderRoadmapView() {
+        // Populate filter dropdowns on first render
+        populateRoadmapFilterDropdowns();
+
+        // If state was loaded from localStorage, sync dropdown checkboxes with loaded state
+        if (stateWasLoaded) {
+            syncRoadmapFilterDropdowns();
+            stateWasLoaded = false; // Only sync once after state load
+        }
+
+        const features = getFilteredRoadmapFeatures();
+        const allFeatures = getRoadmapFeatures();
+        const countEl = document.getElementById('roadmap-count');
+        const thead = document.getElementById('roadmap-table-head');
+        const tbody = document.getElementById('roadmap-table-body');
+        const effortCardsEl = document.getElementById('roadmap-effort-cards');
+
+        // Update count (show filtered vs total if filtering)
+        const isFiltered = roadmapFilters.search || roadmapFilters.states.length > 0 ||
+                          roadmapFilters.customers.length > 0 || roadmapFilters.assignees.length > 0 ||
+                          roadmapFilters.teams.length > 0 || roadmapFilters.iterations.length > 0 ||
+                          roadmapFilters.priorities.length > 0 || roadmapFilters.releases.length > 0 ||
+                          roadmapFilters.tags.length > 0;
+        if (isFiltered) {
+            countEl.textContent = `${features.length} of ${allFeatures.length} features`;
+        } else {
+            countEl.textContent = `${features.length} feature${features.length !== 1 ? 's' : ''}`;
+        }
+
+        // Update clear button visibility
+        const clearBtn = document.getElementById('roadmap-clear-filters-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !isFiltered);
+        }
+
+        // Calculate and render effort cards
+        const featureIds = features.map(f => f.id);
+        const filteredSlices = getFilteredDeliverySlices(featureIds);
+        const { effortByTeam, totalEffort } = calculateEffortByTeam(filteredSlices);
+
+        // Sort teams by effort (descending)
+        const sortedTeams = Object.entries(effortByTeam)
+            .sort((a, b) => b[1] - a[1]);
+
+        // Calculate totals for the "All Teams" card
+        const totalFeatures = features.length;
+        const totalSlices = filteredSlices.length;
+        const totalMembers = sortedTeams.reduce((sum, [team]) => sum + getRoadmapTeamMemberCount(team), 0);
+        const totalCapacity = totalMembers * 22;
+
+        // Build team cards HTML
+        const teamCardsHtml = sortedTeams.map(([team, effort]) => {
+            const lead = roadmapTeamLeads[team] || '';
+            const memberCount = getRoadmapTeamMemberCount(team);
+            const capacity = memberCount * 22;
+            const { featureCount, sliceCount } = countItemsByTeam(features, filteredSlices, team);
+
+            // Try to get lead photo if available
+            const hasPhoto = typeof leadPhotos !== 'undefined' && leadPhotos[lead];
+            const photoHtml = hasPhoto
+                ? `<img src="data:image/jpeg;base64,${leadPhotos[lead]}" class="effort-card-lead-photo" alt="${lead}">`
+                : `<div class="effort-card-lead-avatar">${getInitials(lead)}</div>`;
+
+            // Get team color for this card
+            const teamColor = typeof getTeamColor === 'function' ? getTeamColor(team) : '#94a3b8';
+
+            // Check if this team is selected
+            const isSelected = roadmapFilters.teams.length === 1 && roadmapFilters.teams[0] === team;
+            const selectedClass = isSelected ? ' selected' : '';
+
+            return `
+                <div class="effort-card${selectedClass}" onclick="toggleRoadmapTeamCard('${team.replace(/'/g, "\\'")}')">
+                    <div class="effort-card-header">
+                        <div class="effort-card-label">${team}</div>
+                    </div>
+                    <div class="effort-card-value" style="color: ${teamColor}">${effort.toFixed(1)}<span class="effort-card-unit">d</span></div>
+                    <div class="effort-card-capacity">of ${capacity}d monthly capacity</div>
+                    <div class="effort-card-stats">
+                        <span>${featureCount} Feature${featureCount !== 1 ? 's' : ''}</span>
+                        <span>${sliceCount} Delivery Slice${sliceCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    ${lead ? `
+                    <div class="effort-card-footer">
+                        ${photoHtml}
+                        <span class="effort-card-lead-name">${lead}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        // Render effort cards
+        effortCardsEl.innerHTML = `
+            <div class="effort-card total" onclick="clearRoadmapTeamFilter()" title="Click to show all teams">
+                <div class="effort-card-header">
+                    <div class="effort-card-label">Total Effort</div>
+                </div>
+                <div class="effort-card-value">${totalEffort.toFixed(1)}<span class="effort-card-unit">days</span></div>
+                <div class="effort-card-capacity">of ${totalCapacity}d monthly capacity</div>
+                <div class="effort-card-stats">
+                    <span>${totalFeatures} Feature${totalFeatures !== 1 ? 's' : ''}</span>
+                    <span>${totalSlices} Delivery Slice${totalSlices !== 1 ? 's' : ''}</span>
+                </div>
+            </div>
+            ${teamCardsHtml}
+        `;
+
+        // Define columns (ID, Title, State, Customers, Priority, Tags, Assigned To, Release, Effort)
+        const columns = [
+            { key: 'id', label: 'ID' },
+            { key: 'title', label: 'Title' },
+            { key: 'state', label: 'State' },
+            { key: 'customers', label: 'Customers' },
+            { key: 'priority', label: 'Priority' },
+            { key: 'tags', label: 'Tags' },
+            { key: 'assignedTo', label: 'Assigned To' },
+            { key: 'releaseVersion', label: 'Release' },
+            { key: 'effort', label: 'Effort' }
+        ];
+
+        // Pre-calculate effort for each feature (sum of child delivery slices)
+        // When team/iteration filters are active, only sum effort from matching slices
+        const featureEffortMap = {};
+        features.forEach(f => {
+            const featureSlices = getDeliverySlicesForFeatures([f.id]);
+            let relevantSlices = featureSlices;
+
+            // If team filter is active, only count effort from that team
+            if (roadmapFilters.teams.length > 0) {
+                relevantSlices = relevantSlices.filter(ds => {
+                    const dsTeam = getLastPathSegment(ds.areaPath) || '(No Team)';
+                    return roadmapFilters.teams.includes(dsTeam);
+                });
+            }
+
+            // If iteration filter is active, only count effort from that iteration
+            if (roadmapFilters.iterations.length > 0) {
+                relevantSlices = relevantSlices.filter(ds => {
+                    const dsIteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                    return roadmapFilters.iterations.includes(dsIteration);
+                });
+            }
+
+            featureEffortMap[f.id] = relevantSlices.reduce((sum, ds) => sum + (ds.effort || 0), 0);
+        });
+
+        // Render Strategy Summary (Section 1)
+        renderStrategySummary(features, featureEffortMap);
+
+        // Calculate total effort (for the total row)
+        const totalTableEffort = Object.values(featureEffortMap).reduce((sum, e) => sum + e, 0);
+
+        // Sort features
+        let sortedFeatures = [...features];
+        if (roadmapSortState.column) {
+            // User-selected sort
+            sortedFeatures = sortRoadmapItems(sortedFeatures, roadmapSortState.column, roadmapSortState.direction, featureEffortMap);
+        } else {
+            // Default: sort by backlog priority (lower value = higher priority)
+            sortedFeatures.sort((a, b) => {
+                const aPri = a.backlogPriority || Number.MAX_VALUE;
+                const bPri = b.backlogPriority || Number.MAX_VALUE;
+                return aPri - bPri;
+            });
+        }
+
+        // Build header
+        const showResetBtn = roadmapSortState.column !== null;
+        thead.innerHTML = `<tr>
+            ${columns.map(c => `
+                <th class="sortable-header resizable-header ${getRoadmapColumnClass(c.key)}" onclick="sortRoadmapTable('${c.key}')">
+                    ${c.label}
+                    <span class="sort-indicator">${getRoadmapSortIndicator(c.key)}</span>
+                    <div class="resize-handle" onmousedown="startResize(event, this)"></div>
+                </th>
+            `).join('')}
+            ${showResetBtn ? `<th style="width: 140px;"><button class="reset-sort-btn" onclick="resetRoadmapSort()">Reset to Backlog Priority</button></th>` : ''}
+        </tr>`;
+
+        // Build body - rows are clickable to show delivery slices
+        tbody.innerHTML = sortedFeatures.map(item => {
+            const slices = getDeliverySlicesForFeatures([item.id]);
+
+            // Build badges
+            let badges = '';
+
+            // Badge 0: Blocked tag (highest priority warning)
+            const tags = (item.tags || '').split(';').map(t => t.trim().toLowerCase());
+            if (tags.includes('blocked')) {
+                badges += `<span class="blocked-badge" title="This feature is tagged as Blocked">Blocked</span>`;
+            }
+
+            // Badge 1: No Delivery Slices
+            if (slices.length === 0) {
+                badges += `<span class="no-slices-badge" title="This feature has no Delivery Slices">No slices</span>`;
+            } else {
+                // Badge 2: Zero effort (only if there are slices)
+                const hasZeroEffort = slices.some(ds => !ds.effort || ds.effort === 0);
+                if (hasZeroEffort) {
+                    const zeroEffortSlices = slices.filter(ds => !ds.effort || ds.effort === 0);
+                    badges += `<span class="zero-effort-badge" title="${zeroEffortSlices.length} slice(s) with zero effort">0 effort</span>`;
+                }
+
+                // Badge 3: Multiple iterations
+                const iterationSet = new Set(slices.map(ds => getLastPathSegment(ds.iterationPath) || '(No Iteration)'));
+                const iterationCount = iterationSet.size;
+                if (iterationCount > 1) {
+                    badges += `<span class="iteration-count-badge" title="${[...iterationSet].join(', ')}">${iterationCount} iterations</span>`;
+                }
+            }
+
+            const featureEffort = featureEffortMap[item.id] || 0;
+            // Format tags for display (remove duplicates, sort, join with comma)
+            const displayTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t).join(', ');
+            const priorityDisplay = item.priority ? `P${item.priority}` : '';
+            return `
+            <tr class="clickable-row" data-feature-id="${item.id}" data-feature-title="${(item.title || '').replace(/"/g, '&quot;')}">
+                <td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>
+                <td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>
+                <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
+                <td>${item.customers || ''}</td>
+                <td class="priority-cell">${priorityDisplay}</td>
+                <td class="tags-cell" title="${displayTags}">${displayTags}</td>
+                <td>${item.assignedTo || ''}</td>
+                <td>${item.releaseVersion || ''}</td>
+                <td class="effort-value">${featureEffort > 0 ? featureEffort.toFixed(1) + 'd' : ''}</td>
+                ${showResetBtn ? '<td></td>' : ''}
+            </tr>
+        `;
+        }).join('');
+
+        // Add total row (colspan = 8 for columns before Effort: ID, Title, State, Customers, Priority, Tags, Assigned To, Release)
+        tbody.innerHTML += `
+            <tr class="total-row">
+                <td colspan="8" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
+                <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalTableEffort.toFixed(1)}d</td>
+                ${showResetBtn ? '<td></td>' : ''}
+            </tr>
+        `;
+
+        // Update inline effort summary above table
+        const effortSummaryEl = document.getElementById('roadmap-table-effort-summary');
+        if (effortSummaryEl) {
+            const teamLabel = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : 'All Teams';
+            const iterationLabel = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : '';
+            const filterLabel = iterationLabel ? `${teamLabel} · ${iterationLabel}` : teamLabel;
+            effortSummaryEl.innerHTML = `Table Total: <strong>${totalTableEffort.toFixed(1)}d</strong> (${filterLabel})`;
+        }
+
+        // Ensure click handler is attached
+        setupRoadmapTableClickHandler();
+    }
+
+    // Set up click delegation on the roadmap table body (once)
+    function setupRoadmapTableClickHandler() {
+        const tbody = document.getElementById('roadmap-table-body');
+        if (!tbody || tbody.dataset.clickHandlerAttached) return;
+
+        tbody.addEventListener('click', function(e) {
+            // Don't trigger if clicking on a link
+            if (e.target.tagName === 'A' || e.target.closest('a')) return;
+
+            // Find the clicked row
+            const row = e.target.closest('.clickable-row');
+            if (!row) return;
+
+            const featureId = parseInt(row.dataset.featureId);
+            const featureTitle = row.dataset.featureTitle;
+            if (featureId) {
+                drilldownFeatureSlices(featureId, featureTitle);
+            }
+        });
+
+        tbody.dataset.clickHandlerAttached = 'true';
+    }
+
+    // Initialize click handler when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupRoadmapTableClickHandler);
+    } else {
+        setupRoadmapTableClickHandler();
+    }
+
+    function populateRoadmapFilterDropdowns() {
+        const features = getRoadmapFeatures();
+        const allSlices = getDeliverySlicesForFeatures(features.map(f => f.id));
+
+        // Get unique values from features
+        const states = [...new Set(features.map(f => f.state).filter(Boolean))].sort();
+        const customersSet = new Set();
+        features.forEach(f => {
+            if (f.customers) {
+                f.customers.split(';').forEach(c => {
+                    const trimmed = c.trim();
+                    if (trimmed) customersSet.add(trimmed);
+                });
+            } else {
+                customersSet.add('(No Customer)');
+            }
+        });
+        const customers = [...customersSet].sort();
+        const assignees = [...new Set(features.map(f => f.assignedTo || '(Unassigned)'))].sort();
+
+        // Get unique teams and iterations from delivery slices
+        const teamsSet = new Set();
+        const iterationsSet = new Set();
+        allSlices.forEach(ds => {
+            const team = getLastPathSegment(ds.areaPath);
+            const iteration = getLastPathSegment(ds.iterationPath);
+            if (team) teamsSet.add(team);
+            else teamsSet.add('(No Team)');
+            if (iteration) iterationsSet.add(iteration);
+            else iterationsSet.add('(No Iteration)');
+        });
+        const teams = [...teamsSet].sort();
+        const iterations = [...iterationsSet].sort();
+
+        // Get unique priorities from features
+        const prioritiesSet = new Set(['(No Priority)']);
+        features.forEach(f => {
+            if (f.priority) {
+                prioritiesSet.add(String(f.priority));
+            }
+        });
+        const priorities = [...prioritiesSet].sort((a, b) => {
+            // Put "(No Priority)" last, then sort numerically
+            if (a === '(No Priority)') return 1;
+            if (b === '(No Priority)') return -1;
+            return parseInt(a) - parseInt(b);
+        });
+
+        // Get unique release versions from features
+        const releasesSet = new Set(['(No Release)']);  // Always include the "no release" option
+        features.forEach(f => {
+            if (f.releaseVersion && f.releaseVersion.trim()) {
+                releasesSet.add(f.releaseVersion.trim());
+            }
+        });
+        const releases = [...releasesSet].sort((a, b) => {
+            // Put "(No Release)" first, then sort the rest alphabetically
+            if (a === '(No Release)') return -1;
+            if (b === '(No Release)') return 1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique tags from features
+        const tagsSet = new Set();
+        features.forEach(f => {
+            if (f.tags) {
+                f.tags.split(';').forEach(t => {
+                    const trimmed = t.trim();
+                    if (trimmed) tagsSet.add(trimmed);
+                });
+            }
+        });
+        const tags = [...tagsSet].sort();
+
+        // Populate State dropdown
+        const stateMenu = document.getElementById('roadmap-state-menu');
+        if (stateMenu && !stateMenu.dataset.populated) {
+            stateMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search states..." oninput="filterRoadmapDropdownOptions('state', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-state-options">
+                    ${states.map(s => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.states.includes(s) ? 'checked' : ''} onchange="handleRoadmapFilterChange('state', '${s}', this.checked)">
+                            <span class="option-label">${s}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('state')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('state')">Clear</button>
+                </div>
+            `;
+            stateMenu.dataset.populated = 'true';
+        }
+
+        // Populate Customer dropdown
+        const customerMenu = document.getElementById('roadmap-customer-menu');
+        if (customerMenu && !customerMenu.dataset.populated) {
+            customerMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search customers..." oninput="filterRoadmapDropdownOptions('customer', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-customer-options">
+                    ${customers.map(c => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.customers.includes(c) ? 'checked' : ''} onchange="handleRoadmapFilterChange('customer', '${c.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${c}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('customer')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('customer')">Clear</button>
+                </div>
+            `;
+            customerMenu.dataset.populated = 'true';
+        }
+
+        // Populate Assignee dropdown
+        const assigneeMenu = document.getElementById('roadmap-assignee-menu');
+        if (assigneeMenu && !assigneeMenu.dataset.populated) {
+            assigneeMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search assignees..." oninput="filterRoadmapDropdownOptions('assignee', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-assignee-options">
+                    ${assignees.map(a => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.assignees.includes(a) ? 'checked' : ''} onchange="handleRoadmapFilterChange('assignee', '${a.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${a}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('assignee')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('assignee')">Clear</button>
+                </div>
+            `;
+            assigneeMenu.dataset.populated = 'true';
+        }
+
+        // Populate Team dropdown
+        const teamMenu = document.getElementById('roadmap-team-menu');
+        if (teamMenu && !teamMenu.dataset.populated) {
+            teamMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search teams..." oninput="filterRoadmapDropdownOptions('team', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-team-options">
+                    ${teams.map(t => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.teams.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('team', '${t.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${t}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('team')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('team')">Clear</button>
+                </div>
+            `;
+            teamMenu.dataset.populated = 'true';
+        }
+
+        // Populate Iteration dropdown
+        const iterationMenu = document.getElementById('roadmap-iteration-menu');
+        if (iterationMenu && !iterationMenu.dataset.populated) {
+            iterationMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search iterations..." oninput="filterRoadmapDropdownOptions('iteration', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-iteration-options">
+                    ${iterations.map(i => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.iterations.includes(i) ? 'checked' : ''} onchange="handleRoadmapFilterChange('iteration', '${i.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${i}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('iteration')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('iteration')">Clear</button>
+                </div>
+            `;
+            iterationMenu.dataset.populated = 'true';
+        }
+
+        // Populate Priority dropdown
+        const priorityMenu = document.getElementById('roadmap-priority-menu');
+        if (priorityMenu && !priorityMenu.dataset.populated) {
+            priorityMenu.innerHTML = `
+                <div class="filter-dropdown-options" id="roadmap-priority-options">
+                    ${priorities.map(p => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.priorities.includes(p) ? 'checked' : ''} onchange="handleRoadmapFilterChange('priority', '${p}', this.checked)">
+                            <span class="option-label">${p === '(No Priority)' ? p : 'P' + p}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('priority')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('priority')">Clear</button>
+                </div>
+            `;
+            priorityMenu.dataset.populated = 'true';
+        }
+
+        // Populate Release dropdown
+        const releaseMenu = document.getElementById('roadmap-release-menu');
+        if (releaseMenu && !releaseMenu.dataset.populated) {
+            releaseMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search releases..." oninput="filterRoadmapDropdownOptions('release', this.value)">
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-release-options">
+                    ${releases.map(r => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" ${roadmapFilters.releases.includes(r) ? 'checked' : ''} onchange="handleRoadmapFilterChange('release', '${r.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${r}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('release')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('release')">Clear</button>
+                </div>
+            `;
+            releaseMenu.dataset.populated = 'true';
+        }
+
+        // Populate Tag dropdown
+        const tagMenu = document.getElementById('roadmap-tag-menu');
+        if (tagMenu && !tagMenu.dataset.populated) {
+            tagMenu.innerHTML = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search tags..." oninput="filterRoadmapDropdownOptions('tag', this.value)">
+                </div>
+                <div class="tag-logic-toggle" onclick="event.stopPropagation();">
+                    <span class="tag-logic-label">Match:</span>
+                    <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'or' ? 'active' : ''}" onclick="setTagLogicMode('or')">Any (OR)</button>
+                    <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'and' ? 'active' : ''}" onclick="setTagLogicMode('and')">All (AND)</button>
+                </div>
+                <div class="filter-dropdown-options" id="roadmap-tag-options">
+                    ${tags.map(t => `
+                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                            <input type="checkbox" value="${t.replace(/"/g, '&quot;')}" ${roadmapFilters.tags.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('tag', '${t.replace(/'/g, "\\'")}', this.checked)">
+                            <span class="option-label">${t}</span>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('tag')">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('tag')">Clear</button>
+                </div>
+            `;
+            tagMenu.dataset.populated = 'true';
+        }
+    }
+
+    // Toggle between AND/OR logic for tag filter
+    function setTagLogicMode(mode) {
+        roadmapFilters.tagsLogicMode = mode;
+        // Update button states
+        document.querySelectorAll('.tag-logic-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.textContent.toLowerCase().includes(mode));
+        });
+        renderRoadmapView();
+        saveStateToStorage(); // Persist logic mode change
+    }
+
+    // Sync all roadmap filter dropdown checkboxes with current filter state
+    // Called after state is loaded from localStorage to update UI
+    function syncRoadmapFilterDropdowns() {
+        const filterTypes = ['state', 'customer', 'assignee', 'team', 'iteration', 'priority', 'release', 'tag'];
+        const filterKeyMap = {
+            'state': 'states',
+            'customer': 'customers',
+            'assignee': 'assignees',
+            'team': 'teams',
+            'iteration': 'iterations',
+            'priority': 'priorities',
+            'release': 'releases',
+            'tag': 'tags'
+        };
+
+        filterTypes.forEach(type => {
+            const optionsContainer = document.getElementById(`roadmap-${type}-options`);
+            if (!optionsContainer) return;
+
+            const filterKey = filterKeyMap[type];
+            const selectedValues = roadmapFilters[filterKey] || [];
+
+            optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                const label = opt.querySelector('.option-label')?.textContent;
+                if (cb && label) {
+                    cb.checked = selectedValues.includes(label);
+                }
+            });
+
+            updateRoadmapFilterDisplay(type);
+        });
+
+        // Sync tag logic mode buttons
+        document.querySelectorAll('.tag-logic-btn').forEach(btn => {
+            const isOrBtn = btn.textContent.includes('OR');
+            const isAndBtn = btn.textContent.includes('AND');
+            btn.classList.toggle('active',
+                (isOrBtn && roadmapFilters.tagsLogicMode === 'or') ||
+                (isAndBtn && roadmapFilters.tagsLogicMode === 'and')
+            );
+        });
+
+        // Sync search input
+        const searchInput = document.getElementById('roadmap-search-input');
+        if (searchInput && roadmapFilters.search) {
+            searchInput.value = roadmapFilters.search;
+        }
+    }
+
+    function filterRoadmapDropdownOptions(filterType, searchText) {
+        const optionsContainer = document.getElementById(`roadmap-${filterType}-options`);
+        if (!optionsContainer) return;
+
+        const options = optionsContainer.querySelectorAll('.filter-dropdown-option');
+        const searchLower = searchText.toLowerCase();
+
+        options.forEach(opt => {
+            const label = opt.querySelector('.option-label')?.textContent || '';
+            opt.style.display = label.toLowerCase().includes(searchLower) ? '' : 'none';
+        });
+    }
+
+    // New handler for label-based filter options (onchange on checkbox)
+    function handleRoadmapFilterChange(filterType, value, checked) {
+        const filterKey = getFilterKey(filterType);
+
+        if (checked) {
+            if (!roadmapFilters[filterKey].includes(value)) {
+                roadmapFilters[filterKey].push(value);
+            }
+        } else {
+            roadmapFilters[filterKey] = roadmapFilters[filterKey].filter(v => v !== value);
+            // Reset exclusion mode if all tags/releases are unchecked
+            if (filterType === 'tag' && roadmapFilters.tags.length === 0) {
+                roadmapFilters.tagsExclusionMode = false;
+            }
+            if (filterType === 'release' && roadmapFilters.releases.length === 0) {
+                roadmapFilters.releasesExclusionMode = false;
+            }
+        }
+
+        updateRoadmapFilterDisplay(filterType);
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    // Legacy handler - kept for compatibility but now using handleRoadmapFilterChange
+    function toggleRoadmapFilter(filterType, value, element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        handleRoadmapFilterChange(filterType, value, checkbox.checked);
+    }
+
+    function getFilterKey(filterType) {
+        const keyMap = {
+            'state': 'states',
+            'customer': 'customers',
+            'assignee': 'assignees',
+            'team': 'teams',
+            'iteration': 'iterations',
+            'priority': 'priorities',
+            'release': 'releases',
+            'tag': 'tags'
+        };
+        return keyMap[filterType] || filterType;
+    }
+
+    function getFilterLabel(filterType) {
+        const labelMap = {
+            'state': 'All States',
+            'customer': 'All Customers',
+            'assignee': 'All Assignees',
+            'team': 'All Teams',
+            'iteration': 'All Iterations',
+            'priority': 'All Priorities',
+            'release': 'All Releases',
+            'tag': 'All Tags'
+        };
+        return labelMap[filterType] || 'All';
+    }
+
+    function updateRoadmapFilterDisplay(filterType) {
+        const filterKey = getFilterKey(filterType);
+        const displayEl = document.getElementById(`roadmap-${filterType}-display`);
+        const selected = roadmapFilters[filterKey];
+
+        if (selected.length === 0) {
+            displayEl.textContent = getFilterLabel(filterType);
+        } else if (selected.length === 1) {
+            displayEl.textContent = selected[0];
+        } else {
+            displayEl.textContent = `${selected.length} selected`;
+        }
+    }
+
+    function clearRoadmapFilter(filterType) {
+        const filterKey = getFilterKey(filterType);
+        roadmapFilters[filterKey] = [];
+
+        // Reset exclusion mode when clearing tag/release filter
+        if (filterType === 'tag') {
+            roadmapFilters.tagsExclusionMode = false;
+        }
+        if (filterType === 'release') {
+            roadmapFilters.releasesExclusionMode = false;
+        }
+
+        // Uncheck all checkboxes
+        const optionsContainer = document.getElementById(`roadmap-${filterType}-options`);
+        if (optionsContainer) {
+            optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        updateRoadmapFilterDisplay(filterType);
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    function selectAllRoadmapFilter(filterType) {
+        const filterKey = getFilterKey(filterType);
+        const optionsContainer = document.getElementById(`roadmap-${filterType}-options`);
+        if (!optionsContainer) return;
+
+        // Check all visible checkboxes and collect their values
+        const values = [];
+        optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            if (opt.style.display !== 'none') {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                const label = opt.querySelector('.option-label')?.textContent;
+                if (cb && label) {
+                    cb.checked = true;
+                    values.push(label);
+                }
+            }
+        });
+
+        roadmapFilters[filterKey] = values;
+
+        // For tag/release filter, entering exclusion mode when Select All is clicked
+        if (filterType === 'tag') {
+            roadmapFilters.tagsExclusionMode = true;
+        }
+        if (filterType === 'release') {
+            roadmapFilters.releasesExclusionMode = true;
+        }
+
+        updateRoadmapFilterDisplay(filterType);
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    function closeRoadmapDropdown(dropdownId) {
+        const menu = document.getElementById(dropdownId)?.querySelector('.filter-dropdown-menu');
+        if (menu) menu.classList.remove('open');
+    }
+
+    // Toggle team filter when clicking on a team card
+    function toggleRoadmapTeamCard(team) {
+        // If this team is already selected alone, clear it
+        if (roadmapFilters.teams.length === 1 && roadmapFilters.teams[0] === team) {
+            roadmapFilters.teams = [];
+        } else {
+            // Select only this team
+            roadmapFilters.teams = [team];
+        }
+
+        // Sync the team dropdown checkboxes
+        syncRoadmapTeamDropdown();
+        updateRoadmapFilterDisplay('team');
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    // Clear team filter (when clicking Total card)
+    function clearRoadmapTeamFilter() {
+        roadmapFilters.teams = [];
+        syncRoadmapTeamDropdown();
+        updateRoadmapFilterDisplay('team');
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    // Toggle Team Summary section collapse state
+    function toggleRoadmapTeamSummary() {
+        const section = document.getElementById('roadmap-section-teams');
+        if (section) {
+            section.classList.toggle('collapsed');
+            roadmapTeamSummaryCollapsed = section.classList.contains('collapsed');
+            saveStateToStorage(); // Persist collapse state
+        }
+    }
+
+    // Sync the team dropdown checkboxes with roadmapFilters.teams
+    function syncRoadmapTeamDropdown() {
+        const optionsContainer = document.getElementById('roadmap-team-options');
+        if (!optionsContainer) return;
+
+        optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const cb = opt.querySelector('input[type="checkbox"]');
+            const label = opt.querySelector('.option-label')?.textContent;
+            if (cb && label) {
+                cb.checked = roadmapFilters.teams.includes(label);
+            }
+        });
+    }
+
+    function clearAllRoadmapFilters() {
+        // Clear search
+        const searchInput = document.getElementById('roadmap-search-input');
+        if (searchInput) searchInput.value = '';
+        roadmapFilters.search = '';
+
+        // Clear all filter arrays
+        roadmapFilters.states = [];
+        roadmapFilters.customers = [];
+        roadmapFilters.assignees = [];
+        roadmapFilters.teams = [];
+        roadmapFilters.iterations = [];
+        roadmapFilters.priorities = [];
+        roadmapFilters.releases = [];
+        roadmapFilters.releasesExclusionMode = false;
+        roadmapFilters.tags = [];
+        roadmapFilters.tagsExclusionMode = false;
+        // Note: tagsLogicMode is not reset - user preference is preserved
+
+        // Reset all dropdowns
+        ['state', 'customer', 'assignee', 'team', 'iteration', 'priority', 'release', 'tag'].forEach(type => {
+            const optionsContainer = document.getElementById(`roadmap-${type}-options`);
+            if (optionsContainer) {
+                optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            }
+            updateRoadmapFilterDisplay(type);
+        });
+
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    function applyRoadmapFilters() {
+        const searchInput = document.getElementById('roadmap-search-input');
+        roadmapFilters.search = searchInput ? searchInput.value : '';
+        renderRoadmapView();
+        saveStateToStorage(); // Persist filter changes
+    }
+
+    function getRoadmapColumnClass(key) {
+        const classMap = {
+            'id': 'col-id',
+            'title': 'col-title',
+            'state': 'col-state',
+            'customers': 'col-customers',
+            'priority': 'col-priority',
+            'tags': 'col-tags',
+            'assignedTo': 'col-assignee',
+            'releaseVersion': 'col-release',
+            'effort': 'col-effort'
+        };
+        return classMap[key] || '';
+    }
+
+    function sortRoadmapTable(columnKey) {
+        // Toggle direction if same column, otherwise set to asc
+        if (roadmapSortState.column === columnKey) {
+            roadmapSortState.direction = roadmapSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            roadmapSortState.column = columnKey;
+            roadmapSortState.direction = 'asc';
+        }
+        renderRoadmapView();
+        saveStateToStorage(); // Persist sort changes
+    }
+
+    function getRoadmapSortIndicator(columnKey) {
+        if (roadmapSortState.column !== columnKey) return '';
+        return roadmapSortState.direction === 'asc' ? '▲' : '▼';
+    }
+
+    function sortRoadmapItems(items, column, direction, effortMap) {
+        return [...items].sort((a, b) => {
+            let aVal, bVal;
+
+            // Handle effort column specially - uses calculated effort map
+            if (column === 'effort' && effortMap) {
+                aVal = effortMap[a.id] || 0;
+                bVal = effortMap[b.id] || 0;
+            } else {
+                aVal = a[column];
+                bVal = b[column];
+            }
+
+            // Handle null/undefined
+            if (aVal == null) aVal = '';
+            if (bVal == null) bVal = '';
+
+            // Handle numbers (id, effort)
+            if (column === 'id' || column === 'effort') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
+            } else {
+                // Handle strings
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+            }
+
+            if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    function resetRoadmapSort() {
+        roadmapSortState.column = null;
+        roadmapSortState.direction = 'asc';
+        renderRoadmapView();
+        saveStateToStorage(); // Persist sort changes
+    }
+
+    // Show delivery slices for a feature in a modal
+    function drilldownFeatureSlices(featureId, featureTitle) {
+        const slices = getDeliverySlicesForFeatures([featureId]);
+        const modal = document.getElementById('feature-slices-modal');
+        const titleEl = document.getElementById('feature-modal-title');
+        const contentEl = document.getElementById('feature-modal-content');
+
+        if (!modal || !titleEl || !contentEl) {
+            console.error('[Roadmap] Modal elements not found');
+            return;
+        }
+
+        // Set title
+        titleEl.textContent = `Feature ${featureId}: ${featureTitle}`;
+
+        if (slices.length === 0) {
+            contentEl.innerHTML = `<div class="feature-modal-empty">No Delivery Slices found for this Feature.</div>`;
+        } else {
+            // Check if team/iteration filters are active
+            const activeTeamFilter = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : null;
+            const activeIterationFilter = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : null;
+
+            // Sort slices: matching filters first, then others
+            let sortedSlices = [...slices];
+            sortedSlices.sort((a, b) => {
+                const teamA = a.team || getLastPathSegment(a.areaPath) || '(No Team)';
+                const teamB = b.team || getLastPathSegment(b.areaPath) || '(No Team)';
+                const iterA = a.iteration || getLastPathSegment(a.iterationPath) || '(No Iteration)';
+                const iterB = b.iteration || getLastPathSegment(b.iterationPath) || '(No Iteration)';
+
+                // Calculate match score (higher = better match)
+                const matchA = (activeTeamFilter && teamA === activeTeamFilter ? 2 : 0) +
+                               (activeIterationFilter && iterA === activeIterationFilter ? 1 : 0);
+                const matchB = (activeTeamFilter && teamB === activeTeamFilter ? 2 : 0) +
+                               (activeIterationFilter && iterB === activeIterationFilter ? 1 : 0);
+
+                return matchB - matchA;  // Higher score first
+            });
+
+            // Calculate effort summary
+            let filteredEffort = 0;
+            let totalEffort = 0;
+            sortedSlices.forEach(ds => {
+                const effort = ds.effort || 0;
+                totalEffort += effort;
+                const dsTeam = ds.team || getLastPathSegment(ds.areaPath) || '(No Team)';
+                const dsIteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                const teamMatch = !activeTeamFilter || dsTeam === activeTeamFilter;
+                const iterationMatch = !activeIterationFilter || dsIteration === activeIterationFilter;
+                if (teamMatch && iterationMatch) {
+                    filteredEffort += effort;
+                }
+            });
+
+            // Build effort summary HTML
+            let effortSummaryHtml = '';
+            const hasFilters = activeTeamFilter || activeIterationFilter;
+            if (hasFilters) {
+                const filterLabels = [];
+                if (activeTeamFilter) filterLabels.push(activeTeamFilter);
+                if (activeIterationFilter) filterLabels.push(activeIterationFilter);
+                effortSummaryHtml = `
+                    <div class="feature-modal-effort-summary">
+                        <span class="effort-team-label">${filterLabels.join(' · ')} Effort:</span>
+                        <span class="effort-team-value">${filteredEffort.toFixed(1)}d</span>
+                        <span class="effort-total-label">/ Total:</span>
+                        <span class="effort-total-value">${totalEffort.toFixed(1)}d</span>
+                    </div>
+                `;
+            } else {
+                effortSummaryHtml = `
+                    <div class="feature-modal-effort-summary">
+                        <span class="effort-total-label">Total Effort:</span>
+                        <span class="effort-total-value">${totalEffort.toFixed(1)}d</span>
+                    </div>
+                `;
+            }
+
+            // Build table rows
+            const rows = sortedSlices.map(ds => {
+                const iteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '—';
+                const team = ds.team || getLastPathSegment(ds.areaPath) || '—';
+
+                // Determine if this row should be grayed out (doesn't match active filters)
+                const teamMatch = !activeTeamFilter || team === activeTeamFilter;
+                const iterationMatch = !activeIterationFilter || iteration === activeIterationFilter;
+                const isOtherRow = !teamMatch || !iterationMatch;
+                const rowClass = isOtherRow ? 'other-team-row' : '';
+
+                return `
+                    <tr class="${rowClass}">
+                        <td class="feature-modal-col-id"><a href="${ds.url}" target="_blank" class="work-item-id">${ds.id}</a></td>
+                        <td class="feature-modal-col-title" title="${(ds.title || '').replace(/"/g, '&quot;')}">${ds.title || ''}</td>
+                        <td class="feature-modal-col-state"><span class="state-badge ${getStateClass(ds.state)}">${ds.state || ''}</span></td>
+                        <td class="feature-modal-col-iteration">${iteration}</td>
+                        <td class="feature-modal-col-team">${team}</td>
+                        <td class="feature-modal-col-effort">${ds.effort || '—'}</td>
+                        <td class="feature-modal-col-owner">${ds.assignedTo || '—'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Use separate header and body tables for fixed header
+            contentEl.innerHTML = `
+                ${effortSummaryHtml}
+                <div class="feature-modal-table-container">
+                    <div class="feature-modal-table-header">
+                        <table>
+                            <colgroup>
+                                <col class="feature-modal-col-id">
+                                <col class="feature-modal-col-title">
+                                <col class="feature-modal-col-state">
+                                <col class="feature-modal-col-iteration">
+                                <col class="feature-modal-col-team">
+                                <col class="feature-modal-col-effort">
+                                <col class="feature-modal-col-owner">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>State</th>
+                                    <th>Iteration</th>
+                                    <th>Team</th>
+                                    <th>Effort</th>
+                                    <th>Owner</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                    <div class="feature-modal-table-body">
+                        <table>
+                            <colgroup>
+                                <col class="feature-modal-col-id">
+                                <col class="feature-modal-col-title">
+                                <col class="feature-modal-col-state">
+                                <col class="feature-modal-col-iteration">
+                                <col class="feature-modal-col-team">
+                                <col class="feature-modal-col-effort">
+                                <col class="feature-modal-col-owner">
+                            </colgroup>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show modal
+        modal.style.display = 'flex';
+    }
+
+    // Scroll-to-close for roadmap dropdowns
+    let roadmapScrollHandler = null;
+
+    function setupRoadmapScrollToClose() {
+        if (roadmapScrollHandler) return;
+
+        roadmapScrollHandler = () => {
+            // Close all roadmap dropdowns on scroll
+            ['roadmap-state-dropdown', 'roadmap-customer-dropdown', 'roadmap-assignee-dropdown',
+             'roadmap-team-dropdown', 'roadmap-iteration-dropdown', 'roadmap-release-dropdown', 'roadmap-tag-dropdown'].forEach(id => {
+                const menu = document.getElementById(id)?.querySelector('.filter-dropdown-menu');
+                if (menu && menu.classList.contains('open')) {
+                    menu.classList.remove('open');
+                }
+            });
+        };
+
+        window.addEventListener('scroll', roadmapScrollHandler, { passive: true });
+    }
+
+    // Initialize scroll-to-close when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupRoadmapScrollToClose);
+    } else {
+        setupRoadmapScrollToClose();
+    }
+</script>

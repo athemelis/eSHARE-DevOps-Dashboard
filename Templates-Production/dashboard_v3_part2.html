@@ -1,0 +1,1672 @@
+    <script>
+    // Work items data will be injected here
+    const workItems = WORK_ITEMS_PLACEHOLDER;
+
+    // CSV validation data (injected from generator for data source validation)
+    const csvValidationData = CSV_VALIDATION_DATA_PLACEHOLDER;
+
+    // State management
+    let currentView = 'executive';
+    let drilldownStack = [];
+    let multiSelectState = { field: null, values: new Set() };
+    let activeCharts = {};
+    let selectedReleases = []; // Array for multi-select
+    let selectedTimePeriod = 'all';
+
+    // ==================== STATE PERSISTENCE (localStorage) ====================
+    const STORAGE_KEY = 'eshare-devops-dashboard-state';
+
+    // Save current state to localStorage
+    function saveStateToStorage() {
+        try {
+            const state = {
+                currentView: currentView,
+                // Roadmap view state
+                roadmapFilters: typeof roadmapFilters !== 'undefined' ? roadmapFilters : null,
+                roadmapSortState: typeof roadmapSortState !== 'undefined' ? roadmapSortState : null,
+                roadmapTeamSummaryCollapsed: typeof roadmapTeamSummaryCollapsed !== 'undefined' ? roadmapTeamSummaryCollapsed : true,
+                // Releases view state
+                releaseHeaderFilters: typeof releaseHeaderFilters !== 'undefined' ? releaseHeaderFilters : null,
+                releasesSearchFilter: typeof releasesSearchFilter !== 'undefined' ? releasesSearchFilter : '',
+                selectedReleases: typeof selectedReleases !== 'undefined' ? selectedReleases : [],
+                // Executive view state
+                execChartFilters: typeof execChartFilters !== 'undefined' ? execChartFilters : null,
+                execTeamFilter: document.getElementById('exec-team-filter')?.value || 'all',
+                execTypeFilter: document.getElementById('exec-type-filter')?.value || 'all',
+                // Customers view state (v80: Issues only, with filters for customers, categories, states, priorities, releases)
+                customersFilters: typeof customersFilters !== 'undefined' ? customersFilters : null,
+                customersSortState: typeof customersSortState !== 'undefined' ? customersSortState : null,
+                // Bugs view state
+                bugsChartFilters: typeof bugsChartFilters !== 'undefined' ? bugsChartFilters : null,
+                bugTrendFilters: typeof bugTrendFilters !== 'undefined' ? bugTrendFilters : null,
+                selectedBugDateRange: typeof selectedBugDateRange !== 'undefined' ? selectedBugDateRange : 'quarter',
+                bugTrendStartDate: document.getElementById('bug-trend-start')?.value || '',
+                bugTrendEndDate: document.getElementById('bug-trend-end')?.value || '',
+                // Teams view state
+                teamLeadChartFilters: typeof teamLeadChartFilters !== 'undefined' ? teamLeadChartFilters : null,
+                currentTeamDetails: typeof currentTeamDetails !== 'undefined' ? currentTeamDetails : null,
+                selectedTimePeriod: typeof selectedTimePeriod !== 'undefined' ? selectedTimePeriod : 'all',
+                engFilters: typeof engFilters !== 'undefined' ? engFilters : null,
+                selectedEngineers: typeof selectedEngineers !== 'undefined' ? selectedEngineers : [],
+                // Tasks view state
+                tasksParentTypeFilter: document.getElementById('tasks-parent-type-filter')?.value || 'all',
+                tasksTeamFilter: document.getElementById('tasks-team-filter')?.value || 'all',
+                tasksStateFilter: typeof getSelectedTasksStates !== 'undefined' ? getSelectedTasksStates() : [],
+                // Details view state
+                detailsTypeFilter: document.getElementById('details-type-filter')?.value || 'all',
+                detailsTeamFilter: document.getElementById('details-team-filter')?.value || 'all',
+                detailsStateFilter: typeof getSelectedDetailsStates !== 'undefined' ? getSelectedDetailsStates() : [],
+                // Validation view state
+                validationTypeFilter: document.getElementById('validation-type-filter')?.value || 'all',
+                validationTeamFilter: document.getElementById('validation-team-filter')?.value || 'all',
+                validationStateFilter: typeof getSelectedValidationStates !== 'undefined' ? getSelectedValidationStates() : [],
+                timestamp: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+            console.warn('[State] Failed to save state to localStorage:', e);
+        }
+    }
+
+    // Load state from localStorage
+    function loadStateFromStorage() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) return null;
+
+            const state = JSON.parse(stored);
+            // State expires after 24 hours
+            if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) {
+                localStorage.removeItem(STORAGE_KEY);
+                return null;
+            }
+            return state;
+        } catch (e) {
+            console.warn('[State] Failed to load state from localStorage:', e);
+            return null;
+        }
+    }
+
+    // Flag to indicate state was loaded and dropdowns need syncing
+    let stateWasLoaded = false;
+    let releasesStateWasLoaded = false;
+    let executiveStateWasLoaded = false;
+    let customersStateWasLoaded = false;
+    let bugsStateWasLoaded = false;
+    let teamsStateWasLoaded = false;
+    let tasksStateWasLoaded = false;
+    let detailsStateWasLoaded = false;
+    let validationStateWasLoaded = false;
+
+    // Loaded state storage (used for DOM restoration after render)
+    let loadedStateCache = null;
+
+    // Apply loaded state (called after all components are initialized)
+    function applyLoadedState(state) {
+        if (!state) return;
+
+        // Cache state for DOM restoration after render
+        loadedStateCache = state;
+
+        // Restore roadmap filters if available
+        if (state.roadmapFilters && typeof roadmapFilters !== 'undefined') {
+            Object.assign(roadmapFilters, state.roadmapFilters);
+            stateWasLoaded = true;
+        }
+
+        // Restore roadmap sort state if available
+        if (state.roadmapSortState && typeof roadmapSortState !== 'undefined') {
+            Object.assign(roadmapSortState, state.roadmapSortState);
+        }
+
+        // Restore Team Summary collapse state
+        if (typeof state.roadmapTeamSummaryCollapsed !== 'undefined' && typeof roadmapTeamSummaryCollapsed !== 'undefined') {
+            roadmapTeamSummaryCollapsed = state.roadmapTeamSummaryCollapsed;
+            // Apply collapse state to DOM after render
+            setTimeout(() => {
+                const section = document.getElementById('roadmap-section-teams');
+                if (section) {
+                    section.classList.toggle('collapsed', roadmapTeamSummaryCollapsed);
+                }
+            }, 0);
+        }
+
+        // Restore Releases view state
+        if (state.releaseHeaderFilters && typeof releaseHeaderFilters !== 'undefined') {
+            Object.assign(releaseHeaderFilters, state.releaseHeaderFilters);
+            releasesStateWasLoaded = true;
+        }
+        if (typeof state.releasesSearchFilter !== 'undefined' && typeof releasesSearchFilter !== 'undefined') {
+            releasesSearchFilter = state.releasesSearchFilter;
+        }
+        if (state.selectedReleases && typeof selectedReleases !== 'undefined') {
+            selectedReleases = [...state.selectedReleases];
+        }
+
+        // Restore Executive view state
+        if (state.execChartFilters && typeof execChartFilters !== 'undefined') {
+            Object.assign(execChartFilters, state.execChartFilters);
+        }
+        // Always mark as loaded if we have any executive state (even if default values)
+        if (typeof state.execTeamFilter !== 'undefined' || typeof state.execTypeFilter !== 'undefined') {
+            executiveStateWasLoaded = true;
+        }
+
+        // Restore Customers view state
+        if (state.customersFilters && typeof customersFilters !== 'undefined') {
+            Object.assign(customersFilters, state.customersFilters);
+        }
+        if (state.customersSortState && typeof customersSortState !== 'undefined') {
+            Object.assign(customersSortState, state.customersSortState);
+        }
+        // Always mark as loaded if we have any customer state
+        if (state.customersFilters || state.customersSortState) {
+            customersStateWasLoaded = true;
+        }
+
+        // Restore Bugs view state
+        if (state.bugsChartFilters && typeof bugsChartFilters !== 'undefined') {
+            Object.assign(bugsChartFilters, state.bugsChartFilters);
+        }
+        if (state.bugTrendFilters && typeof bugTrendFilters !== 'undefined') {
+            Object.assign(bugTrendFilters, state.bugTrendFilters);
+        }
+        if (typeof state.selectedBugDateRange !== 'undefined' && typeof selectedBugDateRange !== 'undefined') {
+            selectedBugDateRange = state.selectedBugDateRange;
+        }
+        // Always mark as loaded if we have any bugs state
+        if (typeof state.selectedBugDateRange !== 'undefined' || state.bugTrendFilters || typeof state.bugTrendStartDate !== 'undefined') {
+            bugsStateWasLoaded = true;
+        }
+
+        // Restore Teams view state
+        if (state.teamLeadChartFilters && typeof teamLeadChartFilters !== 'undefined') {
+            Object.assign(teamLeadChartFilters, state.teamLeadChartFilters);
+        }
+        if (typeof state.currentTeamDetails !== 'undefined' && typeof currentTeamDetails !== 'undefined') {
+            currentTeamDetails = state.currentTeamDetails;
+        }
+        if (typeof state.selectedTimePeriod !== 'undefined' && typeof selectedTimePeriod !== 'undefined') {
+            selectedTimePeriod = state.selectedTimePeriod;
+        }
+        if (state.engFilters && typeof engFilters !== 'undefined') {
+            Object.assign(engFilters, state.engFilters);
+        }
+        if (state.selectedEngineers && typeof selectedEngineers !== 'undefined') {
+            selectedEngineers = [...state.selectedEngineers];
+        }
+        // Always mark as loaded if we have any teams state
+        if (typeof state.selectedTimePeriod !== 'undefined' || state.teamLeadChartFilters || state.engFilters) {
+            teamsStateWasLoaded = true;
+        }
+
+        // Mark Tasks view state for restoration - always if we have any tasks state
+        if (typeof state.tasksParentTypeFilter !== 'undefined' || typeof state.tasksTeamFilter !== 'undefined' || state.tasksStateFilter) {
+            tasksStateWasLoaded = true;
+        }
+
+        // Mark Details view state for restoration - always if we have any details state
+        if (typeof state.detailsTypeFilter !== 'undefined' || typeof state.detailsTeamFilter !== 'undefined' || state.detailsStateFilter) {
+            detailsStateWasLoaded = true;
+        }
+
+        // Mark Validation view state for restoration - always if we have any validation state
+        if (typeof state.validationTypeFilter !== 'undefined' || typeof state.validationTeamFilter !== 'undefined' || state.validationStateFilter) {
+            validationStateWasLoaded = true;
+        }
+
+        // Restore view (will be applied during initialization)
+        if (state.currentView) {
+            currentView = state.currentView;
+        }
+    }
+    
+    // Color palettes
+    const colors = {
+        primary: ['#22d3ee', '#a78bfa', '#34d399', '#fb923c', '#f87171', '#60a5fa', '#f472b6', '#fbbf24', '#4ade80', '#818cf8'],
+        states: {
+            'Done': '#34d399',
+            'Closed': '#34d399',
+            'In Progress': '#60a5fa',
+            'New': '#94a3b8',
+            'To Do': '#94a3b8',
+            'Triaged': '#fb923c',
+            'Removed': '#f87171',
+            'Ready For Review': '#a78bfa'
+        },
+        teams: {
+            'Frontend': '#60a5fa',
+            'Backend': '#34d399',
+            'QA': '#fb923c',
+            'DevOps': '#a78bfa',
+            'Analytics': '#f472b6',
+            'Govern': '#22d3ee',
+            'Customer Success': '#fbbf24',
+            'eShare': '#94a3b8',
+            'SCG': '#f87171'
+        },
+        bugTypes: {
+            'Customer Related': '#f87171',
+            'Product Quality': '#fb923c',
+            'Technical & Infrastructure': '#a78bfa'
+        },
+        priority: {
+            '1': '#f87171',
+            '2': '#fb923c',
+            '3': '#fbbf24',
+            '4': '#94a3b8'
+        }
+    };
+    
+    // ==================== HEADER HELPERS ====================
+    
+    // Toggle mobile navigation
+    function toggleMobileNav() {
+        document.getElementById('nav-mobile').classList.toggle('open');
+    }
+    
+    // Toggle filter dropdown
+    function toggleFilterDropdown(dropdownId) {
+        const menu = document.querySelector(`#${dropdownId} .filter-dropdown-menu`);
+        const isOpen = menu.classList.contains('open');
+        
+        // Close all dropdowns first
+        document.querySelectorAll('.filter-dropdown-menu').forEach(m => m.classList.remove('open'));
+        document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('open'));
+        
+        // Toggle the clicked one
+        if (!isOpen) {
+            menu.classList.add('open');
+            openDropdownId = dropdownId;
+        } else {
+            openDropdownId = null;
+        }
+    }
+    
+    // Toggle header info panel
+    function toggleHeaderInfo(panelId) {
+        const panel = document.getElementById(panelId);
+        const isOpen = panel.classList.contains('open');
+        
+        // Close all panels and dropdowns first
+        document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('open'));
+        document.querySelectorAll('.filter-dropdown-menu').forEach(m => m.classList.remove('open'));
+        openDropdownId = null;
+        
+        // Toggle the clicked one
+        if (!isOpen) {
+            panel.classList.add('open');
+        }
+    }
+    
+    // Track which dropdown is currently open
+    let openDropdownId = null;
+    
+    // Track if any release filter dropdown was open
+    let releaseFilterDropdownWasOpen = false;
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-row-info')) {
+            openDropdownId = null;
+            document.querySelectorAll('.filter-dropdown-menu').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('open'));
+        }
+    });
+
+    // Close dropdowns when scrolling the window
+    window.addEventListener('scroll', function() {
+        if (openDropdownId) {
+            openDropdownId = null;
+            document.querySelectorAll('.filter-dropdown-menu').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('open'));
+        }
+    }, { passive: true });
+
+    // Re-open a dropdown after re-render
+    function reopenDropdown() {
+        if (openDropdownId) {
+            const menu = document.querySelector(`#${openDropdownId} .filter-dropdown-menu`);
+            if (menu) {
+                menu.classList.add('open');
+            }
+        }
+    }
+    
+    // Update release header filter display text
+    function updateReleaseHeaderDisplay() {
+        const display = document.getElementById('release-filter-display');
+        if (!display) return;
+        
+        const totalOptions = document.querySelectorAll('#release-filter-menu .filter-dropdown-option input[type="checkbox"]').length;
+        
+        if (selectedReleases.length === 0) {
+            display.textContent = 'All Releases';
+        } else if (selectedReleases.length === 1) {
+            display.textContent = selectedReleases[0];
+        } else if (selectedReleases.length <= 2) {
+            display.textContent = selectedReleases.join(', ');
+        } else {
+            display.textContent = `${selectedReleases.length} releases selected`;
+        }
+    }
+    
+    // Handle release checkbox change - standard multi-select behavior
+    function handleReleaseCheckboxChange(releaseVersion, checked, event) {
+        event.stopPropagation(); // Keep dropdown open
+        openDropdownId = 'release-filter-dropdown';
+
+        // Save scroll position before re-render
+        const optionsContainer = document.getElementById('release-dropdown-options');
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        if (checked) {
+            if (!selectedReleases.includes(releaseVersion)) {
+                selectedReleases.push(releaseVersion);
+            }
+        } else {
+            selectedReleases = selectedReleases.filter(r => r !== releaseVersion);
+        }
+
+        updateReleaseHeaderDisplay();
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+        reopenDropdown();
+
+        // Restore scroll position after re-render
+        const newOptionsContainer = document.getElementById('release-dropdown-options');
+        if (newOptionsContainer) {
+            newOptionsContainer.scrollTop = scrollTop;
+        }
+    }
+
+    // Select all releases - re-render immediately
+    function selectAllReleases(event) {
+        if (event) event.stopPropagation();
+        openDropdownId = 'release-filter-dropdown';
+        const checkboxes = document.querySelectorAll('#release-filter-menu .filter-dropdown-option input[type="checkbox"]');
+        selectedReleases = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            selectedReleases.push(cb.dataset.release);
+        });
+        updateReleaseHeaderDisplay();
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+        reopenDropdown();
+    }
+
+    // Clear release selection - re-render immediately
+    function clearReleaseSelection(event) {
+        if (event) event.stopPropagation();
+        openDropdownId = 'release-filter-dropdown';
+        document.querySelectorAll('#release-filter-menu .filter-dropdown-option input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+        selectedReleases = [];
+        updateReleaseHeaderDisplay();
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+        reopenDropdown();
+    }
+    
+    // ==================== RELEASE HEADER FILTERS ====================
+    
+    // Store header filter selections
+    let releaseHeaderFilters = {
+        type: [],
+        bugtype: [],
+        state: [],
+        team: [],
+        customer: []
+    };
+
+    // Releases search filter
+    let releasesSearchFilter = '';
+    
+    // Filter dropdown options by search text
+    function filterDropdownOptions(filterType, searchText) {
+        const searchLower = searchText.toLowerCase().trim();
+        const optionsContainer = document.getElementById(`release-${filterType}-options`);
+        if (!optionsContainer) return;
+
+        const options = optionsContainer.querySelectorAll('.filter-dropdown-option');
+        options.forEach(option => {
+            const searchValue = option.getAttribute('data-search-value') || '';
+            if (searchLower === '' || searchValue.includes(searchLower)) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    }
+
+    // Filter Release dropdown options (special case with different structure)
+    function filterReleaseDropdownOptions(searchText) {
+        const searchLower = searchText.toLowerCase().trim();
+        const optionsContainer = document.getElementById('release-dropdown-options');
+        if (!optionsContainer) return;
+
+        const options = optionsContainer.querySelectorAll('.filter-dropdown-option');
+        options.forEach(option => {
+            const searchValue = option.getAttribute('data-search-value') || '';
+            if (searchLower === '' || searchValue.includes(searchLower)) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    }
+
+    // Update header filter when checkbox changes - re-render immediately
+    function updateReleaseHeaderFilter(filterType, event) {
+        if (event) event.stopPropagation();
+        openDropdownId = `release-${filterType}-header-dropdown`;
+        const checkboxes = document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]:checked`);
+        releaseHeaderFilters[filterType] = Array.from(checkboxes).map(cb => cb.value);
+        updateReleaseHeaderFilterDisplay(filterType);
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+        reopenDropdown();
+    }
+    
+    // Update display text for header filter
+    function updateReleaseHeaderFilterDisplay(filterType) {
+        const display = document.getElementById(`release-${filterType}-header-display`);
+        if (!display) return;
+        
+        const labels = {
+            type: 'All Types',
+            bugtype: 'All Bug Types',
+            state: 'All States',
+            team: 'All Teams',
+            customer: 'All Customers'
+        };
+        
+        const selected = releaseHeaderFilters[filterType];
+        const totalCheckboxes = document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).length;
+        
+        if (selected.length === 0 || selected.length === totalCheckboxes) {
+            display.textContent = labels[filterType];
+        } else if (selected.length === 1) {
+            display.textContent = selected[0];
+        } else {
+            display.textContent = `${selected.length} selected`;
+        }
+    }
+    
+    // Select all for header filter - re-render immediately
+    function selectAllHeaderFilter(filterType, event) {
+        if (event) event.stopPropagation();
+        openDropdownId = `release-${filterType}-header-dropdown`;
+        const checkboxes = document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`);
+        releaseHeaderFilters[filterType] = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            releaseHeaderFilters[filterType].push(cb.value);
+        });
+        updateReleaseHeaderFilterDisplay(filterType);
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+        reopenDropdown();
+    }
+
+    // Clear header filter - re-render immediately
+    function clearHeaderFilter(filterType, event) {
+        if (event) event.stopPropagation();
+        openDropdownId = `release-${filterType}-header-dropdown`;
+        document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
+            cb.checked = false;
+        });
+        releaseHeaderFilters[filterType] = [];
+        updateReleaseHeaderFilterDisplay(filterType);
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+        reopenDropdown();
+    }
+    
+    // Apply releases search filter
+    function applyReleasesSearch() {
+        const searchInput = document.getElementById('releases-search-input');
+        releasesSearchFilter = searchInput ? searchInput.value : '';
+        updateClearFiltersButton();
+        saveStateToStorage();
+        renderReleasesView();
+    }
+
+    // Check if any release filters are active
+    function hasActiveReleaseFilters() {
+        if (releasesSearchFilter) return true;
+        if (selectedReleases.length > 0) return true;
+        if (releaseHeaderFilters.type.length > 0) return true;
+        if (releaseHeaderFilters.bugtype.length > 0) return true;
+        if (releaseHeaderFilters.state.length > 0) return true;
+        if (releaseHeaderFilters.team.length > 0) return true;
+        if (releaseHeaderFilters.customer.length > 0) return true;
+        return false;
+    }
+    
+    // Clear all release filters
+    function clearAllReleaseFilters() {
+        // Clear search
+        const searchInput = document.getElementById('releases-search-input');
+        if (searchInput) searchInput.value = '';
+        releasesSearchFilter = '';
+
+        // Clear release selection
+        selectedReleases = [];
+        document.querySelectorAll('#release-filter-menu .filter-dropdown-option input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+        });
+        updateReleaseHeaderDisplay();
+
+        // Clear all header filters
+        ['type', 'bugtype', 'state', 'team', 'customer'].forEach(filterType => {
+            document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
+                cb.checked = false;
+            });
+            releaseHeaderFilters[filterType] = [];
+            updateReleaseHeaderFilterDisplay(filterType);
+        });
+
+        // Hide clear button
+        const clearBtn = document.getElementById('release-clear-filters-btn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+
+        saveStateToStorage();
+        renderReleasesView();
+    }
+
+    // Sync Releases view dropdowns with loaded state
+    function syncReleasesFilterDropdowns() {
+        // Restore search input
+        const searchInput = document.getElementById('releases-search-input');
+        if (searchInput && releasesSearchFilter) {
+            searchInput.value = releasesSearchFilter;
+        }
+
+        // Sync release selection checkboxes
+        document.querySelectorAll('#release-dropdown-options input[type="checkbox"]').forEach(cb => {
+            cb.checked = selectedReleases.includes(cb.value);
+        });
+        updateReleaseHeaderDisplay();
+
+        // Sync header filter checkboxes
+        ['type', 'bugtype', 'state', 'team', 'customer'].forEach(filterType => {
+            document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
+                cb.checked = releaseHeaderFilters[filterType].includes(cb.value);
+            });
+            updateReleaseHeaderFilterDisplay(filterType);
+        });
+
+        updateClearFiltersButton();
+    }
+    
+    // Update clear button visibility
+    function updateClearFiltersButton() {
+        const clearBtn = document.getElementById('release-clear-filters-btn');
+        if (clearBtn) {
+            if (hasActiveReleaseFilters()) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+        }
+    }
+    
+    // Get filtered release items based on header filters
+    function getHeaderFilteredReleaseItems(items) {
+        return items.filter(item => {
+            // Search filter (searches title and ID)
+            if (releasesSearchFilter) {
+                const searchLower = releasesSearchFilter.toLowerCase();
+                const titleMatch = (item.title || '').toLowerCase().includes(searchLower);
+                const idMatch = String(item.id).includes(releasesSearchFilter);
+                if (!titleMatch && !idMatch) return false;
+            }
+
+            // Type filter
+            if (releaseHeaderFilters.type.length > 0) {
+                let typeMatch = false;
+                if (releaseHeaderFilters.type.includes('Feature') && item.type === 'Feature') typeMatch = true;
+                if (releaseHeaderFilters.type.includes('Issue') && item.type === 'Issue') typeMatch = true;
+                if (releaseHeaderFilters.type.includes('CustomerBug') && item.type === 'Bug' && item.bugType === 'Customer Related') typeMatch = true;
+                if (releaseHeaderFilters.type.includes('InternalBug') && item.type === 'Bug' && item.bugType !== 'Customer Related') typeMatch = true;
+                if (!typeMatch) return false;
+            }
+            
+            // Bug type filter - when active, only Bugs can match (Features/Issues are excluded)
+            if (releaseHeaderFilters.bugtype.length > 0) {
+                if (item.type !== 'Bug') return false; // Non-bugs are excluded when bugtype filter is active
+                if (!releaseHeaderFilters.bugtype.includes(item.bugType)) return false;
+            }
+            
+            // State filter
+            if (releaseHeaderFilters.state.length > 0) {
+                if (!releaseHeaderFilters.state.includes(item.state)) return false;
+            }
+            
+            // Team filter
+            if (releaseHeaderFilters.team.length > 0) {
+                if (!releaseHeaderFilters.team.includes(item.team || '(Not Set)')) return false;
+            }
+            
+            // Customer filter - item must have at least one of the selected customers
+            if (releaseHeaderFilters.customer.length > 0) {
+                if (!item.customers) return false;
+                const itemCustomers = item.customers.split(';').map(c => c.trim()).filter(c => c);
+                const hasMatchingCustomer = itemCustomers.some(c => releaseHeaderFilters.customer.includes(c));
+                if (!hasMatchingCustomer) return false;
+            }
+            
+            return true;
+        });
+    }
+    
+    // Utility functions
+    function getStateClass(state) {
+        const s = (state || '').toLowerCase().replace(/\s+/g, '');
+        if (s === 'done' || s === 'closed') return 'state-done';
+        if (s === 'inprogress') return 'state-inprogress';
+        if (s === 'new' || s === 'todo') return 'state-new';
+        if (s === 'triaged') return 'state-triaged';
+        if (s === 'removed') return 'state-removed';
+        return 'state-new';
+    }
+    
+    function countBy(items, field) {
+        const counts = {};
+        items.forEach(item => {
+            const val = item[field] || '(Not Set)';
+            counts[val] = (counts[val] || 0) + 1;
+        });
+        return counts;
+    }
+    
+    function sumBy(items, groupField, sumField) {
+        const sums = {};
+        items.forEach(item => {
+            const key = item[groupField] || '(Not Set)';
+            const val = item[sumField] || 0;
+            sums[key] = (sums[key] || 0) + val;
+        });
+        return sums;
+    }
+    
+    function sortObjectByValue(obj, ascending = false) {
+        const sorted = Object.entries(obj).sort((a, b) => ascending ? a[1] - b[1] : b[1] - a[1]);
+        return Object.fromEntries(sorted);
+    }
+    
+    function filterItems(items, filters) {
+        return items.filter(item => {
+            for (const [field, value] of Object.entries(filters)) {
+                if (Array.isArray(value)) {
+                    // Multi-select filter
+                    const itemVal = item[field] || '(Not Set)';
+                    if (!value.includes(itemVal)) return false;
+                } else {
+                    const itemVal = item[field] || '(Not Set)';
+                    if (itemVal !== value) return false;
+                }
+            }
+            return true;
+        });
+    }
+    
+    function destroyChart(chartId) {
+        if (activeCharts[chartId]) {
+            activeCharts[chartId].destroy();
+            delete activeCharts[chartId];
+        }
+    }
+    
+    function createChart(canvasId, type, data, options = {}) {
+        destroyChart(canvasId);
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+        
+        const defaultOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: type === 'doughnut' || type === 'pie',
+                    position: 'right',
+                    labels: { color: '#94a3b8', font: { size: 11 } }
+                },
+                datalabels: {
+                    display: false  // Disable datalabels by default
+                }
+            }
+        };
+        
+        activeCharts[canvasId] = new Chart(ctx, {
+            type,
+            data,
+            options: { ...defaultOptions, ...options }
+        });
+        
+        return activeCharts[canvasId];
+    }
+    
+    // Date utility functions
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        return new Date(dateStr);
+    }
+    
+    function getCompletionDate(item) {
+        if (item.state === 'Done' && item.closedDate) {
+            return parseDate(item.closedDate);
+        } else if (item.state === 'Closed' && item.stateChangeDate) {
+            return parseDate(item.stateChangeDate);
+        }
+        return null;
+    }
+    
+    function isInPeriod(date, period) {
+        if (!date) return false;
+        const now = new Date();
+        const d = new Date(date);
+        
+        switch(period) {
+            case 'week':
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                startOfWeek.setHours(0, 0, 0, 0);
+                return d >= startOfWeek;
+            case 'month':
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            case 'lastmonth':
+                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+            case 'quarter':
+                const currentQuarter = Math.floor(now.getMonth() / 3);
+                const dateQuarter = Math.floor(d.getMonth() / 3);
+                return dateQuarter === currentQuarter && d.getFullYear() === now.getFullYear();
+            case 'all':
+            default:
+                return true;
+        }
+    }
+    
+    function getWeekNumber(date) {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+        const yearStart = new Date(d.getFullYear(), 0, 1);
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+    
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    // Extract iteration info
+    function getIterationMonth(iteration) {
+        if (!iteration) return null;
+        const match = iteration.match(/CY\d{4}Q\d-(\w+)/);
+        return match ? match[1] : null;
+    }
+    
+    // Slice field definitions per work item type
+    const sliceFieldsByType = {
+        'Bug': [
+            { key: 'bugType', label: 'Bug Type', colors: colors.bugTypes },
+            { key: 'state', label: 'Status', colors: colors.states },
+            { key: 'deliverySliceOwner', label: 'Bug Owner' },
+            { key: 'feature', label: 'Feature' },
+            { key: 'component', label: 'Component' },
+            { key: 'team', label: 'Team', colors: colors.teams },
+            { key: 'releaseVersion', label: 'Release' },
+            { key: 'assignedTo', label: 'Assigned To' }
+        ],
+        'Issue': [
+            { key: 'ticketCategory', label: 'Category' },
+            { key: 'state', label: 'Status', colors: colors.states },
+            { key: 'customers', label: 'Customer' },
+            { key: 'team', label: 'Team', colors: colors.teams },
+            { key: 'deliverySliceOwner', label: 'DS Owner' }
+        ],
+        'Feature': [
+            { key: 'state', label: 'Status', colors: colors.states },
+            { key: 'customers', label: 'Customer' },
+            { key: 'team', label: 'Team', colors: colors.teams },
+            { key: 'releaseVersion', label: 'Release' }
+        ],
+        'Delivery Slice': [
+            { key: 'state', label: 'Status', colors: colors.states },
+            { key: 'team', label: 'Team', colors: colors.teams },
+            { key: 'deliverySliceOwner', label: 'DS Owner' },
+            { key: 'iteration', label: 'Iteration' }
+        ],
+        'Task': [
+            { key: 'state', label: 'Status', colors: colors.states },
+            { key: 'team', label: 'Team', colors: colors.teams },
+            { key: 'assignedTo', label: 'Assigned To' },
+            { key: 'iteration', label: 'Iteration' }
+        ],
+        'default': [
+            { key: 'type', label: 'Type' },
+            { key: 'state', label: 'Status', colors: colors.states },
+            { key: 'team', label: 'Team', colors: colors.teams },
+            { key: 'assignedTo', label: 'Assigned To' }
+        ]
+    };
+    
+    function getSliceFields(items) {
+        const types = [...new Set(items.map(i => i.type))];
+        if (types.length === 1) {
+            return sliceFieldsByType[types[0]] || sliceFieldsByType['default'];
+        }
+        return sliceFieldsByType['default'];
+    }
+    
+    // Multi-select handling
+    function handleChartClick(evt, elements, chart, items, filterField, sliceFields) {
+        if (elements.length === 0) return;
+        
+        const labels = chart.data.labels;
+        const clickedLabel = labels[elements[0].index];
+        
+        // Check if Ctrl/Cmd key is pressed for multi-select
+        if (evt.native.ctrlKey || evt.native.metaKey) {
+            // Initialize multi-select if first click or different field
+            if (multiSelectState.field !== filterField) {
+                multiSelectState.field = filterField;
+                multiSelectState.values = new Set();
+            }
+            
+            // Toggle the clicked value
+            if (multiSelectState.values.has(clickedLabel)) {
+                multiSelectState.values.delete(clickedLabel);
+            } else {
+                multiSelectState.values.add(clickedLabel);
+            }
+            
+            // Update selection info display
+            updateSelectionInfo();
+            
+            // If we have selections, filter and show
+            if (multiSelectState.values.size > 0) {
+                const selectedValues = Array.from(multiSelectState.values);
+                const filtered = items.filter(item => selectedValues.includes(item[filterField] || '(Not Set)'));
+                
+                // Update current drilldown with multi-select filter
+                if (drilldownStack.length > 0) {
+                    const current = drilldownStack[drilldownStack.length - 1];
+                    current.multiSelect = { field: filterField, values: selectedValues };
+                    renderDrilldown();
+                } else {
+                    showDrilldown(`${filterField}: ${selectedValues.join(', ')}`, filtered, sliceFields);
+                }
+            }
+        } else {
+            // Single click - clear multi-select and do normal drilldown
+            clearMultiSelect();
+            const filtered = items.filter(item => (item[filterField] || '(Not Set)') === clickedLabel);
+            showDrilldown(`${filterField}: ${clickedLabel}`, filtered, sliceFields);
+        }
+    }
+    
+    function updateSelectionInfo() {
+        const infoEl = document.getElementById('selectionInfo');
+        const countEl = document.getElementById('selectionCount');
+        
+        // Guard against missing elements (e.g., when drilldown panel doesn't exist)
+        if (!infoEl) return;
+        
+        if (multiSelectState.values.size > 0) {
+            infoEl.classList.add('active');
+            if (countEl) countEl.textContent = multiSelectState.values.size;
+        } else {
+            infoEl.classList.remove('active');
+        }
+    }
+    
+    function clearMultiSelect() {
+        multiSelectState.field = null;
+        multiSelectState.values = new Set();
+        updateSelectionInfo();
+        
+        if (drilldownStack.length > 0) {
+            const current = drilldownStack[drilldownStack.length - 1];
+            delete current.multiSelect;
+            renderDrilldown();
+        }
+    }
+    
+    // Drilldown functions
+    function showDrilldown(title, items, sliceFields) {
+        drilldownStack.push({ 
+            title, 
+            items: [...items], // Store a copy of items
+            sliceFields, 
+            filters: {} 
+        });
+        renderDrilldown();
+    }
+    
+    function renderDrilldown() {
+        const drilldownPanel = document.getElementById('drilldownPanel');
+        
+        // Guard against missing drilldown panel (removed in v68)
+        if (!drilldownPanel) {
+            updateBreadcrumb();
+            return;
+        }
+        
+        if (drilldownStack.length === 0) {
+            drilldownPanel.classList.remove('active');
+            updateBreadcrumb();
+            return;
+        }
+        
+        const current = drilldownStack[drilldownStack.length - 1];
+        let filteredItems = [...current.items];
+        
+        // Apply any filters
+        if (Object.keys(current.filters).length > 0) {
+            filteredItems = filterItems(filteredItems, current.filters);
+        }
+        
+        // Apply multi-select if present
+        if (current.multiSelect && current.multiSelect.values.length > 0) {
+            filteredItems = filteredItems.filter(item => 
+                current.multiSelect.values.includes(item[current.multiSelect.field] || '(Not Set)')
+            );
+        }
+        
+        drilldownPanel.classList.add('active');
+        const titleEl = document.getElementById('drilldownTitle');
+        const countEl = document.getElementById('drilldownCount');
+        if (titleEl) titleEl.textContent = current.title;
+        if (countEl) countEl.textContent = `${filteredItems.length} items`;
+        
+        // Render custom header if present
+        const customHeaderContainer = document.getElementById('drilldownCustomHeader');
+        if (customHeaderContainer) {
+            customHeaderContainer.innerHTML = current.customHeader || '';
+        }
+        
+        // Render slice filters
+        renderSliceFilters(current, filteredItems);
+        
+        // Render table
+        renderWorkItemsTable(filteredItems);
+        
+        updateBreadcrumb();
+        
+        // Scroll drilldown panel into view
+        setTimeout(() => {
+            drilldownPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    }
+    
+    function renderSliceFilters(drilldownState, items) {
+        const container = document.getElementById('sliceFilters');
+        container.innerHTML = '';
+        
+        if (!drilldownState.sliceFields || drilldownState.sliceFields.length === 0) return;
+        
+        drilldownState.sliceFields.forEach((field, idx) => {
+            const counts = countBy(items, field.key);
+            if (Object.keys(counts).length <= 1) return;
+            
+            // Sort by value descending
+            const sortedCounts = sortObjectByValue(counts);
+            
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'slice-chart-container';
+            chartDiv.innerHTML = `
+                <div class="slice-chart-title">${field.label}</div>
+                <canvas id="slice-chart-${idx}" class="slice-chart-canvas"></canvas>
+                <div class="multi-select-hint">Ctrl+Click to multi-select</div>
+            `;
+            container.appendChild(chartDiv);
+            
+            const labels = Object.keys(sortedCounts).slice(0, 8);
+            const data = labels.map(l => sortedCounts[l]);
+            const chartColors = field.colors || colors.primary;
+            
+            setTimeout(() => {
+                const chart = createChart(`slice-chart-${idx}`, 'doughnut', {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: labels.map((label, i) => 
+                            typeof chartColors === 'object' && !Array.isArray(chartColors) 
+                                ? (chartColors[label] || colors.primary[i % colors.primary.length])
+                                : chartColors[i % chartColors.length]
+                        ),
+                        borderWidth: 0
+                    }]
+                }, {
+                    plugins: { legend: { display: false } },
+                    onClick: (evt, elements) => {
+                        if (elements.length > 0) {
+                            const label = labels[elements[0].index];
+                            drilldownBySlice(field.key, label, evt);
+                        }
+                    }
+                });
+            }, 50);
+        });
+    }
+    
+    function drilldownBySlice(field, value, evt) {
+        const current = drilldownStack[drilldownStack.length - 1];
+        
+        // Check for multi-select (Ctrl/Cmd+Click)
+        if (evt && (evt.native.ctrlKey || evt.native.metaKey)) {
+            if (!current.multiSelect || current.multiSelect.field !== field) {
+                current.multiSelect = { field, values: [] };
+            }
+            
+            const idx = current.multiSelect.values.indexOf(value);
+            if (idx > -1) {
+                current.multiSelect.values.splice(idx, 1);
+            } else {
+                current.multiSelect.values.push(value);
+            }
+            
+            multiSelectState.field = field;
+            multiSelectState.values = new Set(current.multiSelect.values);
+            updateSelectionInfo();
+            renderDrilldown();
+            return;
+        }
+        
+        // Single click - create new drilldown level
+        clearMultiSelect();
+        
+        let filteredItems = [...current.items];
+        if (Object.keys(current.filters).length > 0) {
+            filteredItems = filterItems(filteredItems, current.filters);
+        }
+        
+        const newFiltered = filteredItems.filter(item => (item[field] || '(Not Set)') === value);
+        const fieldLabel = current.sliceFields.find(f => f.key === field)?.label || field;
+        
+        drilldownStack.push({
+            title: `${fieldLabel}: ${value}`,
+            items: newFiltered,
+            sliceFields: current.sliceFields.filter(f => f.key !== field),
+            filters: {}
+        });
+        
+        renderDrilldown();
+    }
+    
+    function renderWorkItemsTable(items) {
+        const thead = document.getElementById('tableHead');
+        const tbody = document.getElementById('tableBody');
+        
+        // Determine columns based on item types present
+        const types = [...new Set(items.map(i => i.type))];
+        let columns = [
+            { key: 'id', label: 'ID' },
+            { key: 'title', label: 'Title' },
+            { key: 'type', label: 'Type' },
+            { key: 'state', label: 'State' }
+        ];
+        
+        // Add Customers column for release-related items (Feature, Issue, Bug)
+        const isReleaseRelated = types.some(t => ['Feature', 'Issue', 'Bug'].includes(t));
+        if (isReleaseRelated) {
+            columns.push({ key: 'customers', label: 'Customers' });
+        }
+        
+        columns.push({ key: 'assignedTo', label: 'Assigned To' });
+        columns.push({ key: 'team', label: 'Team' });
+        
+        // Add type-specific columns
+        if (types.includes('Bug')) {
+            columns.push({ key: 'bugType', label: 'Bug Type' });
+            columns.push({ key: 'feature', label: 'Feature' });
+            columns.push({ key: 'component', label: 'Component' });
+            columns.push({ key: 'deliverySliceOwner', label: 'Bug Owner' });
+            columns.push({ key: 'effort', label: 'Effort' });
+            columns.push({ key: 'createdDate', label: 'Created' });
+            columns.push({ key: 'closedDate', label: 'Closed' });
+            columns.push({ key: 'gantt', label: 'Timeline' });
+        }
+        if (types.includes('Issue')) {
+            columns.push({ key: 'ticketCategory', label: 'Category' });
+        }
+        if (types.includes('Delivery Slice') && !types.includes('Bug')) {
+            columns.push({ key: 'deliverySliceOwner', label: 'DS Owner' });
+            columns.push({ key: 'effort', label: 'Effort' });
+        }
+        if (types.includes('Task')) {
+            columns.push({ key: 'effort', label: 'Effort' });
+        }
+        columns.push({ key: 'iteration', label: 'Iteration' });
+        columns.push({ key: 'releaseVersion', label: 'Release' });
+        
+        // Remove duplicates
+        const seenKeys = new Set();
+        columns = columns.filter(c => {
+            if (seenKeys.has(c.key)) return false;
+            seenKeys.add(c.key);
+            return true;
+        });
+        
+        // Calculate Gantt timeline range if showing bugs
+        let ganttStartDate, ganttEndDate, ganttWeeks = [];
+        if (types.includes('Bug')) {
+            // Get date range from bug filter inputs or use item dates
+            const startInput = document.getElementById('bug-trend-start')?.value;
+            const endInput = document.getElementById('bug-trend-end')?.value;
+            
+            if (startInput && endInput) {
+                ganttStartDate = new Date(startInput);
+                ganttEndDate = new Date(endInput);
+            } else {
+                // Find min/max dates from items
+                const dates = items.flatMap(item => {
+                    const d = [];
+                    if (item.createdDate) d.push(new Date(item.createdDate));
+                    const closed = getBugClosedDateForTable(item);
+                    if (closed) d.push(closed);
+                    return d;
+                }).filter(d => d);
+                
+                if (dates.length > 0) {
+                    ganttStartDate = new Date(Math.min(...dates));
+                    ganttEndDate = new Date(Math.max(...dates));
+                }
+            }
+            
+            // Build week columns
+            if (ganttStartDate && ganttEndDate) {
+                ganttStartDate.setHours(0, 0, 0, 0);
+                ganttEndDate.setHours(23, 59, 59, 999);
+                
+                // Get Monday of start week
+                const monday = new Date(ganttStartDate);
+                const day = monday.getDay();
+                monday.setDate(monday.getDate() - day + (day === 0 ? -6 : 1));
+                
+                let currentWeek = new Date(monday);
+                while (currentWeek <= ganttEndDate) {
+                    ganttWeeks.push(new Date(currentWeek));
+                    currentWeek.setDate(currentWeek.getDate() + 7);
+                }
+            }
+        }
+        
+        // Store gantt data for sorting
+        window._drilldownGanttData = { ganttStartDate, ganttEndDate, ganttWeeks };
+        
+        // Initialize sort state for drilldown table
+        if (!tableSortState['drilldown']) {
+            tableSortState['drilldown'] = { column: null, direction: 'asc', items: [...items], columns };
+        } else {
+            tableSortState['drilldown'].items = [...items];
+            tableSortState['drilldown'].columns = columns;
+        }
+        
+        // Sort items if sort is active
+        let sortedItems = [...items];
+        const state = tableSortState['drilldown'];
+        if (state.column) {
+            sortedItems = sortItems(sortedItems, state.column, state.direction);
+        }
+        
+        const hasSortActive = state.column;
+        const clearSortBtn = hasSortActive ? `<button class="clear-sort-btn" onclick="clearDrilldownSort()">Clear Sort</button>` : '';
+        
+        thead.innerHTML = `<tr>${columns.map(c => {
+            if (c.key === 'gantt' && ganttWeeks.length > 0) {
+                // Gantt header with week markers - not sortable, not resizable
+                const weekLabels = ganttWeeks.map(w => {
+                    const month = w.toLocaleDateString('en-US', { month: 'short' });
+                    const day = w.getDate();
+                    return `<span class="gantt-week-label">${month} ${day}</span>`;
+                }).join('');
+                return `<th class="gantt-header"><div class="gantt-weeks">${weekLabels}</div></th>`;
+            }
+            return `<th class="sortable-header resizable-header ${getColumnClass(c.key)}" onclick="sortDrilldownTable('${c.key}')">
+                ${c.label}
+                <span class="sort-indicator">${getSortIndicator('drilldown', c.key)}</span>
+                <div class="resize-handle" onmousedown="startResize(event, this)"></div>
+            </th>`;
+        }).join('')}${hasSortActive ? `<th style="width: 80px;">${clearSortBtn}</th>` : ''}</tr>`;
+        
+        tbody.innerHTML = sortedItems.map(item => `
+            <tr>
+                ${columns.map(col => {
+                    if (col.key === 'id') {
+                        return `<td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>`;
+                    }
+                    if (col.key === 'title') {
+                        return `<td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''}</td>`;
+                    }
+                    if (col.key === 'state') {
+                        return `<td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>`;
+                    }
+                    if (col.key === 'effort') {
+                        return `<td class="effort-value">${item.effort ? item.effort.toFixed(1) + 'd' : ''}</td>`;
+                    }
+                    if (col.key === 'createdDate') {
+                        const d = item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '';
+                        return `<td>${d}</td>`;
+                    }
+                    if (col.key === 'closedDate') {
+                        const closed = getBugClosedDateForTable(item);
+                        const d = closed ? closed.toLocaleDateString() : (item.state === 'Done' || item.state === 'Closed' ? '?' : '');
+                        return `<td>${d}</td>`;
+                    }
+                    if (col.key === 'gantt' && ganttWeeks.length > 0) {
+                        return `<td class="gantt-cell">${renderGanttBar(item, ganttStartDate, ganttEndDate, ganttWeeks)}</td>`;
+                    }
+                    return `<td>${item[col.key] || ''}</td>`;
+                }).join('')}${hasSortActive ? '<td></td>' : ''}
+            </tr>
+        `).join('');
+    }
+    
+    function sortDrilldownTable(columnKey) {
+        const state = tableSortState['drilldown'];
+        if (!state) return;
+        
+        // Toggle direction if same column, otherwise set to asc
+        if (state.column === columnKey) {
+            state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            state.column = columnKey;
+            state.direction = 'asc';
+        }
+        
+        // Re-render the table
+        renderWorkItemsTable(state.items);
+    }
+    
+    function clearDrilldownSort() {
+        if (tableSortState['drilldown']) {
+            tableSortState['drilldown'].column = null;
+            tableSortState['drilldown'].direction = 'asc';
+            renderWorkItemsTable(tableSortState['drilldown'].items);
+        }
+    }
+    
+    function getBugClosedDateForTable(item) {
+        // For table display - get closed date
+        if (item.closedDate) {
+            try {
+                return new Date(item.closedDate);
+            } catch {
+                // fall through
+            }
+        }
+        if (item.stateChangeDate && (item.state === 'Done' || item.state === 'Closed')) {
+            try {
+                return new Date(item.stateChangeDate);
+            } catch {
+                // fall through
+            }
+        }
+        return null;
+    }
+    
+    function renderGanttBar(item, ganttStartDate, ganttEndDate, ganttWeeks) {
+        if (!ganttStartDate || !ganttEndDate || ganttWeeks.length === 0) return '';
+        
+        const created = item.createdDate ? new Date(item.createdDate) : null;
+        const closed = getBugClosedDateForTable(item);
+        
+        if (!created) return '<div class="gantt-bar-container"></div>';
+        
+        const totalMs = ganttEndDate.getTime() - ganttStartDate.getTime();
+        if (totalMs <= 0) return '<div class="gantt-bar-container"></div>';
+        
+        // Calculate positions as percentages
+        const startMs = Math.max(0, created.getTime() - ganttStartDate.getTime());
+        const startPercent = (startMs / totalMs) * 100;
+        
+        let endPercent;
+        let isOpen = false;
+        if (closed) {
+            const endMs = Math.min(totalMs, closed.getTime() - ganttStartDate.getTime());
+            endPercent = (endMs / totalMs) * 100;
+        } else {
+            // Still open - show bar extending to end
+            endPercent = 100;
+            isOpen = true;
+        }
+        
+        const widthPercent = Math.max(2, endPercent - startPercent);
+        const barClass = isOpen ? 'gantt-bar open' : 'gantt-bar closed';
+        
+        // Week dividers
+        const weekDividers = ganttWeeks.map((w, i) => {
+            const weekMs = w.getTime() - ganttStartDate.getTime();
+            const weekPercent = (weekMs / totalMs) * 100;
+            return `<div class="gantt-week-divider" style="left: ${weekPercent}%"></div>`;
+        }).join('');
+        
+        return `
+            <div class="gantt-bar-container">
+                ${weekDividers}
+                <div class="${barClass}" style="left: ${startPercent}%; width: ${widthPercent}%;" 
+                     title="Created: ${created.toLocaleDateString()}${closed ? ', Closed: ' + closed.toLocaleDateString() : ' (Open)'}"></div>
+            </div>
+        `;
+    }
+    
+    function closeDrilldown() {
+        drilldownStack = [];
+        clearMultiSelect();
+        const panel = document.getElementById('drilldownPanel');
+        if (panel) panel.classList.remove('active');
+        updateBreadcrumb();
+    }
+    
+    function navigateBreadcrumb(index) {
+        if (index === -1) {
+            closeDrilldown();
+        } else {
+            // Keep items up to and including the clicked index
+            drilldownStack = drilldownStack.slice(0, index + 1);
+            clearMultiSelect();
+            renderDrilldown();
+        }
+    }
+    
+    function updateBreadcrumb() {
+        const container = document.getElementById('breadcrumb');
+        const viewNames = {
+            'executive': 'Executive',
+            'teams': 'Teams',
+            'customers': 'Customers',
+            'bugs': 'Bugs',
+            'releases': 'Releases',
+            'tasks': 'Tasks',
+            'validation': 'Validation',
+            'orgchart': 'Org Chart',
+            'details': 'Details'
+        };
+        
+        let html = `<span class="breadcrumb-item" onclick="navigateBreadcrumb(-1)">${viewNames[currentView] || currentView}</span>`;
+        
+        drilldownStack.forEach((item, idx) => {
+            html += `<span class="breadcrumb-separator">›</span>`;
+            if (idx === drilldownStack.length - 1) {
+                html += `<span class="breadcrumb-current">${item.title}</span>`;
+            } else {
+                html += `<span class="breadcrumb-item" onclick="navigateBreadcrumb(${idx})">${item.title}</span>`;
+            }
+        });
+        
+        container.innerHTML = html;
+    }
+    
+    function createClickableChart(canvasId, type, data, filterField, colorMap = null, baseItems = null) {
+        const items = baseItems || workItems;
+        const sortedData = sortObjectByValue(data);
+        const labels = Object.keys(sortedData);
+        const values = Object.values(sortedData);
+        const chartColors = labels.map((label, i) => 
+            colorMap ? (colorMap[label] || colors.primary[i % colors.primary.length]) : colors.primary[i % colors.primary.length]
+        );
+        
+        const chart = createChart(canvasId, type, {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: chartColors,
+                borderWidth: 0
+            }]
+        }, {
+            onClick: (evt, elements) => {
+                if (elements.length > 0) {
+                    handleChartClick(evt, elements, activeCharts[canvasId], items, filterField, getSliceFields(items));
+                }
+            },
+            plugins: {
+                legend: { display: type === 'doughnut', position: 'right', labels: { color: '#94a3b8' } }
+            },
+            scales: type === 'bar' ? {
+                x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+            } : undefined
+        });
+        
+        return chart;
+    }
+    
+    // Sortable table state
+    const tableSortState = {};
+    
+    function renderSortableTable(tableId, items, columns, defaultSort = null) {
+        const thead = document.getElementById(`${tableId}TableHead`);
+        const tbody = document.getElementById(`${tableId}TableBody`);
+        
+        if (!thead || !tbody) return;
+        
+        // Initialize sort state if needed
+        if (!tableSortState[tableId]) {
+            // Apply default sort if provided and no existing state
+            if (defaultSort) {
+                tableSortState[tableId] = { 
+                    column: defaultSort.column, 
+                    direction: defaultSort.direction || 'asc', 
+                    items: [...items],
+                    defaultSort: defaultSort  // Store default for reset
+                };
+            } else {
+                tableSortState[tableId] = { column: null, direction: 'asc', items: [...items] };
+            }
+        } else {
+            tableSortState[tableId].items = [...items];
+            if (defaultSort) {
+                tableSortState[tableId].defaultSort = defaultSort;
+            }
+        }
+        
+        // Render header with sort indicators and resize handles
+        // Show reset button only when sorted by column other than default backlogPriority
+        const currentColumn = tableSortState[tableId]?.column;
+        const defaultColumn = tableSortState[tableId]?.defaultSort?.column;
+        const showResetBtn = currentColumn && currentColumn !== defaultColumn;
+        const resetSortBtn = showResetBtn ? `<button class="reset-sort-btn" onclick="clearTableSort('${tableId}')">Reset to Backlog Priority</button>` : '';
+
+        thead.innerHTML = `<tr>${columns.map(c => `
+            <th class="sortable-header resizable-header ${getColumnClass(c.key)}" onclick="sortTable('${tableId}', '${c.key}')">
+                ${c.label}
+                <span class="sort-indicator">${getSortIndicator(tableId, c.key)}</span>
+                <div class="resize-handle" onmousedown="startResize(event, this)"></div>
+            </th>
+        `).join('')}${showResetBtn ? `<th style="width: 140px;">${resetSortBtn}</th>` : ''}</tr>`;
+        
+        // Sort items if sort is active
+        let sortedItems = [...items];
+        const state = tableSortState[tableId];
+        if (state.column) {
+            sortedItems = sortItems(sortedItems, state.column, state.direction);
+        }
+        
+        // Render body
+        tbody.innerHTML = sortedItems.map(item => `
+            <tr>
+                ${columns.map(col => renderTableCell(item, col)).join('')}
+                ${showResetBtn ? '<td></td>' : ''}
+            </tr>
+        `).join('');
+        
+        // Store columns for re-render
+        tableSortState[tableId].columns = columns;
+    }
+    
+    function getColumnClass(key) {
+        const classMap = {
+            'id': 'col-id',
+            'title': 'col-title',
+            'type': 'col-type',
+            'state': 'col-state',
+            'assignedTo': 'col-assignee',
+            'csOwner': 'col-assignee',
+            'team': 'col-team',
+            'customers': 'col-customers',
+            'targetDate': 'col-date',
+            'createdDate': 'col-date',
+            'closedDate': 'col-date',
+            'effort': 'col-effort',
+            'backlogPriority': 'col-priority'
+        };
+        return classMap[key] || '';
+    }
+    
+    // Column resize functionality
+    let resizing = null;
+    
+    function startResize(e, handle) {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        const th = handle.parentElement;
+        resizing = {
+            th: th,
+            startX: e.pageX,
+            startWidth: th.offsetWidth
+        };
+        
+        handle.classList.add('resizing');
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+    }
+    
+    function doResize(e) {
+        if (!resizing) return;
+        
+        const diff = e.pageX - resizing.startX;
+        const newWidth = Math.max(50, resizing.startWidth + diff);
+        resizing.th.style.width = newWidth + 'px';
+        resizing.th.style.minWidth = newWidth + 'px';
+    }
+    
+    function stopResize(e) {
+        if (resizing) {
+            const handle = resizing.th.querySelector('.resize-handle');
+            if (handle) handle.classList.remove('resizing');
+        }
+        resizing = null;
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+    
+    function clearTableSort(tableId) {
+        if (tableSortState[tableId]) {
+            // Reset to default sort if available, otherwise clear
+            const defaultSort = tableSortState[tableId].defaultSort;
+            if (defaultSort) {
+                tableSortState[tableId].column = defaultSort.column;
+                tableSortState[tableId].direction = defaultSort.direction || 'asc';
+            } else {
+                tableSortState[tableId].column = null;
+                tableSortState[tableId].direction = 'asc';
+            }
+            renderSortableTable(tableId, tableSortState[tableId].items, tableSortState[tableId].columns, defaultSort);
+        }
+    }
+    
+    function renderTableCell(item, col) {
+        if (col.key === 'id') {
+            return `<td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>`;
+        }
+        if (col.key === 'title') {
+            return `<td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''}</td>`;
+        }
+        if (col.key === 'state') {
+            return `<td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>`;
+        }
+        if (col.key === 'effort') {
+            return `<td class="effort-value">${item.effort ? item.effort.toFixed(1) + 'd' : ''}</td>`;
+        }
+        if (col.key === 'targetDate') {
+            return `<td>${item.targetDate ? item.targetDate.split(' ')[0] : ''}</td>`;
+        }
+        if (col.key === 'createdDate') {
+            const d = item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '';
+            return `<td>${d}</td>`;
+        }
+        if (col.key === 'closedDate') {
+            const closed = getBugClosedDateForTable(item);
+            const d = closed ? closed.toLocaleDateString() : (item.state === 'Done' || item.state === 'Closed' ? '?' : '');
+            return `<td>${d}</td>`;
+        }
+        if (col.key === 'backlogPriority') {
+            // Display rank number (lower is higher priority) - format for readability
+            if (item.backlogPriority) {
+                // Convert large number to relative rank display
+                const rank = Math.round(item.backlogPriority / 10000000);
+                return `<td class="priority-value" title="${item.backlogPriority}">${rank}</td>`;
+            }
+            return `<td class="priority-value">-</td>`;
+        }
+        return `<td>${item[col.key] || ''}</td>`;
+    }
+    
+    function sortTable(tableId, columnKey) {
+        const state = tableSortState[tableId];
+        if (!state) return;
+        
+        // Toggle direction if same column, otherwise set to asc
+        if (state.column === columnKey) {
+            state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            state.column = columnKey;
+            state.direction = 'asc';
+        }
+        
+        // Re-render the table
+        renderSortableTable(tableId, state.items, state.columns);
+    }
+    
+    function getSortIndicator(tableId, columnKey) {
+        const state = tableSortState[tableId];
+        if (!state || state.column !== columnKey) return '';
+        return state.direction === 'asc' ? '▲' : '▼';
+    }
+    
+    function sortItems(items, column, direction) {
+        return [...items].sort((a, b) => {
+            let aVal = a[column];
+            let bVal = b[column];
+            
+            // Handle null/undefined
+            if (aVal == null) aVal = '';
+            if (bVal == null) bVal = '';
+            
+            // Handle dates
+            if (column.includes('Date') || column === 'targetDate') {
+                aVal = aVal ? new Date(aVal).getTime() : 0;
+                bVal = bVal ? new Date(bVal).getTime() : 0;
+            }
+            // Handle numbers
+            else if (column === 'id' || column === 'effort') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
+            }
+            // Handle strings
+            else {
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+            }
+            
+            if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+</script>

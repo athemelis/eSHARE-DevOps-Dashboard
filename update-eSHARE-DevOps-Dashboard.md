@@ -7,6 +7,10 @@ This setup runs your `generate_dashboard.py` script every minute using a `launch
 - Reload helper script: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/reload-launchd-agent.sh`
 - LaunchAgent plist: `~/Library/LaunchAgents/com.eshare.devops.dashboard.plist`
 
+**Template directories:**
+- Development: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/Templates/`
+- Production: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/Templates-Production/`
+
 **Output locations:**
 - Local (for testing): `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
 - Published (production): `/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html`
@@ -17,25 +21,48 @@ This setup runs your `generate_dashboard.py` script every minute using a `launch
 
 File: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
 
-This is a simple wrapper that passes arguments through to the Python script:
+This script selects the appropriate template directory based on the mode:
+- **Local mode**: Uses `Templates/` (development templates)
+- **Publish mode**: Uses `Templates-Production/` (stable production templates)
 
 ```bash
 #!/bin/bash
+#
+# Update eSHARE DevOps Dashboard
+#
+# Usage:
+#   ./update-eSHARE-DevOps-Dashboard.sh           # Generate to local directory (for testing) using dev templates
+#   ./update-eSHARE-DevOps-Dashboard.sh --publish # Publish to SharePoint (production) using production templates
+#   ./update-eSHARE-DevOps-Dashboard.sh -p        # Same as above
+#
+# Template directories:
+#   - Dev templates:  ./Templates (for local development)
+#   - Prod templates: ./Templates-Production (for scheduled publishing)
+#
+
 cd "/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/"
-/usr/bin/python3 generate_dashboard.py "$@"
+
+# Check if --publish or -p flag is present
+if [[ "$*" == *"--publish"* ]] || [[ "$*" == *"-p"* ]]; then
+    # Use production templates for publishing
+    /usr/bin/python3 generate_dashboard.py -t "./Templates-Production" "$@"
+else
+    # Use dev templates for local testing
+    /usr/bin/python3 generate_dashboard.py "$@"
+fi
 ```
 
 **Usage:**
 ```bash
-# Local mode (for testing) - outputs to local directory
+# Local mode (for testing) - uses Templates/, outputs to local directory
 ./update-eSHARE-DevOps-Dashboard.sh
 
-# Publish mode (production) - outputs to SharePoint
+# Publish mode (production) - uses Templates-Production/, outputs to SharePoint
 ./update-eSHARE-DevOps-Dashboard.sh --publish
 ./update-eSHARE-DevOps-Dashboard.sh -p
 ```
 
-The Python script has built-in default paths for CSV files (SharePoint locations) and handles local vs publish output paths based on the `-p` flag.
+This separation allows you to develop and test code changes locally without affecting the production dashboard. The launchd job runs with `--publish` and uses the stable `Templates-Production/` templates.
 
 Make it executable:
 ```bash
@@ -84,11 +111,67 @@ Current plist (includes `--publish` flag for production output):
 </plist>
 ```
 
-**Note:** The `--publish` flag ensures the scheduled job outputs directly to SharePoint. Remove this flag if you want the scheduled job to output to the local directory instead.
+**Note:** The `--publish` flag ensures the scheduled job outputs directly to SharePoint using the production templates. The launchd job should always run with `--publish` to use the stable `Templates-Production/` directory.
 
 ---
 
-## 3. Load the agent and force a first run
+## 3. Development vs Production Workflow
+
+### How it works
+
+The dashboard uses **two separate template directories** to isolate development from production:
+
+| Directory | Purpose | Used by |
+|-----------|---------|---------|
+| `Templates/` | Development templates | Local testing (`./update-eSHARE-DevOps-Dashboard.sh`) |
+| `Templates-Production/` | Stable production templates | Scheduled job (`--publish` flag) |
+
+### Development workflow
+
+1. **Make code changes** to files in `Templates/`
+2. **Test locally** by running:
+   ```bash
+   ./update-eSHARE-DevOps-Dashboard.sh
+   open eSHARE-DevOps-Dashboard.html
+   ```
+3. **Iterate** until changes are ready for production
+
+### Publishing to production
+
+When your changes are ready:
+
+1. **Copy templates** to production directory:
+   ```bash
+   cp Templates/*.html Templates-Production/
+   ```
+
+2. **Verify the version** in `Templates-Production/dashboard_v3_part1.html`
+
+3. **Publish once** to confirm:
+   ```bash
+   ./update-eSHARE-DevOps-Dashboard.sh --publish
+   ```
+
+4. The launchd job will continue refreshing data every 60 seconds using the new production templates
+
+### Rolling back
+
+If you need to revert production to a previous version:
+
+```bash
+# Restore from git (e.g., v79)
+git show 6b53f68:Templates/dashboard_v3_part1.html > Templates-Production/dashboard_v3_part1.html
+git show 6b53f68:Templates/dashboard_v3_part2.html > Templates-Production/dashboard_v3_part2.html
+git show 6b53f68:Templates/dashboard_v3_part3.html > Templates-Production/dashboard_v3_part3.html
+git show 6b53f68:Templates/dashboard_v3_part4.html > Templates-Production/dashboard_v3_part4.html
+
+# Force a publish
+./update-eSHARE-DevOps-Dashboard.sh --publish
+```
+
+---
+
+## 4. Load the agent and force a first run
 
 **Easiest method - use the reload helper script:**
 ```bash
@@ -114,7 +197,7 @@ launchctl kickstart -k gui/"$(id -u)"/com.eshare.devops.dashboard
 
 ---
 
-## 4. Logs and debugging
+## 5. Logs and debugging
 
 **Log file locations:**
 - Output: `/tmp/eshare_devops_dashboard.out`
@@ -146,7 +229,7 @@ The Python script includes retry logic (5 attempts with exponential backoff) to 
 
 ---
 
-## 5. Health check commands (quick status & tests)
+## 6. Health check commands (quick status & tests)
 
 Use these commands any time you want to check or debug the job:
 
@@ -173,7 +256,7 @@ These commands let you confirm that the job is loaded, see which script and argu
 
 ---
 
-## 6. Apply changes, stop, or remove the job
+## 7. Apply changes, stop, or remove the job
 
 **After editing plist or shell script:**
 ```bash

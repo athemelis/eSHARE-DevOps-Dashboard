@@ -380,96 +380,6 @@
         return filtered;
     }
     
-    // ==================== CUSTOMERS VIEW CHART FILTERS ====================
-    let customerChartFilters = { category: [], state: [], customer: [] };
-    let activeCustomerFilterDropdown = null;
-    
-    function toggleCustomerChartFilter(filterType) {
-        const options = document.getElementById(`customer-chart-${filterType}-options`);
-        ['category', 'state', 'customer'].forEach(ft => {
-            if (ft !== filterType) {
-                const other = document.getElementById(`customer-chart-${ft}-options`);
-                if (other) other.classList.remove('show');
-            }
-        });
-        if (options) {
-            options.classList.toggle('show');
-            activeCustomerFilterDropdown = options.classList.contains('show') ? filterType : null;
-        }
-    }
-    
-    function toggleAllCustomerChartFilter(filterType, checked) {
-        const checkboxes = document.querySelectorAll(`#customer-chart-${filterType}-options input[type="checkbox"]:not(#customer-chart-${filterType}-select-all)`);
-        checkboxes.forEach(cb => cb.checked = checked);
-        if (checked) {
-            customerChartFilters[filterType] = Array.from(checkboxes).map(cb => cb.value);
-        } else {
-            customerChartFilters[filterType] = [];
-        }
-        updateCustomerChartFilterDisplay(filterType);
-        saveStateToStorage();
-        renderCustomersView();
-    }
-
-    function updateCustomerChartFilter(filterType) {
-        const checkboxes = document.querySelectorAll(`#customer-chart-${filterType}-options input[type="checkbox"]:not(#customer-chart-${filterType}-select-all)`);
-        customerChartFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        updateCustomerChartFilterDisplay(filterType);
-        saveStateToStorage();
-        renderCustomersView();
-    }
-    
-    function updateCustomerChartFilterDisplay(filterType) {
-        const checkboxes = document.querySelectorAll(`#customer-chart-${filterType}-options input[type="checkbox"]:not(#customer-chart-${filterType}-select-all)`);
-        const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        const displayText = document.getElementById(`customer-chart-${filterType}-display`);
-        const selectAllCheckbox = document.getElementById(`customer-chart-${filterType}-select-all`);
-        
-        if (selectAllCheckbox) {
-            selectAllCheckbox.checked = selected.length === checkboxes.length && checkboxes.length > 0;
-            selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
-        }
-        
-        const allLabels = { category: 'All Categories', state: 'All States', customer: 'All Customers' };
-        if (selected.length === 0 || selected.length === checkboxes.length) {
-            displayText.textContent = allLabels[filterType];
-        } else if (selected.length === 1) {
-            displayText.textContent = selected[0];
-        } else {
-            displayText.textContent = `${selected.length} selected`;
-        }
-    }
-    
-    function restoreCustomerChartFilterStates() {
-        ['category', 'state', 'customer'].forEach(filterType => {
-            const checkboxes = document.querySelectorAll(`#customer-chart-${filterType}-options input[type="checkbox"]:not(#customer-chart-${filterType}-select-all)`);
-            const selectedValues = customerChartFilters[filterType] || [];
-            checkboxes.forEach(cb => { cb.checked = selectedValues.includes(cb.value); });
-            updateCustomerChartFilterDisplay(filterType);
-        });
-        if (activeCustomerFilterDropdown) {
-            const options = document.getElementById(`customer-chart-${activeCustomerFilterDropdown}-options`);
-            if (options) options.classList.add('show');
-        }
-    }
-    
-    function getCustomerChartFilteredItems(items) {
-        let filtered = [...items];
-        if (customerChartFilters.category.length > 0) {
-            filtered = filtered.filter(item => customerChartFilters.category.includes(item.ticketCategory || '(Not Set)'));
-        }
-        if (customerChartFilters.state.length > 0) {
-            filtered = filtered.filter(item => customerChartFilters.state.includes(item.state));
-        }
-        if (customerChartFilters.customer.length > 0) {
-            filtered = filtered.filter(item => {
-                if (!item.customers) return customerChartFilters.customer.includes('(No Customer)');
-                return item.customers.split(';').some(c => customerChartFilters.customer.includes(c.trim()));
-            });
-        }
-        return filtered;
-    }
-    
     // ==================== BUGS CATEGORIZATION CHART FILTERS ====================
     let bugsChartFilters = { bugtype: [], status: [], feature: [], component: [] };
     let activeBugsChartFilterDropdown = null;
@@ -597,16 +507,15 @@
 
     // Sync Customers view state from localStorage
     function syncCustomersFilterState() {
-        // Restore header dropdown select
-        if (loadedStateCache) {
-            const teamFilter = document.getElementById('customer-team-filter');
-            if (teamFilter && loadedStateCache.customerTeamFilter) {
-                teamFilter.value = loadedStateCache.customerTeamFilter;
+        // Restore search input
+        if (loadedStateCache && loadedStateCache.customersFilters) {
+            const searchInput = document.getElementById('customers-search-input');
+            if (searchInput && loadedStateCache.customersFilters.search) {
+                searchInput.value = loadedStateCache.customersFilters.search;
             }
         }
 
-        // Restore chart filter checkboxes
-        restoreCustomerChartFilterStates();
+        // Filter dropdowns are populated and synced in renderCustomersView via populateCustomersFilterDropdowns
     }
 
     // Sync Tasks view state from localStorage

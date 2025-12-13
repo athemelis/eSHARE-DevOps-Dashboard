@@ -582,232 +582,786 @@
         showDrilldown(`Team: ${team}`, items, getSliceFields(items));
     }
     
-    // Customers View filter helper
-    function getFilteredCustomerItems() {
-        const teamFilter = document.getElementById('customer-team-filter')?.value || 'all';
-        const selectedStates = getSelectedCustomerStates();
-        
-        let items = workItems;
-        
-        if (teamFilter !== 'all') {
-            items = items.filter(w => w.team === teamFilter);
+    // ==================== CUSTOMERS VIEW (Issues Only) ====================
+
+    // Customers View filter state
+    let customersFilters = {
+        search: '',
+        customers: [],
+        categories: [],
+        states: [],
+        priorities: [],
+        releases: [],
+        aging: []
+    };
+
+    // Customers View sort state
+    let customersSortState = {
+        column: 'id',
+        direction: 'desc'
+    };
+
+    // Aging buckets in display order
+    const AGING_BUCKETS = ['1 day', '1 week', '2 weeks', '4 weeks', 'Older', 'TBD'];
+
+    // Calculate aging bucket for an issue (based on DAX logic)
+    function calculateAgingBucket(issue) {
+        const state = issue.state;
+        const createdDate = issue.createdDate;
+        const closedDate = issue.closedDate;
+
+        // Check for null/missing values
+        const hasError = !state || !createdDate ||
+            ((state === 'Closed' || state === 'Done') && !closedDate);
+
+        if (hasError) return 'TBD';
+
+        // Calculate age in days
+        let ageDays;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (state === 'New' || state === 'To Do' || state === 'In Progress' || state === 'Triaged' || state === 'Ready For Review') {
+            // Open states: days since created
+            const created = new Date(createdDate);
+            ageDays = Math.floor((today - created) / (1000 * 60 * 60 * 24));
+        } else if (state === 'Closed' || state === 'Done') {
+            // Closed states: days from created to closed
+            const created = new Date(createdDate);
+            const closed = new Date(closedDate);
+            ageDays = Math.floor((closed - created) / (1000 * 60 * 60 * 24));
+        } else {
+            // Unexpected state (Removed, etc.)
+            return 'TBD';
         }
-        
-        if (selectedStates.length > 0) {
-            items = items.filter(w => selectedStates.includes(w.state));
-        }
-        
-        return items;
+
+        // Return the appropriate bucket
+        if (ageDays <= 1) return '1 day';
+        if (ageDays <= 7) return '1 week';
+        if (ageDays <= 14) return '2 weeks';
+        if (ageDays <= 28) return '4 weeks';
+        return 'Older';
     }
-    
-    function applyCustomerFilters() {
+
+    // Calculate age in days for sorting
+    function calculateAgeDays(issue) {
+        const state = issue.state;
+        const createdDate = issue.createdDate;
+        const closedDate = issue.closedDate;
+
+        if (!state || !createdDate) return -1;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (state === 'Closed' || state === 'Done') {
+            if (!closedDate) return -1;
+            const created = new Date(createdDate);
+            const closed = new Date(closedDate);
+            return Math.floor((closed - created) / (1000 * 60 * 60 * 24));
+        } else if (state === 'Removed') {
+            return -1;
+        } else {
+            const created = new Date(createdDate);
+            return Math.floor((today - created) / (1000 * 60 * 60 * 24));
+        }
+    }
+
+    // Get all Issues (the base dataset for Customers view)
+    function getAllIssues() {
+        return workItems.filter(w => w.type === 'Issue');
+    }
+
+    // Get filtered Issues based on current filter state
+    function getFilteredIssues() {
+        let issues = getAllIssues();
+
+        // Apply search filter
+        if (customersFilters.search) {
+            const searchLower = customersFilters.search.toLowerCase();
+            issues = issues.filter(i => {
+                const titleMatch = (i.title || '').toLowerCase().includes(searchLower);
+                const idMatch = String(i.id).includes(customersFilters.search);
+                return titleMatch || idMatch;
+            });
+        }
+
+        // Apply customer filter
+        if (customersFilters.customers.length > 0) {
+            issues = issues.filter(i => {
+                if (!i.customers) return customersFilters.customers.includes('(No Customer)');
+                const itemCustomers = i.customers.split(';').map(c => c.trim());
+                return itemCustomers.some(c => customersFilters.customers.includes(c));
+            });
+        }
+
+        // Apply category filter
+        if (customersFilters.categories.length > 0) {
+            issues = issues.filter(i => {
+                const category = i.ticketCategory || '(Not Set)';
+                return customersFilters.categories.includes(category);
+            });
+        }
+
+        // Apply state filter
+        if (customersFilters.states.length > 0) {
+            issues = issues.filter(i => customersFilters.states.includes(i.state));
+        }
+
+        // Apply priority filter
+        if (customersFilters.priorities.length > 0) {
+            issues = issues.filter(i => {
+                const priority = i.priority ? 'P' + i.priority : '(No Priority)';
+                return customersFilters.priorities.includes(priority);
+            });
+        }
+
+        // Apply release filter
+        if (customersFilters.releases.length > 0) {
+            issues = issues.filter(i => {
+                const release = i.releaseVersion || '(No Release)';
+                return customersFilters.releases.includes(release);
+            });
+        }
+
+        // Apply aging filter
+        if (customersFilters.aging.length > 0) {
+            issues = issues.filter(i => {
+                const aging = calculateAgingBucket(i);
+                return customersFilters.aging.includes(aging);
+            });
+        }
+
+        return issues;
+    }
+
+    // Check if any filters are active
+    function hasActiveCustomersFilters() {
+        return customersFilters.search !== '' ||
+               customersFilters.customers.length > 0 ||
+               customersFilters.categories.length > 0 ||
+               customersFilters.states.length > 0 ||
+               customersFilters.priorities.length > 0 ||
+               customersFilters.releases.length > 0 ||
+               customersFilters.aging.length > 0;
+    }
+
+    // Apply filters and re-render
+    function applyCustomersFilters() {
+        customersFilters.search = document.getElementById('customers-search-input')?.value || '';
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Clear all filters
+    function clearAllCustomersFilters() {
+        customersFilters = {
+            search: '',
+            customers: [],
+            categories: [],
+            states: [],
+            priorities: [],
+            releases: [],
+            aging: []
+        };
+        document.getElementById('customers-search-input').value = '';
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+    }
+
+    // Update clear button visibility
+    function updateCustomersClearButton() {
+        const clearBtn = document.getElementById('customers-clear-filters-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !hasActiveCustomersFilters());
+        }
+    }
+
+    // Filter dropdown search helper
+    function filterCustomersDropdownOptions(inputEl, menuId) {
+        const searchValue = inputEl.value.toLowerCase();
+        const options = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all)`);
+        options.forEach(opt => {
+            const label = opt.textContent.toLowerCase();
+            opt.style.display = label.includes(searchValue) ? '' : 'none';
+        });
+    }
+
+    // Build dropdown HTML with search, options, and action buttons
+    function buildCustomersDropdownHtml(filterType, items, selectedItems) {
+        const menuId = getCustomersMenuId(filterType);
+        const selectAllId = getCustomersSelectAllId(filterType);
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search..." oninput="filterCustomersDropdownOptions(this, '${menuId}')" onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${menuId}-options">
+        `;
+
+        items.forEach(item => {
+            const isChecked = selectedItems.includes(item);
+            const escapedItem = item.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${item.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${escapedItem}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('${filterType}')">
+                    <span class="option-label">${item}</span>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllCustomersFilter('${filterType}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearCustomersFilter('${filterType}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    // Build release dropdown HTML with version + date (like Releases dashboard)
+    function buildCustomersReleaseDropdownHtml(releaseInfo, releases, noReleaseCount, selectedItems) {
+        const menuId = 'customers-release-menu';
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search..." oninput="filterCustomersDropdownOptions(this, '${menuId}')" onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${menuId}-options">
+        `;
+
+        // (No Release) option at the TOP
+        if (noReleaseCount > 0) {
+            const isChecked = selectedItems.includes('(No Release)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="no release" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('releases')">
+                    <span class="option-label">(No Release)</span>
+                    <span class="option-meta">${noReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // Regular releases with dates
+        releases.forEach(r => {
+            const info = releaseInfo[r];
+            const isChecked = selectedItems.includes(r);
+            let dateDisplay;
+            if (info.dates.size === 1) {
+                dateDisplay = [...info.dates][0];
+            } else if (info.dates.size > 1) {
+                dateDisplay = 'Multiple dates';
+            } else {
+                dateDisplay = 'No date';
+            }
+
+            const escapedRelease = r.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${r.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${escapedRelease}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('releases')">
+                    <span class="option-label">${r}</span>
+                    <span class="option-meta">${dateDisplay}</span>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllCustomersFilter('releases', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearCustomersFilter('releases', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    // Helper to get menu ID
+    function getCustomersMenuId(filterType) {
+        const menuIds = {
+            customers: 'customers-customer-menu',
+            categories: 'customers-category-menu',
+            states: 'customers-state-menu',
+            priorities: 'customers-priority-menu',
+            releases: 'customers-release-menu',
+            aging: 'customers-aging-menu'
+        };
+        return menuIds[filterType];
+    }
+
+    // Helper to get select all checkbox ID
+    function getCustomersSelectAllId(filterType) {
+        const ids = {
+            customers: 'customers-customer-select-all',
+            categories: 'customers-category-select-all',
+            states: 'customers-state-select-all',
+            priorities: 'customers-priority-select-all',
+            releases: 'customers-release-select-all',
+            aging: 'customers-aging-select-all'
+        };
+        return ids[filterType];
+    }
+
+    // Helper to get display element ID
+    function getCustomersDisplayId(filterType) {
+        const ids = {
+            customers: 'customers-customer-display',
+            categories: 'customers-category-display',
+            states: 'customers-state-display',
+            priorities: 'customers-priority-display',
+            releases: 'customers-release-display',
+            aging: 'customers-aging-display'
+        };
+        return ids[filterType];
+    }
+
+    // Populate filter dropdowns
+    function populateCustomersFilterDropdowns() {
+        const issues = getAllIssues();
+
+        // Get unique customers
+        const customersSet = new Set();
+        issues.forEach(i => {
+            if (i.customers) {
+                i.customers.split(';').forEach(c => {
+                    const trimmed = c.trim();
+                    if (trimmed) customersSet.add(trimmed);
+                });
+            } else {
+                customersSet.add('(No Customer)');
+            }
+        });
+        const allCustomers = [...customersSet].sort((a, b) => {
+            if (a === '(No Customer)') return 1;
+            if (b === '(No Customer)') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique categories
+        const categoriesSet = new Set();
+        issues.forEach(i => {
+            categoriesSet.add(i.ticketCategory || '(Not Set)');
+        });
+        const allCategories = [...categoriesSet].sort((a, b) => {
+            if (a === '(Not Set)') return 1;
+            if (b === '(Not Set)') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique states
+        const statesSet = new Set();
+        issues.forEach(i => {
+            if (i.state) statesSet.add(i.state);
+        });
+        const stateOrder = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+        const allStates = [...statesSet].sort((a, b) => {
+            const aIdx = stateOrder.indexOf(a);
+            const bIdx = stateOrder.indexOf(b);
+            if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+            if (aIdx === -1) return 1;
+            if (bIdx === -1) return -1;
+            return aIdx - bIdx;
+        });
+
+        // Get unique priorities
+        const prioritiesSet = new Set();
+        issues.forEach(i => {
+            prioritiesSet.add(i.priority ? 'P' + i.priority : '(No Priority)');
+        });
+        const allPriorities = [...prioritiesSet].sort((a, b) => {
+            if (a === '(No Priority)') return 1;
+            if (b === '(No Priority)') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Get unique releases with their target dates
+        const releaseInfo = {};
+        let noReleaseCount = 0;
+        issues.forEach(i => {
+            if (!i.releaseVersion) {
+                noReleaseCount++;
+                return;
+            }
+            const rv = i.releaseVersion;
+            if (!releaseInfo[rv]) {
+                releaseInfo[rv] = { dates: new Set(), count: 0 };
+            }
+            if (i.targetDate) {
+                releaseInfo[rv].dates.add(i.targetDate.split(' ')[0]); // Just the date part
+            }
+            releaseInfo[rv].count++;
+        });
+        const allReleases = Object.keys(releaseInfo).sort();
+
+        // Populate dropdowns
+        const customerMenu = document.getElementById('customers-customer-menu');
+        if (customerMenu) {
+            customerMenu.innerHTML = buildCustomersDropdownHtml('customers', allCustomers, customersFilters.customers);
+        }
+
+        const categoryMenu = document.getElementById('customers-category-menu');
+        if (categoryMenu) {
+            categoryMenu.innerHTML = buildCustomersDropdownHtml('categories', allCategories, customersFilters.categories);
+        }
+
+        const stateMenu = document.getElementById('customers-state-menu');
+        if (stateMenu) {
+            stateMenu.innerHTML = buildCustomersDropdownHtml('states', allStates, customersFilters.states);
+        }
+
+        const priorityMenu = document.getElementById('customers-priority-menu');
+        if (priorityMenu) {
+            priorityMenu.innerHTML = buildCustomersDropdownHtml('priorities', allPriorities, customersFilters.priorities);
+        }
+
+        // Build release dropdown with dates (special handling)
+        const releaseMenu = document.getElementById('customers-release-menu');
+        if (releaseMenu) {
+            releaseMenu.innerHTML = buildCustomersReleaseDropdownHtml(releaseInfo, allReleases, noReleaseCount, customersFilters.releases);
+        }
+
+        // Aging filter dropdown - use AGING_BUCKETS constant for consistent order
+        const agingMenu = document.getElementById('customers-aging-menu');
+        if (agingMenu) {
+            agingMenu.innerHTML = buildCustomersDropdownHtml('aging', AGING_BUCKETS, customersFilters.aging);
+        }
+
+        // Update display text for all filters
+        ['customers', 'categories', 'states', 'priorities', 'releases', 'aging'].forEach(ft => {
+            updateCustomersFilterDisplay(ft);
+        });
+    }
+
+    // Select all in a filter
+    function selectAllCustomersFilter(filterType, event) {
+        event.stopPropagation();
+        const menuId = getCustomersMenuId(filterType);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = true);
+        customersFilters[filterType] = Array.from(checkboxes).map(cb => cb.value);
+        updateCustomersFilterDisplay(filterType);
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Clear a filter
+    function clearCustomersFilter(filterType, event) {
+        event.stopPropagation();
+        const menuId = getCustomersMenuId(filterType);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+        customersFilters[filterType] = [];
+        updateCustomersFilterDisplay(filterType);
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Update filter when checkbox changes
+    function updateCustomersFilter(filterType) {
+        const menuId = getCustomersMenuId(filterType);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        customersFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        updateCustomersFilterDisplay(filterType);
+        saveStateToStorage();
+        renderCustomersView();
+        updateCustomersClearButton();
+    }
+
+    // Update filter display text
+    function updateCustomersFilterDisplay(filterType) {
+        const displayId = getCustomersDisplayId(filterType);
+        const menuId = getCustomersMenuId(filterType);
+        const allLabels = {
+            customers: 'All Customers',
+            categories: 'All Categories',
+            states: 'All States',
+            priorities: 'All Priorities',
+            releases: 'All Releases',
+            aging: 'All Ages'
+        };
+
+        const displayEl = document.getElementById(displayId);
+        const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
+        const selected = customersFilters[filterType];
+
+        if (displayEl) {
+            if (selected.length === 0 || selected.length === checkboxes.length) {
+                displayEl.textContent = allLabels[filterType];
+            } else if (selected.length === 1) {
+                displayEl.textContent = selected[0];
+            } else {
+                displayEl.textContent = `${selected.length} selected`;
+            }
+        }
+    }
+
+    // Filter by card click (Ticket Category)
+    function filterCustomersByCategory(category) {
+        // Clear all filters first, then set category
+        customersFilters = {
+            search: '',
+            customers: [],
+            categories: category ? [category] : [],
+            states: [],
+            priorities: [],
+            releases: [],
+            aging: []
+        };
+        document.getElementById('customers-search-input').value = '';
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+    }
+
+    // Filter by aging bucket click (from histogram)
+    function filterByAgingBucket(bucket) {
+        // Set aging filter to the clicked bucket
+        customersFilters.aging = [bucket];
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    // Filter by state click (from Insights)
+    function filterCustomersByState(stateOrType) {
+        if (stateOrType === 'open') {
+            // "Open issues" = all states except Done, Closed, Removed
+            const openStates = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review'];
+            customersFilters.states = openStates;
+        } else {
+            // Single state filter
+            customersFilters.states = [stateOrType];
+        }
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    // Sort Issues for table
+    function sortCustomersIssues(issues) {
+        const { column, direction } = customersSortState;
+        const multiplier = direction === 'asc' ? 1 : -1;
+
+        return [...issues].sort((a, b) => {
+            let aVal, bVal;
+            switch (column) {
+                case 'id':
+                    return (a.id - b.id) * multiplier;
+                case 'title':
+                    return (a.title || '').localeCompare(b.title || '') * multiplier;
+                case 'state':
+                    const stateOrder = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+                    return (stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state)) * multiplier;
+                case 'customers':
+                    return (a.customers || '').localeCompare(b.customers || '') * multiplier;
+                case 'priority':
+                    aVal = a.priority || 999;
+                    bVal = b.priority || 999;
+                    return (aVal - bVal) * multiplier;
+                case 'aging':
+                    aVal = calculateAgeDays(a);
+                    bVal = calculateAgeDays(b);
+                    return (aVal - bVal) * multiplier;
+                case 'tags':
+                    return (a.tags || '').localeCompare(b.tags || '') * multiplier;
+                case 'csOwner':
+                    return (a.csOwner || '').localeCompare(b.csOwner || '') * multiplier;
+                case 'release':
+                    return (a.releaseVersion || '').localeCompare(b.releaseVersion || '') * multiplier;
+                case 'targetDate':
+                    return (a.targetDate || '').localeCompare(b.targetDate || '') * multiplier;
+                case 'category':
+                    return (a.ticketCategory || '').localeCompare(b.ticketCategory || '') * multiplier;
+                default:
+                    return 0;
+            }
+        });
+    }
+
+    // Handle column header click for sorting
+    function sortCustomersTable(column) {
+        if (customersSortState.column === column) {
+            customersSortState.direction = customersSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            customersSortState.column = column;
+            customersSortState.direction = 'asc';
+        }
         saveStateToStorage();
         renderCustomersView();
     }
-    
+
     // Customers View
     function renderCustomersView() {
         const stats = document.getElementById('customer-stats');
         const insights = document.getElementById('customer-insights');
-        const charts = document.getElementById('customer-charts');
-        
-        const allItems = getFilteredCustomerItems();
-        const teamFilter = document.getElementById('customer-team-filter')?.value || 'all';
-        const selectedStates = getSelectedCustomerStates();
-        const isFiltered = teamFilter !== 'all' || selectedStates.length > 0;
+        const histogramContainer = document.getElementById('customer-aging-histogram');
+        const tableContainer = document.getElementById('customer-issues-table');
+
+        // Get all issues and filtered issues
+        const allIssues = getAllIssues();
+        const filteredIssues = getFilteredIssues();
+        const isFiltered = hasActiveCustomersFilters();
         const filterNote = isFiltered ? ' (filtered)' : '';
-        
-        const customerItems = allItems.filter(w => w.customers);
-        const issues = allItems.filter(w => w.type === 'Issue');
-        const customerCounts = countBy(customerItems, 'customers');
-        const topCustomers = Object.entries(customerCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-        
-        const triaged = issues.filter(i => i.state === 'Triaged').length;
-        const issuesDone = issues.filter(i => i.state === 'Done' || i.state === 'Closed').length;
-        
+
+        // Calculate stats by Ticket Category
+        const enhancementRequests = filteredIssues.filter(i => i.ticketCategory === 'Enhancement Request');
+        const bugs = filteredIssues.filter(i => i.ticketCategory === 'Bug');
+        const tasks = filteredIssues.filter(i => i.ticketCategory === 'Task');
+
+        // Stats cards - clickable
         stats.innerHTML = `
-            <div class="stat-card clickable" onclick="drilldownCustomerStat('all')">
-                <div class="stat-label">Customer-Linked Items${filterNote}</div>
-                <div class="stat-value" style="color: var(--accent-cyan)">${customerItems.length}</div>
-                <div class="stat-subtitle">${allItems.length > 0 ? Math.round(customerItems.length / allItems.length * 100) : 0}% of work</div>
+            <div class="stat-card clickable" onclick="filterCustomersByCategory(null)">
+                <div class="stat-label">Total Issues${filterNote}</div>
+                <div class="stat-value" style="color: var(--accent-cyan)">${filteredIssues.length}</div>
+                <div class="stat-subtitle">${allIssues.length} total in system</div>
             </div>
-            <div class="stat-card clickable" onclick="drilldownCustomerStat('issues')">
-                <div class="stat-label">Customer Issues</div>
-                <div class="stat-value" style="color: var(--accent-orange)">${issues.length}</div>
-                <div class="stat-subtitle">${triaged} triaged, ${issuesDone} resolved</div>
+            <div class="stat-card clickable" onclick="filterCustomersByCategory('Enhancement Request')">
+                <div class="stat-label">Enhancement Requests</div>
+                <div class="stat-value" style="color: var(--accent-blue)">${enhancementRequests.length}</div>
+                <div class="stat-subtitle">${filteredIssues.length > 0 ? Math.round(enhancementRequests.length / filteredIssues.length * 100) : 0}% of issues</div>
             </div>
-            ${topCustomers.slice(0, 4).map(([customer, count]) => `
-                <div class="stat-card clickable" onclick="drilldownCustomer('${customer.replace(/'/g, "\\'")}')">
-                    <div class="stat-label">${customer}</div>
-                    <div class="stat-value" style="color: var(--accent-purple)">${count}</div>
-                    <div class="stat-subtitle">work items</div>
-                </div>
-            `).join('')}
+            <div class="stat-card clickable" onclick="filterCustomersByCategory('Bug')">
+                <div class="stat-label">Bugs</div>
+                <div class="stat-value" style="color: var(--accent-orange)">${bugs.length}</div>
+                <div class="stat-subtitle">${filteredIssues.length > 0 ? Math.round(bugs.length / filteredIssues.length * 100) : 0}% of issues</div>
+            </div>
+            <div class="stat-card clickable" onclick="filterCustomersByCategory('Task')">
+                <div class="stat-label">Tasks</div>
+                <div class="stat-value" style="color: var(--accent-purple)">${tasks.length}</div>
+                <div class="stat-subtitle">${filteredIssues.length > 0 ? Math.round(tasks.length / filteredIssues.length * 100) : 0}% of issues</div>
+            </div>
         `;
-        
-        // Customer insights
-        const issuesByCustomer = {};
-        issues.forEach(i => {
-            const c = i.customers || '(No Customer)';
-            if (!issuesByCustomer[c]) issuesByCustomer[c] = { total: 0, open: 0 };
-            issuesByCustomer[c].total++;
-            if (i.state !== 'Done' && i.state !== 'Closed') issuesByCustomer[c].open++;
-        });
-        const topIssueCustomers = Object.entries(issuesByCustomer)
-            .sort((a, b) => b[1].open - a[1].open)
-            .slice(0, 3);
-        
+
+        // Insights - horizontal format
+        const openIssues = filteredIssues.filter(i => i.state !== 'Done' && i.state !== 'Closed' && i.state !== 'Removed');
+        const triaged = filteredIssues.filter(i => i.state === 'Triaged');
+        const inProgress = filteredIssues.filter(i => i.state === 'In Progress');
+        const newIssues = filteredIssues.filter(i => i.state === 'New');
+
         insights.innerHTML = `
-            <div class="insights-title">⚡ Customer Insights${filterNote}</div>
-            <div class="insight-item info"><span class="insight-icon">📊</span> ${customerItems.length} work items linked to customers</div>
-            <div class="insight-item warning"><span class="insight-icon">⚠️</span> ${triaged} customer issues awaiting triage decisions</div>
-            ${topIssueCustomers.map(([customer, data]) => `
-                <div class="insight-item ${data.open > 20 ? 'critical' : 'info'}">
-                    <span class="insight-icon">🏢</span> ${customer}: ${data.open} open issues (${data.total} total)
-                </div>
-            `).join('')}
-        `;
-        
-        // Get unique values for filters
-        const allCategories = [...new Set(issues.map(i => i.ticketCategory || '(Not Set)'))].sort();
-        const allStatesForFilter = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
-        const allCustomersSet = new Set();
-        customerItems.forEach(w => {
-            if (w.customers) {
-                w.customers.split(';').forEach(c => {
-                    const trimmed = c.trim();
-                    if (trimmed) allCustomersSet.add(trimmed);
-                });
-            }
-        });
-        const allCustomersForFilter = [...allCustomersSet].sort();
-        
-        // Apply chart filters
-        const chartFilteredIssues = getCustomerChartFilteredItems(issues);
-        const chartFilteredCustomerItems = getCustomerChartFilteredItems(customerItems);
-        
-        // Recalculate top customers with filters
-        const filteredCustomerCounts = {};
-        const selectedCustomers = customerChartFilters.customer || [];
-        chartFilteredCustomerItems.forEach(w => {
-            if (w.customers) {
-                w.customers.split(';').forEach(c => {
-                    const trimmed = c.trim();
-                    if (trimmed) {
-                        // Only count if no customers selected, or this customer is selected
-                        if (selectedCustomers.length === 0 || selectedCustomers.includes(trimmed)) {
-                            filteredCustomerCounts[trimmed] = (filteredCustomerCounts[trimmed] || 0) + 1;
-                        }
-                    }
-                });
-            }
-        });
-        const filteredTopCustomers = Object.entries(filteredCustomerCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
-        
-        charts.innerHTML = `
-            <div class="chart-card">
-                <div class="chart-title">Top Customers by Work Items</div>
-                <div class="chart-container"><canvas id="customer-top-chart"></canvas></div>
-                <div class="chart-filter">
-                    <div class="multi-select-dropdown" id="customer-chart-customer-dropdown">
-                        <div class="multi-select-display" onclick="toggleCustomerChartFilter('customer')">
-                            <span id="customer-chart-customer-display">All Customers</span>
-                            <span class="dropdown-arrow">▼</span>
-                        </div>
-                        <div class="multi-select-options" id="customer-chart-customer-options">
-                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-chart-customer-select-all" onchange="toggleAllCustomerChartFilter('customer', this.checked)"> <strong>Select All</strong></label>
-                            <div class="checkbox-divider"></div>
-                            ${allCustomersForFilter.map(c => `<label class="checkbox-option"><input type="checkbox" value="${c}" onchange="updateCustomerChartFilter('customer')"> ${c}</label>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">Issues by Category</div>
-                <div class="chart-container"><canvas id="customer-category-chart"></canvas></div>
-                <div class="chart-filter">
-                    <div class="multi-select-dropdown" id="customer-chart-category-dropdown">
-                        <div class="multi-select-display" onclick="toggleCustomerChartFilter('category')">
-                            <span id="customer-chart-category-display">All Categories</span>
-                            <span class="dropdown-arrow">▼</span>
-                        </div>
-                        <div class="multi-select-options" id="customer-chart-category-options">
-                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-chart-category-select-all" onchange="toggleAllCustomerChartFilter('category', this.checked)"> <strong>Select All</strong></label>
-                            <div class="checkbox-divider"></div>
-                            ${allCategories.map(c => `<label class="checkbox-option"><input type="checkbox" value="${c}" onchange="updateCustomerChartFilter('category')"> ${c}</label>`).join('')}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="chart-card">
-                <div class="chart-title">Issues Pipeline</div>
-                <div class="chart-container"><canvas id="customer-pipeline-chart"></canvas></div>
-                <div class="chart-filter">
-                    <div class="multi-select-dropdown" id="customer-chart-state-dropdown">
-                        <div class="multi-select-display" onclick="toggleCustomerChartFilter('state')">
-                            <span id="customer-chart-state-display">All States</span>
-                            <span class="dropdown-arrow">▼</span>
-                        </div>
-                        <div class="multi-select-options" id="customer-chart-state-options">
-                            <label class="checkbox-option select-all-option"><input type="checkbox" id="customer-chart-state-select-all" onchange="toggleAllCustomerChartFilter('state', this.checked)"> <strong>Select All</strong></label>
-                            <div class="checkbox-divider"></div>
-                            ${allStatesForFilter.map(s => `<label class="checkbox-option"><input type="checkbox" value="${s}" onchange="updateCustomerChartFilter('state')"> ${s}</label>`).join('')}
-                        </div>
-                    </div>
-                </div>
+            <div class="insights-content">
+                <span class="insights-title">⚡ Insights${filterNote}</span>
+                <span class="insight-item info clickable" onclick="filterCustomersByState('open')"><span class="insight-icon">📊</span> ${openIssues.length} open issues</span>
+                <span class="insight-item ${newIssues.length > 10 ? 'warning' : 'info'} clickable" onclick="filterCustomersByState('New')"><span class="insight-icon">🆕</span> ${newIssues.length} new (awaiting triage)</span>
+                <span class="insight-item info clickable" onclick="filterCustomersByState('Triaged')"><span class="insight-icon">📋</span> ${triaged.length} triaged</span>
+                <span class="insight-item info clickable" onclick="filterCustomersByState('In Progress')"><span class="insight-icon">🔄</span> ${inProgress.length} in progress</span>
             </div>
         `;
-        
-        // Restore filter states
-        restoreCustomerChartFilterStates();
-        
-        setTimeout(() => {
-            const sortedCustomers = sortObjectByValue(Object.fromEntries(filteredTopCustomers));
-            createChart('customer-top-chart', 'bar', {
-                labels: Object.keys(sortedCustomers),
-                datasets: [{
-                    data: Object.values(sortedCustomers),
-                    backgroundColor: colors.primary
-                }]
-            }, {
-                onClick: (evt, elements) => {
-                    if (elements.length > 0) {
-                        drilldownCustomer(Object.keys(sortedCustomers)[elements[0].index]);
-                    }
-                },
-                indexAxis: 'y',
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { display: false } }
-                }
-            });
-            
-            const byCategory = sortObjectByValue(countBy(chartFilteredIssues, 'ticketCategory'));
-            createClickableChart('customer-category-chart', 'doughnut', byCategory, 'ticketCategory', null, chartFilteredIssues);
-            
-            const byState = sortObjectByValue(countBy(chartFilteredIssues, 'state'));
-            createClickableChart('customer-pipeline-chart', 'doughnut', byState, 'state', colors.states, chartFilteredIssues);
-        }, 50);
-    }
-    
-    function drilldownCustomerStat(type) {
-        const allItems = getFilteredCustomerItems();
-        let items, title;
-        if (type === 'all') {
-            items = allItems.filter(w => w.customers);
-            title = 'Customer-Linked Items';
-        } else {
-            items = allItems.filter(w => w.type === 'Issue');
-            title = 'Customer Issues';
+
+        // Aging histogram
+        const agingCounts = {};
+        AGING_BUCKETS.forEach(bucket => agingCounts[bucket] = 0);
+        filteredIssues.forEach(issue => {
+            const bucket = calculateAgingBucket(issue);
+            agingCounts[bucket]++;
+        });
+        const maxCount = Math.max(...Object.values(agingCounts), 1);
+
+        // Calculate nice Y-axis tick values
+        const yAxisTicks = [];
+        const tickCount = 4;
+        const tickStep = Math.ceil(maxCount / tickCount);
+        for (let i = tickCount; i >= 0; i--) {
+            yAxisTicks.push(Math.min(i * tickStep, maxCount));
         }
-        showDrilldown(title, items, getSliceFields(items));
-    }
-    
-    function drilldownCustomer(customer) {
-        const allItems = getFilteredCustomerItems();
-        const items = allItems.filter(w => w.customers === customer);
-        showDrilldown(`Customer: ${customer}`, items, getSliceFields(items));
+
+        histogramContainer.innerHTML = `
+            <div class="aging-histogram-title">📊 Issue Aging Distribution${filterNote}</div>
+            <div class="aging-histogram-wrapper">
+                <div class="aging-histogram-yaxis">
+                    ${yAxisTicks.map(tick => `<span class="aging-yaxis-label">${tick}</span>`).join('')}
+                </div>
+                <div class="aging-histogram-chart">
+                    <div class="aging-histogram-bars">
+                        ${AGING_BUCKETS.map(bucket => {
+                            const count = agingCounts[bucket];
+                            const heightPct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                            const barClass = 'bar-' + bucket.replace(/\s+/g, '-');
+                            return `
+                                <div class="aging-bar-container">
+                                    <div class="aging-bar-count">${count}</div>
+                                    <div class="aging-bar ${barClass}" style="height: ${Math.max(heightPct, 2)}%" onclick="filterByAgingBucket('${bucket}')" title="${bucket}: ${count} issues"></div>
+                                    <div class="aging-bar-label">${bucket}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Sort and render table
+        const sortedIssues = sortCustomersIssues(filteredIssues);
+        const sortIcon = (col) => {
+            if (customersSortState.column !== col) return '';
+            return customersSortState.direction === 'asc' ? ' ▲' : ' ▼';
+        };
+
+        // Helper to format target date
+        const formatTargetDate = (dateStr) => {
+            if (!dateStr) return '';
+            // dateStr is in format "YYYY-MM-DD HH:MM:SS" or similar
+            const datePart = dateStr.split(' ')[0];
+            return datePart;
+        };
+
+        tableContainer.innerHTML = `
+            <div class="table-header">
+                <span>Showing ${sortedIssues.length} issues</span>
+            </div>
+            <table class="work-items-table">
+                <thead>
+                    <tr>
+                        <th class="sortable col-id" onclick="sortCustomersTable('id')">ID${sortIcon('id')}</th>
+                        <th class="sortable col-title" onclick="sortCustomersTable('title')">Title${sortIcon('title')}</th>
+                        <th class="sortable col-state" onclick="sortCustomersTable('state')">State${sortIcon('state')}</th>
+                        <th class="sortable col-customers" onclick="sortCustomersTable('customers')">Customers${sortIcon('customers')}</th>
+                        <th class="sortable col-priority" onclick="sortCustomersTable('priority')">Priority${sortIcon('priority')}</th>
+                        <th class="sortable col-aging" onclick="sortCustomersTable('aging')">Aging${sortIcon('aging')}</th>
+                        <th class="sortable col-tags" onclick="sortCustomersTable('tags')">Tags${sortIcon('tags')}</th>
+                        <th class="sortable col-csowner" onclick="sortCustomersTable('csOwner')">CS Owner${sortIcon('csOwner')}</th>
+                        <th class="sortable col-release" onclick="sortCustomersTable('release')">Release Version${sortIcon('release')}</th>
+                        <th class="sortable col-date" onclick="sortCustomersTable('targetDate')">Target Date${sortIcon('targetDate')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sortedIssues.map(issue => `
+                        <tr>
+                            <td class="col-id"><a href="${issue.url}" target="_blank">${issue.id}</a></td>
+                            <td class="col-title" title="${(issue.title || '').replace(/"/g, '&quot;')}">${issue.title || ''}</td>
+                            <td class="col-state"><span class="state-badge state-${(issue.state || '').toLowerCase().replace(/\s+/g, '-')}">${issue.state || ''}</span></td>
+                            <td class="col-customers" title="${(issue.customers || '').replace(/"/g, '&quot;')}">${issue.customers || ''}</td>
+                            <td class="col-priority">${issue.priority ? 'P' + issue.priority : ''}</td>
+                            <td class="col-aging"><span class="aging-badge aging-${calculateAgingBucket(issue).replace(/\s+/g, '-')}">${calculateAgingBucket(issue)}</span></td>
+                            <td class="col-tags" title="${(issue.tags || '').replace(/"/g, '&quot;')}">${issue.tags || ''}</td>
+                            <td class="col-csowner">${issue.csOwner || ''}</td>
+                            <td class="col-release">${issue.releaseVersion || ''}</td>
+                            <td class="col-date">${formatTargetDate(issue.targetDate)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        // Auto-adjust table height: enable scroll mode if more than 20 items
+        const SCROLL_THRESHOLD = 20;
+        if (sortedIssues.length > SCROLL_THRESHOLD) {
+            tableContainer.classList.add('scroll-mode');
+        } else {
+            tableContainer.classList.remove('scroll-mode');
+        }
+
+        // Populate filter dropdowns on first render
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
     }
 
     // ==================== FEATURE ROADMAP VIEW ====================

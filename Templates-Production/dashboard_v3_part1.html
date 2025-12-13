@@ -1,0 +1,3938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ᵉShare DevOps Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a2332;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a78bfa;
+            --accent-green: #34d399;
+            --accent-orange: #fb923c;
+            --accent-red: #f87171;
+            --accent-blue: #60a5fa;
+            --accent-pink: #f472b6;
+            --accent-yellow: #fbbf24;
+            --border-color: #334155;
+            --hover-bg: #2d3a4f;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* ========== STICKY HEADER ========== */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            gap: 1rem;
+        }
+        
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            white-space: nowrap;
+        }
+        
+        .logo span { color: var(--text-primary); }
+        .logo .version { font-size: 0.65rem; font-style: italic; color: var(--text-muted); margin-left: 0.25rem; }
+        .logo .refresh-time { font-size: 0.6rem; color: var(--text-muted); margin-left: 0.75rem; font-weight: 400; }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: nowrap;
+        }
+        
+        .nav-tab {
+            padding: 0.5rem 0.85rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .nav-tab:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+        
+        .nav-tab.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-color: var(--accent-cyan);
+        }
+        
+        /* Hamburger menu */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .hamburger span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: var(--text-secondary);
+            transition: 0.2s;
+        }
+        .hamburger:hover span { background: var(--text-primary); }
+        
+        /* Mobile nav dropdown */
+        .nav-mobile {
+            display: none;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+        .nav-mobile.open { display: flex; }
+        
+        /* Filter row */
+        .filter-row {
+            display: none;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.15rem 0.75rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(34, 211, 238, 0.3);
+            flex-wrap: nowrap;
+        }
+        .filter-row.active { display: flex; }
+        
+        .filter-row-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .filter-row-hint {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        /* Compact filter dropdown pattern */
+        .filter-dropdown {
+            position: relative;
+            flex: 1;
+            min-width: 100px;
+            max-width: 200px;
+        }
+
+        .filter-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.35rem;
+            padding: 0.15rem 0.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.75rem;
+            width: 100%;
+        }
+        .filter-dropdown-toggle:hover { border-color: var(--accent-purple); }
+        .filter-dropdown-toggle .arrow { font-size: 0.65rem; color: var(--text-muted); }
+        
+        .filter-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 350px;
+            overflow-y: auto;
+            z-index: 1001;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+        .filter-dropdown-menu.open { display: block; }
+        
+        .filter-dropdown-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.15s;
+        }
+        .filter-dropdown-option:hover { background: var(--hover-bg); }
+        .filter-dropdown-option input[type="checkbox"] {
+            accent-color: var(--accent-purple);
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .filter-dropdown-option .option-label { color: var(--text-primary); font-weight: 500; }
+        .filter-dropdown-option .option-meta { color: var(--text-muted); font-size: 0.7rem; margin-left: auto; }
+        .filter-dropdown-option.warning .option-meta { color: var(--accent-orange); }
+        /* Label-based filter options - entire row is clickable */
+        label.filter-dropdown-option {
+            margin: 0;
+            font-weight: normal;
+        }
+        
+        .filter-dropdown-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            position: sticky;
+            bottom: 0;
+        }
+        .filter-dropdown-actions button {
+            flex: 1;
+            padding: 0.35rem 0.5rem;
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .filter-btn-primary { background: var(--accent-purple); color: white; }
+        .filter-btn-secondary { background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color) !important; }
+
+        /* AND/OR toggle for Tag filter */
+        .tag-logic-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+        }
+        .tag-logic-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-right: 0.25rem;
+        }
+        .tag-logic-btn {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tag-logic-btn:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+        .tag-logic-btn.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-color: var(--accent-cyan);
+        }
+
+        .filter-dropdown-search {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+        .filter-dropdown-search input {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.75rem;
+        }
+        .filter-dropdown-search input:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+        }
+        .filter-dropdown-search input::placeholder {
+            color: var(--text-muted);
+        }
+        .filter-dropdown-options {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        /* Header select styling */
+        .filter-row select {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .filter-row select:hover { border-color: var(--accent-purple); }
+        
+        /* Header info panel */
+        .filter-row-info {
+            position: relative;
+            flex-shrink: 0;
+        }
+        .info-toggle {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .info-toggle:hover {
+            color: var(--accent-cyan);
+            background: rgba(34, 211, 238, 0.1);
+        }
+        .info-panel {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            min-width: 320px;
+            max-width: 400px;
+            z-index: 1002;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+        .info-panel.open { display: block; }
+        .info-panel p { margin: 0.35rem 0; color: var(--text-secondary); }
+        .info-panel strong { color: var(--accent-cyan); }
+        
+        /* Mini-bar chart for releases */
+        .mini-chart-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .mini-chart-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mini-chart-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .mini-bar-track {
+            display: flex;
+            gap: 3px;
+            height: 40px;
+            align-items: flex-end;
+        }
+        
+        .mini-bar {
+            flex: 1;
+            min-width: 16px;
+            max-width: 60px;
+            background: #475569;
+            border-radius: 3px 3px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .mini-bar:hover {
+            background: var(--accent-cyan);
+            opacity: 0.8;
+        }
+        
+        .mini-bar.selected {
+            background: var(--accent-cyan);
+        }
+
+        .mini-bar.search-match,
+        .mini-bar.filter-match {
+            background: var(--accent-cyan);
+        }
+
+        .mini-bar.dimmed {
+            opacity: 0.3;
+        }
+
+        .mini-bar.selected::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--accent-cyan);
+        }
+
+        .mini-bar-label.dimmed {
+            opacity: 0.3;
+        }
+
+        .mini-bar-labels {
+            display: flex;
+            gap: 3px;
+            margin-top: 8px;
+        }
+        
+        .mini-bar-label {
+            flex: 1;
+            min-width: 16px;
+            max-width: 60px;
+            text-align: center;
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .mini-bar-label.selected {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+        
+        .mini-bar-tooltip {
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .mini-bar:hover .mini-bar-tooltip {
+            opacity: 1;
+        }
+        
+        .tooltip-version {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .tooltip-date {
+            color: var(--text-muted);
+            margin-left: 0.5rem;
+        }
+        
+        .tooltip-count {
+            color: var(--accent-cyan);
+            display: block;
+            margin-top: 2px;
+        }
+        
+        .mini-chart-selection {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .mini-chart-selection-label {
+            color: var(--text-muted);
+        }
+        
+        .mini-chart-selection-value {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+        
+        /* Chart header row pattern - title + subtitle on same line */
+        .chart-header-row {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .chart-header-row h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .chart-subtitle {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        
+        /* Clear all filters button */
+        .clear-filters-btn {
+            padding: 0.3rem 0.6rem;
+            background: transparent;
+            border: 1px solid var(--accent-red);
+            border-radius: 4px;
+            color: var(--accent-red);
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .clear-filters-btn:hover {
+            background: var(--accent-red);
+            color: var(--bg-primary);
+        }
+        
+        .clear-filters-btn.hidden {
+            display: none;
+        }
+        
+        .filter-dropdown-empty {
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+        
+        @media (max-width: 1100px) {
+            .nav-tabs { display: none; }
+            .hamburger { display: flex; }
+        }
+        
+        .main-content {
+            padding: 1.5rem 2rem;
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            flex-wrap: wrap;
+        }
+        
+        .breadcrumb-item {
+            color: var(--accent-cyan);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .breadcrumb-item:hover { color: var(--accent-purple); text-decoration: underline; }
+        
+        .breadcrumb-separator { color: var(--text-muted); }
+        
+        .breadcrumb-current { color: var(--text-primary); font-weight: 500; }
+        
+        .dashboard-view { display: none; }
+        .dashboard-view.active { display: block; }
+        
+        .work-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        .work-items-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .work-items-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+        
+        .work-items-table tr:hover { background: var(--hover-bg); }
+        
+        .work-item-id {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+        }
+        
+        .work-item-id:hover { text-decoration: underline; }
+        
+        .work-item-title {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .state-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .state-done, .state-closed { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
+        .state-inprogress, .state-in-progress { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
+        .state-new, .state-todo, .state-to-do { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+        .state-triaged { background: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
+        .state-removed { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+        .state-ready-for-review { background: rgba(167, 139, 250, 0.2); color: var(--accent-purple); }
+
+        /* Aging badges */
+        .aging-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .aging-1-day { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
+        .aging-1-week { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
+        .aging-2-weeks { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .aging-4-weeks { background: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
+        .aging-Older { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+        .aging-TBD { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+        
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        #release-items-table.table-container {
+            max-height: none;
+            overflow-y: visible;
+        }
+
+        /* Auto-adjusting table height for Customers view */
+        #customer-issues-table.table-container {
+            max-height: none;
+            overflow-y: visible;
+        }
+        #customer-issues-table.table-container.scroll-mode {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .stat-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+        
+        .stat-card.clickable:hover {
+            box-shadow: 0 4px 20px rgba(34, 211, 238, 0.15);
+        }
+
+        .stat-card.non-clickable {
+            cursor: default;
+        }
+        .stat-card.non-clickable:hover {
+            border-color: var(--border-color);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .stat-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        #team-distribution-charts {
+            grid-template-columns: repeat(5, 1fr);
+        }
+        
+        #team-distribution-charts .chart-card {
+            min-width: 0;
+        }
+        
+        #team-distribution-charts .chart-container {
+            height: 200px;
+        }
+        
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        .chart-container.tall { height: 350px; }
+        
+        .chart-filter {
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .chart-filter .multi-select-dropdown {
+            width: 100%;
+        }
+        
+        .chart-filter .multi-select-display {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        .chart-filter .multi-select-options {
+            max-height: 250px;
+        }
+        
+        /* Time period selector */
+        .time-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .time-selector-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-right: 0.5rem;
+        }
+        
+        .time-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .time-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+        
+        .time-btn.active {
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+            border-color: var(--accent-blue);
+        }
+        
+        /* Release selector */
+        .release-selector {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        
+        .release-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .release-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+        
+        .release-btn.active {
+            background: var(--accent-purple);
+            color: var(--bg-primary);
+            border-color: var(--accent-purple);
+        }
+        
+        .release-btn .release-date {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+        
+        .release-btn.warning { border-color: var(--accent-orange); }
+        .release-btn.warning::after {
+            content: '⚠️';
+            font-size: 0.7rem;
+            margin-left: 0.25rem;
+        }
+        
+        /* Insights panel */
+        .insights-panel {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .insights-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 0.75rem;
+        }
+        
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .insight-icon { min-width: 20px; }
+        
+        .insight-item.critical { color: var(--accent-red); }
+        .insight-item.warning { color: var(--accent-orange); }
+        .insight-item.success { color: var(--accent-green); }
+        .insight-item.info { color: var(--accent-blue); }
+        .insight-item.clickable {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .insight-item.clickable:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+        
+        .insights-grid .insights-title {
+            margin-bottom: 0.75rem;
+        }
+        
+        .insights-grid .insights-content {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem 2rem;
+        }
+        
+        .insights-grid .insight-item {
+            margin-bottom: 0;
+        }
+        
+        /* Horizontal insights layout */
+        .insights-horizontal {
+            padding: 0.75rem 1.25rem;
+        }
+        .insights-horizontal .insights-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1.5rem;
+            align-items: center;
+        }
+        .insights-horizontal .insight-item {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        .insights-horizontal .insights-title {
+            margin-bottom: 0;
+            margin-right: 1rem;
+        }
+
+        /* Aging Histogram Section */
+        .aging-histogram-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .aging-histogram-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        .aging-histogram-wrapper {
+            display: flex;
+            align-items: stretch;
+        }
+        .aging-histogram-yaxis {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-right: 0.5rem;
+            padding-bottom: 1.5rem;
+            min-width: 30px;
+        }
+        .aging-yaxis-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+        .aging-histogram-chart {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .aging-histogram-bars {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            height: 120px;
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-left: 0.5rem;
+            padding-bottom: 0;
+        }
+        .aging-bar-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .aging-bar {
+            width: 100%;
+            max-width: 50px;
+            background: linear-gradient(to top, var(--accent-cyan), rgba(34, 211, 238, 0.6));
+            border-radius: 4px 4px 0 0;
+            min-height: 2px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .aging-bar:hover {
+            filter: brightness(1.2);
+        }
+        .aging-bar-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .aging-bar-count {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+        .aging-bar.bar-1-day { background: linear-gradient(to top, rgba(52, 211, 153, 1), rgba(52, 211, 153, 0.6)); }
+        .aging-bar.bar-1-week { background: linear-gradient(to top, rgba(96, 165, 250, 1), rgba(96, 165, 250, 0.6)); }
+        .aging-bar.bar-2-weeks { background: linear-gradient(to top, #fbbf24, rgba(251, 191, 36, 0.6)); }
+        .aging-bar.bar-4-weeks { background: linear-gradient(to top, rgba(251, 146, 60, 1), rgba(251, 146, 60, 0.6)); }
+        .aging-bar.bar-Older { background: linear-gradient(to top, rgba(248, 113, 113, 1), rgba(248, 113, 113, 0.6)); }
+        .aging-bar.bar-TBD { background: linear-gradient(to top, rgba(148, 163, 184, 1), rgba(148, 163, 184, 0.6)); }
+
+        .team-cta {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            background: rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            border: 1px dashed var(--border-color);
+        }
+        
+        /* Engineer Details Section */
+        .engineer-section {
+            margin-bottom: 2rem;
+        }
+        
+        .engineer-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .engineer-section-header h4 {
+            color: var(--accent-purple);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        
+        .engineer-summary-table {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+        
+        .engineer-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        .engineer-matrix-table th,
+        .engineer-matrix-table td {
+            padding: 0.5rem 0.75rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .engineer-matrix-table th {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+        }
+        
+        .engineer-matrix-table .eng-name-col {
+            text-align: left;
+            min-width: 150px;
+        }
+        
+        .engineer-matrix-table .eng-team-col {
+            text-align: left;
+            min-width: 100px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        
+        .engineer-matrix-table .eng-type-col {
+            min-width: 50px;
+        }
+        
+        .engineer-matrix-table .eng-total-col {
+            font-weight: 600;
+            background: rgba(139, 92, 246, 0.1);
+        }
+        
+        .engineer-matrix-table .eng-effort-col {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        
+        .engineer-matrix-table tbody tr.engineer-row {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        
+        .engineer-matrix-table tbody tr.engineer-row:hover {
+            background: rgba(139, 92, 246, 0.15);
+        }
+        
+        .engineer-matrix-table tfoot td {
+            background: var(--bg-secondary);
+            border-top: 2px solid var(--border-color);
+        }
+        
+        .engineer-filter-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .engineer-filter-bar label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .team-coverage-indicator {
+            margin-left: auto;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .team-coverage-indicator.all-accounted {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .team-coverage-indicator.missing-members {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .team-coverage-indicator .coverage-icon {
+            font-size: 1rem;
+        }
+        
+        .engineer-details-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+        
+        .engineer-work-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .engineer-work-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .engineer-work-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .engineer-work-group-header h5 {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin: 0;
+        }
+        
+        .engineer-work-group-header .effort-subtotal {
+            color: var(--accent-cyan);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .gantt-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        
+        .gantt-table th {
+            text-align: left;
+            padding: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .gantt-table td {
+            padding: 0.4rem 0.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .gantt-table .id-col { width: 60px; }
+        .gantt-table .title-col { width: 180px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .gantt-table .date-col { width: 75px; font-size: 0.75rem; color: var(--text-muted); }
+        .gantt-table .state-col { width: 90px; }
+        .gantt-table .effort-col { width: 50px; text-align: right; }
+        .gantt-table .gantt-col { width: 100%; min-width: 200px; }
+        
+        .gantt-cell {
+            position: relative;
+            height: 20px;
+            background: rgba(148, 163, 184, 0.1);
+            border-radius: 4px;
+        }
+        
+        .gantt-bar {
+            position: absolute;
+            height: 100%;
+            border-radius: 4px;
+            min-width: 4px;
+        }
+        
+        .gantt-bar.bug { background: var(--accent-red); }
+        .gantt-bar.task { background: var(--accent-blue); }
+        .gantt-bar.delivery-slice { background: var(--accent-green); }
+        .gantt-bar.feature { background: var(--accent-purple); }
+        .gantt-bar.issue { background: var(--accent-orange); }
+        .gantt-bar.epic { background: var(--accent-cyan); }
+        
+        .gantt-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        
+        .gantt-indicator.before { left: -12px; }
+        .gantt-indicator.ongoing { right: -12px; }
+        
+        .gantt-timeline {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            padding: 0.25rem 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .no-engineer-data {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+            font-style: italic;
+        }
+        
+        /* Validation issues */
+        .validation-issue {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .validation-issue-title {
+            font-weight: 600;
+            color: var(--accent-red);
+            margin-bottom: 0.5rem;
+        }
+        
+        .validation-issue-details {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Multi-select hint */
+        .multi-select-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        
+        /* Effort display */
+        .effort-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-yellow);
+        }
+        
+        /* Bug Trend Section */
+        .bug-filters-bar,
+        .filter-bar {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .date-range-buttons {
+            display: flex;
+            gap: 0.25rem;
+        }
+        
+        .date-range-buttons .time-btn {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        .date-inputs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chart-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: -0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Gantt chart styles */
+        .gantt-header {
+            min-width: 200px;
+            white-space: nowrap;
+        }
+        
+        .gantt-weeks {
+            display: flex;
+            gap: 0;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        
+        .gantt-week-label {
+            min-width: 30px;
+            text-align: left;
+            padding-right: 2px;
+        }
+        
+        .gantt-cell {
+            min-width: 200px;
+            padding: 0.25rem !important;
+        }
+        
+        .gantt-bar-container {
+            position: relative;
+            height: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .gantt-week-divider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--border-color);
+            opacity: 0.5;
+        }
+        
+        .gantt-bar {
+            position: absolute;
+            top: 2px;
+            height: 12px;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        
+        .gantt-bar.closed {
+            background: var(--accent-green);
+        }
+        
+        .gantt-bar.open {
+            background: var(--accent-orange);
+            background: linear-gradient(90deg, var(--accent-orange) 0%, var(--accent-orange) 80%, transparent 100%);
+        }
+        
+        /* Sortable table styles */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sortable-header:hover {
+            background: var(--hover-bg);
+        }
+        
+        .sort-indicator {
+            margin-left: 0.25rem;
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+        
+        /* Release table sections */
+        .release-table-section {
+            margin-bottom: 2.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .release-table-title {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .release-table-title .table-icon {
+            font-size: 1.2rem;
+        }
+        
+        .release-table-section table {
+            margin-bottom: 0;
+        }
+        
+        /* Customer pivot drilldown styles */
+        .customers-pivot-drilldown {
+            padding: 1rem;
+        }
+        
+        .customer-chart-section {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .customer-chart-title {
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .customer-pivot-section {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        
+        .customer-pivot-title {
+            background: var(--bg-card);
+            padding: 0.75rem 1rem;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .customer-pivot-title .table-icon {
+            margin-right: 0.5rem;
+        }
+        
+        .customer-pivot-table-wrapper {
+            overflow-x: auto;
+        }
+        
+        .customer-pivot-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            min-width: max-content;
+        }
+        
+        .customer-pivot-table th {
+            background: var(--bg-secondary);
+            padding: 0.5rem 0.5rem;
+            text-align: left;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        
+        .customer-pivot-table td {
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        
+        .customer-pivot-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .customer-pivot-table tr:hover {
+            background: var(--hover-bg);
+        }
+        
+        .pivot-col-id { width: 60px; }
+        .pivot-col-title { min-width: 250px; max-width: 350px; }
+        .pivot-col-state { width: 80px; }
+        .pivot-col-customer { 
+            width: 70px; 
+            text-align: center;
+            font-size: 0.7rem;
+        }
+        
+        .pivot-cell-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 350px;
+        }
+        
+        .pivot-cell-check {
+            text-align: center;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+        
+        /* Table filter indicator */
+        .table-filter-indicator {
+            background: var(--accent-blue);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+        
+        .clear-filter-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .clear-filter-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Clear sort button */
+        .clear-sort-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            margin-left: 0.5rem;
+        }
+        
+        .clear-sort-btn:hover {
+            background: var(--hover-bg);
+            color: var(--text-secondary);
+        }
+
+        /* Roadmap view styles */
+        .roadmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+        }
+
+        .roadmap-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .roadmap-title-group {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+        }
+
+        .ado-backlog-link {
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .ado-backlog-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .roadmap-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .roadmap-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #roadmap-table-container {
+            max-height: calc(100vh - 280px);
+        }
+
+        /* Effort summary cards */
+        .roadmap-effort-cards {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .effort-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            min-width: 160px;
+            max-width: 200px;
+            flex: 1;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .effort-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+        }
+
+        .effort-card.selected {
+            border-color: var(--accent-cyan);
+            border-width: 2px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 211, 238, 0.08) 100%);
+        }
+
+        .effort-card.total {
+            border-color: var(--accent-cyan);
+            border-width: 2px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 211, 238, 0.1) 100%);
+        }
+
+        .effort-card-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .effort-card-label {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .effort-card-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .effort-card.total .effort-card-value {
+            color: var(--accent-cyan);
+        }
+
+        .effort-card-unit {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 0.25rem;
+        }
+
+        .effort-card-capacity {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .effort-card-stats {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .effort-card-stats span {
+            display: block;
+        }
+
+        .effort-card-footer {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .effort-card-lead-photo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+
+        .effort-card-lead-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .effort-card-lead-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .reset-sort-btn {
+            background: transparent;
+            border: 1px solid var(--accent-orange);
+            color: var(--accent-orange);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .reset-sort-btn:hover {
+            background: var(--accent-orange);
+            color: var(--bg-primary);
+        }
+
+        /* Clickable table rows */
+        .clickable-row {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .clickable-row:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Total row styling */
+        .total-row {
+            background: var(--bg-secondary);
+            border-top: 2px solid var(--border-color);
+        }
+
+        .total-row:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Inline effort summary above table */
+        .roadmap-table-info {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 0.25rem;
+            padding: 0 0.5rem;
+        }
+
+        .roadmap-table-effort-summary {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.25rem 0.6rem;
+        }
+
+        .roadmap-table-effort-summary strong {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* Iteration count badge for features spanning multiple iterations */
+        .iteration-count-badge {
+            display: inline-block;
+            background: var(--accent-purple);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* Blocked badge - critical warning indicator */
+        .blocked-badge {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* No slices badge - warning indicator */
+        .no-slices-badge {
+            display: inline-block;
+            background: var(--state-removed);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* Zero effort badge - warning indicator */
+        .zero-effort-badge {
+            display: inline-block;
+            background: var(--accent-orange);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* Roadmap section headers */
+        .roadmap-section {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Collapsible section styles */
+        .roadmap-section.collapsible .roadmap-section-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .roadmap-section.collapsible .roadmap-section-header:hover {
+            background: rgba(34, 211, 238, 0.05);
+            margin: 0 -0.5rem;
+            padding: 0.25rem 0.5rem 0.5rem 0.5rem;
+            border-radius: 6px;
+        }
+        .roadmap-section.collapsible .collapse-indicator {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .roadmap-section.collapsible.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+        .roadmap-section.collapsible .section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            max-height: 2000px;
+            opacity: 1;
+        }
+        .roadmap-section.collapsible.collapsed .section-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .roadmap-section-header {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .roadmap-section-header .section-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 50%;
+        }
+
+        /* Strategy Summary Table */
+        .strategy-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .strategy-summary-table th {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            line-height: 1.3;
+        }
+
+        .strategy-summary-table th:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .strategy-summary-table td {
+            padding: 0.6rem 0.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .strategy-summary-table td:not(:last-child) {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .strategy-summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .strategy-summary-table .row-label {
+            background: var(--bg-secondary);
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: left;
+            padding-left: 1rem;
+            width: 100px;
+        }
+
+        .strategy-summary-table .count-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+
+        .strategy-summary-table .count-value.clickable {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .strategy-summary-table .count-value.clickable:hover {
+            color: var(--accent-cyan);
+        }
+
+        .strategy-summary-table .effort-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+        }
+
+        .strategy-summary-table .effort-value .effort-pct {
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .strategy-summary-table .effort-value .effort-days {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            margin-left: 0.4rem;
+        }
+
+        .strategy-summary-table th.strategy-col {
+            width: calc((100% - 100px) / 4);
+        }
+
+        /* OKR Summary footer note */
+        .strategy-summary-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+            padding-right: 0.25rem;
+        }
+
+        .strategy-summary-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Strategy multi-category error message */
+        .strategy-error-message {
+            margin-top: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(251, 146, 60, 0.1);
+            border: 1px solid var(--accent-orange);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--accent-orange);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .strategy-error-message .error-icon {
+            font-size: 1rem;
+        }
+
+        .strategy-error-message a {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .strategy-error-message a:hover {
+            opacity: 0.8;
+        }
+
+        /* Filter search input in header */
+        .filter-search-input {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            flex: 1;
+            min-width: 120px;
+            max-width: 200px;
+        }
+
+        .filter-search-input:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+        }
+
+        .filter-search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Auto-fit and resizable columns */
+        .work-items-table,
+        .sortable-table {
+            table-layout: auto;
+            width: 100%;
+        }
+        
+        .work-items-table th,
+        .work-items-table td,
+        .sortable-table th,
+        .sortable-table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+        }
+        
+        .work-items-table .work-item-title,
+        .sortable-table .work-item-title {
+            max-width: 400px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .table-footer {
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-align: right;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
+        .table-header {
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-card);
+        }
+
+        /* Resizable columns */
+        .resizable-header {
+            position: relative;
+        }
+        
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+            cursor: col-resize;
+            background: transparent;
+        }
+        
+        .resize-handle:hover,
+        .resize-handle.resizing {
+            background: var(--accent-blue);
+        }
+        
+        /* Column width presets */
+        .col-id { width: 60px; min-width: 60px; }
+        .col-title { min-width: 200px; }
+        .col-type { width: 100px; min-width: 80px; }
+        .col-state { width: 100px; min-width: 80px; }
+        .col-assignee { width: 150px; min-width: 100px; }
+        .col-release { width: 120px; min-width: 80px; }
+        .col-team { width: 120px; min-width: 80px; }
+        .col-date { width: 100px; min-width: 90px; }
+        .col-effort { width: 70px; min-width: 60px; }
+        .col-priority { width: 70px; min-width: 60px; }
+        .col-tags { width: 150px; min-width: 100px; max-width: 200px; }
+        .col-customers { width: 150px; min-width: 100px; }
+        .col-csowner { width: 130px; min-width: 100px; }
+        .priority-cell { text-align: center; font-weight: 500; color: var(--text-secondary); }
+        .tags-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .priority-value {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        /* Tasks View Styles */
+        .tasks-grouped-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .task-group {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .task-group-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .task-group-header:hover {
+            background: var(--hover-bg);
+        }
+        
+        .toggle-icon {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            width: 1rem;
+        }
+        
+        .parent-type-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .parent-type-badge.delivery-slice { background: var(--accent-cyan); color: #000; }
+        .parent-type-badge.bug { background: #f87171; color: #000; }
+        .parent-type-badge.issue { background: #fb923c; color: #000; }
+        .parent-type-badge.feature { background: #a78bfa; color: #000; }
+        .parent-type-badge.task { background: #60a5fa; color: #000; }
+        .parent-type-badge.orphan { background: #6b7280; color: #fff; }
+        .parent-type-badge.unknown { background: #374151; color: #fff; }
+        
+        .parent-link {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .parent-link:hover {
+            text-decoration: underline;
+        }
+        
+        .parent-title {
+            flex: 1;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .task-count {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        
+        .task-group-content {
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .task-group-content .work-items-table {
+            margin: 0;
+            border-radius: 0;
+        }
+        
+        .orphan-group {
+            border-color: #6b7280;
+        }
+        
+        /* Divergence styling */
+        .divergence-value {
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .divergence-value.on-target {
+            color: #22c55e;
+        }
+        
+        .divergence-value.over {
+            color: #ef4444;
+        }
+        
+        .divergence-value.under {
+            color: #eab308;
+        }
+        
+        /* Accent stat cards */
+        .stat-card.accent-green .stat-value {
+            color: #22c55e;
+        }
+        
+        .stat-card.accent-red .stat-value {
+            color: #ef4444;
+        }
+        
+        .stat-card.accent-yellow .stat-value {
+            color: #eab308;
+        }
+        
+        .accent-red {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        /* Section divider */
+        .section-divider {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .section-divider h3 {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        /* Org Chart Styles */
+        .orgchart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            padding: 1rem 0;
+        }
+        
+        .team-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            min-width: 280px;
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .team-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .team-lead-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #fff;
+        }
+        
+        .team-lead-info h4 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        
+        .team-lead-info .role {
+            color: var(--accent-purple);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .team-members {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .team-member {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0;
+        }
+        
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .member-name {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        
+        .member-count {
+            background: var(--accent-cyan);
+            color: #000;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .team-lead-photo {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent-purple);
+        }
+        
+        .team-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #fff;
+            margin-left: auto;
+        }
+        
+        .member-team-tag {
+            padding: 0.1rem 0.4rem;
+            border-radius: 8px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            margin-left: auto;
+        }
+        
+        .member-photo {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+        
+        .member-photo.grayscale, .member-avatar.grayscale {
+            filter: grayscale(100%);
+            opacity: 0.6;
+        }
+        
+        .former-members-section {
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--border-color);
+        }
+        
+        .former-members-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .team-member.former .member-name {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .team-members.former {
+            opacity: 0.7;
+        }
+        
+        /* Definitions panel */
+        .definitions-panel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+        }
+        
+        .definitions-title {
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .definition-item {
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        
+        .definition-item strong {
+            color: var(--text-secondary);
+        }
+        
+        .section-divider {
+            margin: 2rem 0 1rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .section-divider h3 {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .section-header {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-group label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+        
+        .filter-group input[type="date"],
+        .filter-group select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-primary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+        }
+        
+        .filter-group input[type="date"]:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+        
+        /* Multi-select dropdown with checkboxes */
+        .multi-select-dropdown {
+            position: relative;
+            min-width: 140px;
+        }
+        
+        .multi-select-display {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .multi-select-display:hover {
+            border-color: var(--accent-cyan);
+        }
+        
+        .dropdown-arrow {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+        
+        .multi-select-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 2px;
+            z-index: 1000;
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .multi-select-options.show {
+            display: block;
+        }
+        
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        
+        .checkbox-option:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .checkbox-option input[type="checkbox"] {
+            accent-color: var(--accent-cyan);
+            width: 14px;
+            height: 14px;
+        }
+        
+        .checkbox-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.25rem 0;
+        }
+        
+        .select-all-option {
+            background: var(--bg-tertiary);
+        }
+        
+        /* Team Details Section */
+        .team-details-section {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--accent-cyan);
+        }
+        
+        .team-details-section .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .team-details-section .section-header h3 {
+            margin: 0;
+            color: var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .team-details-section .close-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .team-details-section .close-btn:hover {
+            background: var(--accent-red);
+            color: white;
+            border-color: var(--accent-red);
+        }
+        
+        .team-filters-bar {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        
+        .doughnut-container {
+            max-height: 250px;
+        }
+        
+        .effort-summary {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        
+        .effort-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            min-width: 120px;
+        }
+        
+        .effort-card .effort-type {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        
+        .effort-card .effort-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+        
+        .effort-card .effort-count {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Team stat card with lead photo */
+        .team-stat-card {
+            position: relative;
+        }
+        
+        .team-stat-card.all-teams-card {
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(6, 182, 212, 0.1) 100%);
+            border: 2px solid var(--accent-cyan);
+        }
+        
+        .team-lead-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .team-lead-photo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border-color);
+        }
+        
+        .team-lead-name {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Calculation definition */
+        .calculation-definition {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .definition-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .definition-toggle:hover {
+            color: var(--accent-cyan);
+        }
+        
+        .toggle-icon {
+            transition: transform 0.2s;
+        }
+        
+        .definition-toggle.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+        
+        .definition-content {
+            padding: 0 1rem 1rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .definition-content p {
+            margin: 0.5rem 0;
+        }
+        
+        .definition-content strong {
+            color: var(--text-primary);
+        }
+        
+        .filter-group span {
+            color: var(--text-muted);
+        }
+        
+        .filter-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-cyan);
+            color: var(--text-primary);
+        }
+        
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+            margin-bottom: 1.5rem;
+        }
+        
+        .chart-container.tall {
+            height: 350px;
+        }
+        
+        /* Trend indicator colors */
+        .trend-up {
+            color: var(--accent-red) !important;
+        }
+        
+        .trend-down {
+            color: var(--accent-green) !important;
+        }
+        
+        .trend-neutral {
+            color: var(--text-secondary) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Header -->
+    <div class="sticky-header">
+        <!-- Top row: Logo + Nav -->
+        <div class="header-top">
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v80</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-view="executive">Executive</button>
+                <button class="nav-tab" data-view="releases">Releases</button>
+                <button class="nav-tab" data-view="roadmap">Roadmap</button>
+                <button class="nav-tab" data-view="customers">Customers</button>
+                <button class="nav-tab" data-view="bugs">Bugs</button>
+                <button class="nav-tab" data-view="tasks">Tasks</button>
+                <button class="nav-tab" data-view="teams">Teams</button>
+                <button class="nav-tab" data-view="orgchart">Org Chart</button>
+                <button class="nav-tab" data-view="details">Details</button>
+                <button class="nav-tab" data-view="validation">Validation</button>
+            </nav>
+            
+            <button class="hamburger" onclick="toggleMobileNav()">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        
+        <!-- Mobile nav (hidden by default) -->
+        <div class="nav-mobile" id="nav-mobile">
+            <button class="nav-tab active" data-view="executive">Executive</button>
+            <button class="nav-tab" data-view="releases">Releases</button>
+            <button class="nav-tab" data-view="roadmap">Roadmap</button>
+            <button class="nav-tab" data-view="customers">Customers</button>
+            <button class="nav-tab" data-view="bugs">Bugs</button>
+            <button class="nav-tab" data-view="tasks">Tasks</button>
+            <button class="nav-tab" data-view="teams">Teams</button>
+            <button class="nav-tab" data-view="orgchart">Org Chart</button>
+            <button class="nav-tab" data-view="details">Details</button>
+            <button class="nav-tab" data-view="validation">Validation</button>
+        </div>
+        
+        <!-- Filter rows (view-specific, only one active at a time) -->
+        <!-- Releases filter row -->
+        <div class="filter-row" id="filter-row-releases">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="releases-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyReleasesSearch()">
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="release-filter-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-filter-dropdown')">
+                    <span id="release-filter-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-filter-menu">
+                    <!-- Populated dynamically by renderReleasesView -->
+                </div>
+            </div>
+            
+            <span class="filter-row-label">Type:</span>
+            <div class="filter-dropdown" id="release-type-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-type-header-dropdown')">
+                    <span id="release-type-header-display">All Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-type-header-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <span class="filter-row-label">Bug Type:</span>
+            <div class="filter-dropdown" id="release-bugtype-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-bugtype-header-dropdown')">
+                    <span id="release-bugtype-header-display">All Bug Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-bugtype-header-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="release-state-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-state-header-dropdown')">
+                    <span id="release-state-header-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-state-header-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="release-team-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-team-header-dropdown')">
+                    <span id="release-team-header-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-team-header-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="release-customer-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-customer-header-dropdown')">
+                    <span id="release-customer-header-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-customer-header-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <button class="clear-filters-btn hidden" id="release-clear-filters-btn" onclick="clearAllReleaseFilters()">✕ Clear All</button>
+            
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('releases-info-panel')">ℹ️ Info</span>
+                <div class="info-panel" id="releases-info-panel">
+                    <p><strong>Release Items:</strong> Features, Issues, Bugs with a Release Version assigned.</p>
+                    <p><strong>Completion %:</strong> Done or Closed items ÷ Total × 100.</p>
+                    <p><strong>At Risk:</strong> Incomplete items with target date within 14 days or past.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Executive filter row (placeholder - implement later) -->
+        <div class="filter-row active" id="filter-row-executive">
+            <span class="filter-row-label">Team:</span>
+            <select id="exec-team-filter-header" onchange="document.getElementById('exec-team-filter').value=this.value; applyExecFilters();">
+                <option value="all">All Teams</option>
+                <option value="Frontend">Frontend</option>
+                <option value="Backend">Backend</option>
+                <option value="QA">QA</option>
+                <option value="DevOps">DevOps</option>
+                <option value="Analytics">Analytics</option>
+                <option value="Govern">Govern</option>
+                <option value="Customer Success">Customer Success</option>
+            </select>
+            <span class="filter-row-label" style="margin-left: 1rem;">Type:</span>
+            <select id="exec-type-filter-header" onchange="document.getElementById('exec-type-filter').value=this.value; applyExecFilters();">
+                <option value="all">All Types</option>
+                <option value="Feature">Feature</option>
+                <option value="Issue">Issue</option>
+                <option value="Bug">Bug</option>
+                <option value="Delivery Slice">Delivery Slice</option>
+                <option value="Task">Task</option>
+            </select>
+        </div>
+
+        <!-- Roadmap filter row -->
+        <div class="filter-row" id="filter-row-roadmap">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="roadmap-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyRoadmapFilters()">
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="roadmap-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-state-dropdown')">
+                    <span id="roadmap-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="roadmap-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-customer-dropdown')">
+                    <span id="roadmap-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Assigned To:</span>
+            <div class="filter-dropdown" id="roadmap-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-assignee-dropdown')">
+                    <span id="roadmap-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-assignee-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="roadmap-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-team-dropdown')">
+                    <span id="roadmap-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-team-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="roadmap-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-iteration-dropdown')">
+                    <span id="roadmap-iteration-display">All Iterations</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-iteration-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="roadmap-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-priority-dropdown')">
+                    <span id="roadmap-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="roadmap-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-release-dropdown')">
+                    <span id="roadmap-release-display">(No Release)</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-release-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="roadmap-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
+                    <span id="roadmap-tag-display">Candidate</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="roadmap-clear-filters-btn" onclick="clearAllRoadmapFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ Info</span>
+                <div class="info-panel" id="roadmap-info-panel">
+                    <p><strong>Default filters:</strong></p>
+                    <p>• Release: "(No Release)" - Features with no Release Version assigned</p>
+                    <p>• Tag: "Candidate" - Features tagged as Candidate</p>
+                    <p><strong>Default order:</strong> Backlog Priority (lower = higher priority)</p>
+                    <p>Click any column header to sort. Use "Reset to Backlog Priority" to restore default order.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers filter row -->
+        <div class="filter-row" id="filter-row-customers">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="customers-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyCustomersFilters()">
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="customers-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-customer-dropdown')">
+                    <span id="customers-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Category:</span>
+            <div class="filter-dropdown" id="customers-category-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-category-dropdown')">
+                    <span id="customers-category-display">All Categories</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-category-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="customers-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-state-dropdown')">
+                    <span id="customers-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="customers-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-priority-dropdown')">
+                    <span id="customers-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="customers-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-release-dropdown')">
+                    <span id="customers-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-release-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Aging:</span>
+            <div class="filter-dropdown" id="customers-aging-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-aging-dropdown')">
+                    <span id="customers-aging-display">All Ages</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-aging-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="customers-clear-filters-btn" onclick="clearAllCustomersFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('customers-info-panel')">ℹ️ Info</span>
+                <div class="info-panel" id="customers-info-panel">
+                    <p><strong>Customer Issues:</strong> Work items of type "Issue" with customer information.</p>
+                    <p><strong>Ticket Category:</strong> Enhancement Request, Bug, Task, or (Not Set).</p>
+                    <p><strong>CS Owner:</strong> Customer Success team member assigned to the issue.</p>
+                    <p><strong>Multi-Customer Items:</strong> Issues affecting multiple customers (semicolon-separated in the Customers field).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <main class="main-content">
+        <div class="breadcrumb" id="breadcrumb" style="display: none;">
+            <span class="breadcrumb-current">Executive</span>
+        </div>
+        
+        <!-- Executive View -->
+        <div class="dashboard-view active" id="view-executive">
+            <div class="filter-bar" id="exec-filters">
+                <div class="filter-group">
+                    <label>Team:</label>
+                    <select id="exec-team-filter" onchange="applyExecFilters()">
+                        <option value="all">All Teams</option>
+                        <option value="Frontend">Frontend</option>
+                        <option value="Backend">Backend</option>
+                        <option value="QA">QA</option>
+                        <option value="DevOps">DevOps</option>
+                        <option value="Analytics">Analytics</option>
+                        <option value="Govern">Govern</option>
+                        <option value="Customer Success">Customer Success</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type:</label>
+                    <select id="exec-type-filter" onchange="applyExecFilters()">
+                        <option value="all">All Types</option>
+                        <option value="Feature">Feature</option>
+                        <option value="Issue">Issue</option>
+                        <option value="Bug">Bug</option>
+                        <option value="Delivery Slice">Delivery Slice</option>
+                        <option value="Task">Task</option>
+                    </select>
+                </div>
+            </div>
+            <div class="calculation-definition" id="exec-definition">
+                <div class="definition-toggle" onclick="toggleDefinition('exec-definition')">
+                    <span>📖 How are executive metrics calculated?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="definition-content" style="display: none;">
+                    <p><strong>Completion Rate:</strong> Work items in Done or Closed state ÷ Total work items × 100.</p>
+                    <p><strong>In Progress:</strong> Work items with state "In Progress".</p>
+                    <p><strong>Open Bugs:</strong> Bugs not in Done, Closed, or Removed state.</p>
+                    <p><strong>Blocked:</strong> Work items with "blocked" in their Tags field.</p>
+                    <p><strong>Unassigned:</strong> Open work items (not Done/Closed/Removed) with no Assigned To value.</p>
+                </div>
+            </div>
+            <div class="stats-grid" id="exec-stats"></div>
+            <div class="insights-panel" id="exec-insights"></div>
+            <div class="charts-grid" id="exec-charts"></div>
+        </div>
+        
+        <!-- Teams View -->
+        <div class="dashboard-view" id="view-teams">
+            <div class="time-selector" id="team-time-selector">
+                <span class="time-selector-label">Time Period:</span>
+                <button class="time-btn active" data-period="all">All Time</button>
+                <button class="time-btn" data-period="quarter">This Quarter</button>
+                <button class="time-btn" data-period="lastmonth">Last Month</button>
+                <button class="time-btn" data-period="month">This Month</button>
+                <button class="time-btn" data-period="lastweek">Last Week</button>
+                <button class="time-btn" data-period="week">This Week</button>
+            </div>
+            <div class="insights-panel insights-grid" id="team-insights"></div>
+            <div class="charts-grid" id="team-charts"></div>
+            <div id="team-distribution-section"></div>
+            <div class="team-cta">👇 Click on a team card below to view details</div>
+            <div class="stats-grid" id="team-stats"></div>
+            
+            <!-- Team Details Section (expandable) -->
+            <div class="team-details-section" id="team-details-section" style="display: none;">
+                <div class="section-header">
+                    <h3 id="team-details-title">Team Details</h3>
+                    <button class="close-btn" onclick="closeTeamDetails()">✕ Close</button>
+                </div>
+                
+                <!-- Engineer Details Section -->
+                <div class="engineer-section" id="engineer-section">
+                    <div class="engineer-section-header">
+                        <h4>👥 Engineer Workload</h4>
+                    </div>
+                    
+                    <!-- State and Priority Filters -->
+                    <div class="engineer-filter-bar" style="margin-bottom: 1rem;">
+                        <label>Filter:</label>
+                        <div class="multi-select-dropdown" id="eng-state-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngDropdown('state')">
+                                <span id="eng-state-display">All States</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="eng-state-options">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                        <div class="multi-select-dropdown" id="eng-priority-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngDropdown('priority')">
+                                <span id="eng-priority-display">All Priorities</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="eng-priority-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="eng-priority-select-all" onchange="toggleAllEngFilter('priority', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                <label class="checkbox-option"><input type="checkbox" value="1" onchange="updateEngFilter('priority')"> 1 - Critical</label>
+                                <label class="checkbox-option"><input type="checkbox" value="2" onchange="updateEngFilter('priority')"> 2 - High</label>
+                                <label class="checkbox-option"><input type="checkbox" value="3" onchange="updateEngFilter('priority')"> 3 - Medium</label>
+                                <label class="checkbox-option"><input type="checkbox" value="4" onchange="updateEngFilter('priority')"> 4 - Low</label>
+                            </div>
+                        </div>
+                        <div class="multi-select-dropdown" id="eng-type-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngDropdown('type')">
+                                <span id="eng-type-display">All Types</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="eng-type-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="eng-type-select-all" onchange="toggleAllEngFilter('type', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                <label class="checkbox-option"><input type="checkbox" value="Bug" onchange="updateEngFilter('type')"> Bug</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Task" onchange="updateEngFilter('type')"> Task</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Delivery Slice" onchange="updateEngFilter('type')"> Delivery Slice</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Feature" onchange="updateEngFilter('type')"> Feature</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Issue" onchange="updateEngFilter('type')"> Issue</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Epic" onchange="updateEngFilter('type')"> Epic</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Key Result" onchange="updateEngFilter('type')"> Key Result</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Objective" onchange="updateEngFilter('type')"> Objective</label>
+                            </div>
+                        </div>
+                        <div class="team-coverage-indicator" id="team-coverage-indicator">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Table - Workload by Engineer and Type -->
+                    <div class="engineer-summary-table" id="engineer-summary-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                    
+                    <!-- Engineer Filter -->
+                    <div class="engineer-filter-bar">
+                        <label>Filter by Engineer:</label>
+                        <div class="multi-select-dropdown" id="engineer-filter-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngineerFilter()">
+                                <span id="engineer-filter-display">All Engineers</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="engineer-filter-options">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Engineer Details with Gantt -->
+                    <div class="engineer-details-container" id="engineer-details-container">
+                        <div class="no-engineer-data">Select engineers above to view work item details</div>
+                    </div>
+                </div>
+                
+                <!-- Effort Categorization Section -->
+                <div class="section-divider" style="margin-top: 2rem;">
+                    <h3>📊 Effort Categorization</h3>
+                </div>
+                
+                <!-- Team Doughnut Charts with inline filters -->
+                <div class="charts-grid" id="team-detail-charts">
+                    <div class="chart-card">
+                        <div class="chart-title">By Type</div>
+                        <div class="chart-container doughnut-container"><canvas id="team-type-chart"></canvas></div>
+                        <div class="chart-filter">
+                            <div class="multi-select-dropdown" id="team-type-dropdown">
+                                <div class="multi-select-display" onclick="toggleTeamDropdown('type')">
+                                    <span id="team-type-display">All Types</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="multi-select-options" id="team-type-options">
+                                    <label class="checkbox-option select-all-option"><input type="checkbox" id="team-type-select-all" onchange="toggleAllTeamFilter('type', this.checked)"> <strong>Select All</strong></label>
+                                    <div class="checkbox-divider"></div>
+                                    <label class="checkbox-option"><input type="checkbox" value="Bug" onchange="updateTeamFilter('type')"> Bug</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Task" onchange="updateTeamFilter('type')"> Task</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Delivery Slice" onchange="updateTeamFilter('type')"> Delivery Slice</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Feature" onchange="updateTeamFilter('type')"> Feature</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Issue" onchange="updateTeamFilter('type')"> Issue</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Epic" onchange="updateTeamFilter('type')"> Epic</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">By State</div>
+                        <div class="chart-container doughnut-container"><canvas id="team-state-chart"></canvas></div>
+                        <div class="chart-filter">
+                            <div class="multi-select-dropdown" id="team-state-dropdown">
+                                <div class="multi-select-display" onclick="toggleTeamDropdown('state')">
+                                    <span id="team-state-display">All States</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="multi-select-options" id="team-state-options">
+                                    <label class="checkbox-option select-all-option"><input type="checkbox" id="team-state-select-all" onchange="toggleAllTeamFilter('state', this.checked)"> <strong>Select All</strong></label>
+                                    <div class="checkbox-divider"></div>
+                                    <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateTeamFilter('state')"> New</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateTeamFilter('state')"> Triaged</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateTeamFilter('state')"> To Do</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateTeamFilter('state')"> In Progress</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateTeamFilter('state')"> Ready For Review</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateTeamFilter('state')"> Done</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateTeamFilter('state')"> Closed</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateTeamFilter('state')"> Removed</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">By Priority</div>
+                        <div class="chart-container doughnut-container"><canvas id="team-priority-chart"></canvas></div>
+                        <div class="chart-filter">
+                            <div class="multi-select-dropdown" id="team-priority-dropdown">
+                                <div class="multi-select-display" onclick="toggleTeamDropdown('priority')">
+                                    <span id="team-priority-display">All Priorities</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="multi-select-options" id="team-priority-options">
+                                    <label class="checkbox-option select-all-option"><input type="checkbox" id="team-priority-select-all" onchange="toggleAllTeamFilter('priority', this.checked)"> <strong>Select All</strong></label>
+                                    <div class="checkbox-divider"></div>
+                                    <label class="checkbox-option"><input type="checkbox" value="1" onchange="updateTeamFilter('priority')"> 1 - Critical</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="2" onchange="updateTeamFilter('priority')"> 2 - High</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="3" onchange="updateTeamFilter('priority')"> 3 - Medium</label>
+                                    <label class="checkbox-option"><input type="checkbox" value="4" onchange="updateTeamFilter('priority')"> 4 - Low</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">By Assigned To</div>
+                        <div class="chart-container doughnut-container"><canvas id="team-assignee-chart"></canvas></div>
+                        <div class="chart-filter">
+                            <div class="multi-select-dropdown" id="team-assignee-dropdown">
+                                <div class="multi-select-display" onclick="toggleTeamDropdown('assignee')">
+                                    <span id="team-assignee-display">All Members</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="multi-select-options" id="team-assignee-options">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">By Iteration</div>
+                        <div class="chart-container doughnut-container"><canvas id="team-iteration-chart"></canvas></div>
+                        <div class="chart-filter">
+                            <div class="multi-select-dropdown" id="team-iteration-dropdown">
+                                <div class="multi-select-display" onclick="toggleTeamDropdown('iteration')">
+                                    <span id="team-iteration-display">All Iterations</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="multi-select-options" id="team-iteration-options">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Effort Summary by Type -->
+                <div class="effort-summary" id="team-effort-summary"></div>
+                
+                <!-- Effort Calculation Definition -->
+                <div class="calculation-definition" id="team-effort-definition">
+                    <div class="definition-toggle" onclick="toggleTeamEffortDefinition()">
+                        <span>📊 How is effort calculated?</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="definition-content" id="team-effort-definition-content" style="display: none;">
+                        <p><strong>Effort:</strong> Sum of the "Effort" field on each work item (in person-days).</p>
+                        <p><strong>By Type:</strong> Effort is shown separately per work item type to avoid double-counting. For example, if a Delivery Slice has 5d effort and its child Tasks also have effort, they are counted separately.</p>
+                        <p><strong>Capacity:</strong> Number of team members × working days in the selected period (excludes weekends).</p>
+                        <p><strong>Utilization:</strong> Total Effort ÷ Capacity × 100%. Values over 100% indicate over-commitment.</p>
+                        <p><strong>Note:</strong> This calculation assumes all team members are available full-time. PTO, holidays, and part-time allocations are not factored in.</p>
+                    </div>
+                </div>
+                
+                <!-- Work Items Table -->
+                <div class="table-section" id="team-items-table-section">
+                    <div class="table-header">
+                        <h4 id="team-items-count">Work Items</h4>
+                        <button class="time-btn" onclick="clearTeamFilters()">Clear Filters</button>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="work-items-table sortable-table" id="team-items-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>Title</th>
+                                    <th>State</th>
+                                    <th>Priority</th>
+                                    <th>Assigned To</th>
+                                    <th>Iteration</th>
+                                    <th>Effort</th>
+                                </tr>
+                            </thead>
+                            <tbody id="team-items-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customers View -->
+        <div class="dashboard-view" id="view-customers">
+            <div class="stats-grid" id="customer-stats"></div>
+            <div class="insights-panel insights-horizontal" id="customer-insights"></div>
+            <div class="aging-histogram-section" id="customer-aging-histogram"></div>
+            <div class="table-container" id="customer-issues-table"></div>
+        </div>
+        
+        <!-- Bugs View (renamed from Quality) -->
+        <div class="dashboard-view" id="view-bugs">
+            <!-- Bug Filters - apply to all visuals -->
+            <div class="bug-filters-bar">
+                <div class="filter-group">
+                    <label>Date Range:</label>
+                    <div class="date-range-buttons">
+                        <button class="time-btn" data-range="week" onclick="setBugDateRange('week')">Week</button>
+                        <button class="time-btn" data-range="month" onclick="setBugDateRange('month')">Month</button>
+                        <button class="time-btn active" data-range="quarter" onclick="setBugDateRange('quarter')">Quarter</button>
+                        <button class="time-btn" data-range="custom" onclick="setBugDateRange('custom')">Custom</button>
+                    </div>
+                </div>
+                <div class="filter-group date-inputs" id="bug-date-inputs" style="display: none;">
+                    <input type="date" id="bug-trend-start" onchange="applyBugFilters()" />
+                    <span>to</span>
+                    <input type="date" id="bug-trend-end" onchange="applyBugFilters()" />
+                </div>
+                <div class="filter-group">
+                    <label>Bug Type:</label>
+                    <div class="multi-select-dropdown" id="bug-type-dropdown">
+                        <div class="multi-select-display" onclick="toggleBugDropdown('type')">
+                            <span id="bug-type-display">All Types</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="bug-type-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="bug-type-select-all" onchange="toggleAllBugFilter('type', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            <label class="checkbox-option"><input type="checkbox" value="Customer Related" onchange="updateBugFilter('type')"> Customer Related</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Product Quality" onchange="updateBugFilter('type')"> Product Quality</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Technical & Infrastructure" onchange="updateBugFilter('type')"> Technical & Infrastructure</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Priority:</label>
+                    <div class="multi-select-dropdown" id="bug-priority-dropdown">
+                        <div class="multi-select-display" onclick="toggleBugDropdown('priority')">
+                            <span id="bug-priority-display">All Priorities</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="bug-priority-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="bug-priority-select-all" onchange="toggleAllBugFilter('priority', this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            <label class="checkbox-option"><input type="checkbox" value="1" onchange="updateBugFilter('priority')"> 1 - Critical</label>
+                            <label class="checkbox-option"><input type="checkbox" value="2" onchange="updateBugFilter('priority')"> 2 - High</label>
+                            <label class="checkbox-option"><input type="checkbox" value="3" onchange="updateBugFilter('priority')"> 3 - Medium</label>
+                            <label class="checkbox-option"><input type="checkbox" value="4" onchange="updateBugFilter('priority')"> 4 - Low</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>State:</label>
+                    <div class="multi-select-dropdown" id="state-dropdown">
+                        <div class="multi-select-display" onclick="toggleStateDropdown()">
+                            <span id="state-display-text">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="state-select-all" onchange="toggleAllStates(this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateStateFilter()"> New</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateStateFilter()"> Triaged</label>
+                            <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateStateFilter()"> To Do</label>
+                            <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateStateFilter()"> In Progress</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateStateFilter()"> Ready For Review</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateStateFilter()"> Done</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateStateFilter()"> Closed</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateStateFilter()"> Removed</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="calculation-definition" id="bugs-definitions">
+                <div class="definition-toggle" onclick="toggleDefinition('bugs-definitions')">
+                    <span>📖 How are bug metrics calculated?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="definition-content" style="display: none;">
+                    <p><strong>Active bugs:</strong> Bugs that were active during the selected period (created before period end AND not closed before period start).</p>
+                    <p><strong>Spread effort:</strong> Effort is distributed proportionally across each bug's lifetime. E.g., a 15-day bug open for 50 days contributes 15×(7/50)=2.1 days to a 7-day period.</p>
+                    <p><strong>Utilization %:</strong> Spread effort ÷ working days in period × 100. Shows what % of an engineer's time was spent on bugs.</p>
+                    <p><strong>Created vs Closed:</strong> Bugs created or closed within the selected date range. "Closed" includes both Done (code changes) and Closed (no code changes) states.</p>
+                </div>
+            </div>
+            
+            <div class="stats-grid" id="bugs-stats"></div>
+            <div class="insights-panel" id="bugs-insights"></div>
+            
+            <!-- Bug Trend Section -->
+            <div class="stats-grid" id="bugs-trend-stats"></div>
+            <div class="chart-card full-width" id="bugs-trend-chart-container">
+                <div class="chart-title">Bug Trend by Week</div>
+                <div class="chart-container tall"><canvas id="bugs-trend-chart"></canvas></div>
+            </div>
+            
+            <!-- Bug Categorization Section -->
+            <div class="section-divider">
+                <h3>Bug Categorization</h3>
+            </div>
+            <div class="charts-grid" id="bugs-categorization-charts"></div>
+            
+            <!-- Bug Effort Section -->
+            <div class="section-divider">
+                <h3>Bug Effort</h3>
+            </div>
+            <div class="charts-grid" id="bugs-effort-charts"></div>
+            
+            <!-- Bug Effort Analysis Section (Estimate vs Actual) -->
+            <div class="section-divider" style="margin-top: 2rem;">
+                <h3>Effort Estimate vs Actual</h3>
+            </div>
+            <div class="calculation-definition" id="bug-effort-definition">
+                <div class="definition-toggle" onclick="toggleDefinition('bug-effort-definition')">
+                    <span>📖 How is bug effort tracked?</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="definition-content" style="display: none;">
+                    <p><strong>Estimate (Bug Effort):</strong> Initial estimate entered by Bug Owner when bug is created.</p>
+                    <p><strong>Actual (Effort Rollup):</strong> Sum of effort from child tasks, entered by engineers as they work.</p>
+                    <p><strong>Divergence:</strong> Actual − Estimate. Positive = took longer than estimated, Negative = took less.</p>
+                    <p><strong>Variance:</strong> The divergence as a percentage of the estimate.</p>
+                </div>
+            </div>
+            <div class="stats-grid" id="bug-effort-stats"></div>
+            <div class="charts-grid" id="bug-effort-charts"></div>
+            <div class="table-container" id="bug-effort-table"></div>
+        </div>
+        
+        <!-- Releases View -->
+        <div class="dashboard-view" id="view-releases">
+            <div class="stats-grid" id="release-stats"></div>
+            <div class="insights-panel insights-horizontal" id="release-insights"></div>
+            
+            <!-- Full bar chart (shown when no filters active) -->
+            <div class="chart-card full-width" id="release-bar-chart-container" style="display: none;">
+                <div class="chart-header-row">
+                    <h3>Items by Release</h3>
+                    <span class="chart-subtitle">Click bar to select · Ctrl+Click for multi-select</span>
+                </div>
+                <div class="chart-container" style="height: 280px;">
+                    <canvas id="release-bar-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Mini bar chart (shown when filters active) -->
+            <div class="mini-chart-container" id="release-mini-chart-container" style="display: none;">
+                <div class="mini-chart-header">
+                    <span class="mini-chart-title">Items by Release</span>
+                    <span class="chart-subtitle">Click bar to select · Ctrl+Click for multi-select</span>
+                </div>
+                <div class="mini-bar-track" id="release-mini-bars"></div>
+                <div class="mini-bar-labels" id="release-mini-labels"></div>
+                <div class="mini-chart-selection" id="release-mini-selection" style="display: none;"></div>
+            </div>
+            
+            <div class="charts-grid" id="release-charts"></div>
+            <div class="table-container" id="release-items-table" style="display: none;">
+                <!-- Tables generated dynamically by renderReleaseItemsTables -->
+            </div>
+        </div>
+
+        <!-- Feature Roadmap View -->
+        <div class="dashboard-view" id="view-roadmap">
+            <!-- Section 1: OKR Summary -->
+            <div class="roadmap-section" id="roadmap-section-summary">
+                <div class="roadmap-section-header">
+                    <span class="section-number">1</span>
+                    <span>OKR Summary</span>
+                </div>
+                <table class="strategy-summary-table" id="strategy-summary-table">
+                    <thead>
+                        <tr>
+                            <th class="row-label"></th>
+                            <th class="strategy-col">eSHARE is must-have</th>
+                            <th class="strategy-col">eSHARE is the collaboration standard</th>
+                            <th class="strategy-col">eSHARE deployability</th>
+                            <th class="strategy-col">eSHARE is customer-focused, stable and secure</th>
+                        </tr>
+                    </thead>
+                    <tbody id="strategy-summary-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+                <div class="strategy-summary-footer">
+                    <span class="strategy-summary-note" id="strategy-unmatched-note"></span>
+                </div>
+                <div id="strategy-error-container"></div>
+            </div>
+
+            <!-- Section 2: Team Summary (Collapsible) -->
+            <div class="roadmap-section collapsible collapsed" id="roadmap-section-teams">
+                <div class="roadmap-section-header" onclick="toggleRoadmapTeamSummary()">
+                    <span class="section-number">2</span>
+                    <span>Team Summary</span>
+                    <span class="collapse-indicator">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="roadmap-effort-cards" id="roadmap-effort-cards">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Feature Details -->
+            <div class="roadmap-section" id="roadmap-section-details">
+                <div class="roadmap-section-header">
+                    <span class="section-number">3</span>
+                    <span>Feature Details</span>
+                    <a href="https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false" target="_blank" class="ado-backlog-link">Link to ADO Feature Backlog</a>
+                    <span class="roadmap-count" id="roadmap-count" style="margin-left: auto;"></span>
+                </div>
+                <!-- Inline effort summary for the table -->
+                <div class="roadmap-table-info">
+                    <span class="roadmap-table-effort-summary" id="roadmap-table-effort-summary"></span>
+                </div>
+                <div class="table-container" id="roadmap-table-container">
+                    <table class="work-items-table" id="roadmap-table">
+                        <thead id="roadmap-table-head"></thead>
+                        <tbody id="roadmap-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks View -->
+        <div class="dashboard-view" id="view-tasks">
+            <div class="filter-bar" id="tasks-filters">
+                <div class="filter-group">
+                    <label>Parent Type:</label>
+                    <select id="tasks-parent-type-filter" onchange="applyTasksFilters()">
+                        <option value="all">All Parents</option>
+                        <option value="Delivery Slice">Delivery Slice</option>
+                        <option value="Bug">Bug</option>
+                        <option value="Issue">Issue</option>
+                        <option value="Feature">Feature</option>
+                        <option value="orphan">Orphan (No Parent)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>State:</label>
+                    <div class="multi-select-dropdown" id="tasks-state-dropdown">
+                        <div class="multi-select-display" onclick="toggleTasksStateDropdown()">
+                            <span id="tasks-state-display">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="tasks-state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="tasks-state-select-all" onchange="toggleAllTasksStates(this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateTasksStateFilter()"> New</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateTasksStateFilter()"> Triaged</label>
+                            <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateTasksStateFilter()"> To Do</label>
+                            <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateTasksStateFilter()"> In Progress</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateTasksStateFilter()"> Ready For Review</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateTasksStateFilter()"> Done</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateTasksStateFilter()"> Closed</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateTasksStateFilter()"> Removed</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Team:</label>
+                    <select id="tasks-team-filter" onchange="applyTasksFilters()">
+                        <option value="all">All Teams</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Task Overview Section -->
+            <div id="tasks-overview-section">
+                <div class="stats-grid" id="tasks-stats"></div>
+                <div class="insights-panel" id="tasks-insights"></div>
+                <div class="charts-grid" id="tasks-charts"></div>
+                <div class="table-container" id="tasks-table-container"></div>
+            </div>
+        </div>
+        
+        <!-- Validation View -->
+        <div class="dashboard-view" id="view-validation">
+            <div class="filter-bar" id="validation-filters">
+                <div class="filter-group">
+                    <label>Bug Type:</label>
+                    <select id="validation-type-filter" onchange="applyValidationFilters()">
+                        <option value="all">All Types</option>
+                        <option value="Customer Related">Customer Related</option>
+                        <option value="Product Quality">Product Quality</option>
+                        <option value="Technical & Infrastructure">Technical & Infrastructure</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>State:</label>
+                    <div class="multi-select-dropdown" id="validation-state-dropdown">
+                        <div class="multi-select-display" onclick="toggleValidationStateDropdown()">
+                            <span id="validation-state-display">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="validation-state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="validation-state-select-all" onchange="toggleAllValidationStates(this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateValidationStateFilter()"> New</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateValidationStateFilter()"> Triaged</label>
+                            <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateValidationStateFilter()"> To Do</label>
+                            <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateValidationStateFilter()"> In Progress</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateValidationStateFilter()"> Ready For Review</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateValidationStateFilter()"> Done</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateValidationStateFilter()"> Closed</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateValidationStateFilter()"> Removed</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Data Source Validation Section -->
+            <div id="data-source-validation-section" style="margin-bottom: 2rem;">
+                <div class="section-divider">
+                    <h3>📊 Data Source Validation</h3>
+                </div>
+                <div class="calculation-definition" id="data-source-definition">
+                    <div class="definition-toggle" onclick="toggleDefinition('data-source-definition')">
+                        <span>📖 What is Data Source Validation?</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="definition-content" style="display: none;">
+                        <p><strong>Purpose:</strong> Ensures the dashboard accurately reflects the source CSV data from Azure DevOps.</p>
+                        <p><strong>CSV Source:</strong> The count and breakdown of records as read from the input CSV file during generation.</p>
+                        <p><strong>Dashboard:</strong> The count and breakdown computed from the workItems array in the browser.</p>
+                        <p><strong>Match Status:</strong> ✓ indicates values match exactly, ✗ indicates a discrepancy that needs investigation.</p>
+                    </div>
+                </div>
+                <div id="data-source-validation-content"></div>
+            </div>
+
+            <div class="stats-grid" id="validation-stats"></div>
+            <div class="insights-panel" id="validation-insights"></div>
+            <div id="validation-issues"></div>
+            <div class="charts-grid" id="validation-charts"></div>
+
+            <!-- Data Quality Section -->
+            <div id="data-quality-section" style="margin-top: 2rem;">
+                <div class="section-divider">
+                    <h3>Data Quality Checks</h3>
+                </div>
+                <div class="calculation-definition" id="data-quality-definition">
+                    <div class="definition-toggle" onclick="toggleDefinition('data-quality-definition')">
+                        <span>📖 What makes data "quality"?</span>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="definition-content" style="display: none;">
+                        <p><strong>Fully Classified Bug:</strong> A bug with Bug Type, Feature, and Component all set.</p>
+                        <p><strong>Tasks Missing Effort:</strong> Tasks where engineers haven't logged their actual effort (Effort field is empty or 0).</p>
+                        <p><strong>Bugs Without Tasks:</strong> Bugs with estimates but no task breakdown (work not yet planned).</p>
+                        <p><strong>Orphan Tasks:</strong> Tasks not linked to any parent work item.</p>
+                        <p><strong>Same-Type Parent:</strong> Work items whose parent is the same type (e.g., Task under Task) - unusual hierarchy.</p>
+                        <p><strong>Cross-Team Assignment:</strong> Work item assigned to someone not in the team (based on Area Path vs Org Chart).</p>
+                        <p><strong>Unknown Assignee:</strong> Work item assigned to someone not found in any team in the Org Chart.</p>
+                    </div>
+                </div>
+                <div class="stats-grid" id="data-quality-stats"></div>
+                <div class="charts-grid" id="data-quality-charts"></div>
+                <div class="table-container" id="data-quality-tables"></div>
+            </div>
+        </div>
+        
+        <!-- Org Chart View -->
+        <div class="dashboard-view" id="view-orgchart">
+            <div class="stats-grid" id="orgchart-stats"></div>
+            <div class="orgchart-container" id="orgchart-container"></div>
+        </div>
+        
+        <!-- Details View -->
+        <div class="dashboard-view" id="view-details">
+            <div class="filter-bar" id="details-filters">
+                <div class="filter-group">
+                    <label>Team:</label>
+                    <select id="details-team-filter" onchange="applyDetailsFilters()">
+                        <option value="all">All Teams</option>
+                        <option value="Frontend">Frontend</option>
+                        <option value="Backend">Backend</option>
+                        <option value="QA">QA</option>
+                        <option value="DevOps">DevOps</option>
+                        <option value="Analytics">Analytics</option>
+                        <option value="Govern">Govern</option>
+                        <option value="Customer Success">Customer Success</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type:</label>
+                    <select id="details-type-filter" onchange="applyDetailsFilters()">
+                        <option value="all">All Types</option>
+                        <option value="Feature">Feature</option>
+                        <option value="Issue">Issue</option>
+                        <option value="Bug">Bug</option>
+                        <option value="Delivery Slice">Delivery Slice</option>
+                        <option value="Task">Task</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>State:</label>
+                    <div class="multi-select-dropdown" id="details-state-dropdown">
+                        <div class="multi-select-display" onclick="toggleDetailsStateDropdown()">
+                            <span id="details-state-display">All States</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="multi-select-options" id="details-state-options">
+                            <label class="checkbox-option select-all-option"><input type="checkbox" id="details-state-select-all" onchange="toggleAllDetailsStates(this.checked)"> <strong>Select All</strong></label>
+                            <div class="checkbox-divider"></div>
+                            <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateDetailsStateFilter()"> New</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateDetailsStateFilter()"> Triaged</label>
+                            <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateDetailsStateFilter()"> To Do</label>
+                            <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateDetailsStateFilter()"> In Progress</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateDetailsStateFilter()"> Ready For Review</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateDetailsStateFilter()"> Done</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateDetailsStateFilter()"> Closed</label>
+                            <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateDetailsStateFilter()"> Removed</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats-grid" id="details-stats"></div>
+            <div class="insights-panel" id="details-insights"></div>
+            <div class="charts-grid" id="details-charts"></div>
+        </div>
+        
+    </main>

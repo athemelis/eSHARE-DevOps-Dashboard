@@ -4,25 +4,50 @@
 This is a reporting dashboard that visualizes Azure DevOps work items (Features, Delivery Slices, Bugs, Issues, Tasks). It runs as a single HTML file served from SharePoint.
 
 ## Architecture
-- **Templates/**: HTML template parts that get concatenated
+- **Templates/**: Development HTML template parts (for local testing)
+- **Templates-Production/**: Production HTML template parts (for scheduled publishing)
 - **generate_dashboard.py**: Python script that combines templates + CSV data → final HTML
 - **Data files** (not in repo): `ALL_Items.csv`, `Org_Chart.csv` managed by Power Automate
 
 ## Key Files
 | File | Purpose |
 |------|---------|
-| `Templates/dashboard_v3_part1.html` | HTML structure + CSS |
-| `Templates/dashboard_v3_part2.html` | Core JavaScript + data placeholder |
-| `Templates/dashboard_v3_part3.html` | Releases, Customers, Bugs views |
-| `Templates/dashboard_v3_part4.html` | Teams, Org Chart, Validation views |
+| `Templates/dashboard_v3_part1.html` | HTML structure + CSS (DEV) |
+| `Templates/dashboard_v3_part2.html` | Core JavaScript + data placeholder (DEV) |
+| `Templates/dashboard_v3_part3.html` | Releases, Customers, Bugs views (DEV) |
+| `Templates/dashboard_v3_part4.html` | Teams, Org Chart, Validation views (DEV) |
+| `Templates-Production/*` | Production templates (stable version) |
 | `generate_dashboard.py` | Generation script |
 | `DASHBOARD_README.md` | User documentation |
 
-## Development Workflow
-1. Make changes to template files
-2. Run `python3 generate_dashboard.py` to generate output
-3. Open `ᵉShare DevOps Dashboard.html` in browser to validate
-4. If good: update version number, commit, push
+## Development vs Production Workflow
+
+**Two separate template directories:**
+- `Templates/` - Development templates for local testing
+- `Templates-Production/` - Production templates used by the 60-second launchd job
+
+**Development workflow:**
+1. Make changes to `Templates/` files
+2. Run `python3 generate_dashboard.py` (no flags) to generate to local DEV file
+3. Open `eSHARE-DevOps-Dashboard.html` in browser to validate
+4. Repeat until changes are ready
+
+**Publishing to production:**
+1. When ready, copy updated templates to `Templates-Production/`:
+   ```bash
+   cp Templates/*.html Templates-Production/
+   ```
+2. Update version in `Templates-Production/dashboard_v3_part1.html`
+3. Run `python3 generate_dashboard.py --publish` to publish once
+4. The launchd job will continue refreshing data every 60 seconds using production templates
+
+**Key paths:**
+- DEV output: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
+- PROD output: SharePoint `Product Planning/ᵉShare DevOps Dashboard.html`
+
+**Shell script behavior:**
+- `./update-eSHARE-DevOps-Dashboard.sh` → Uses `Templates/`, outputs to DEV
+- `./update-eSHARE-DevOps-Dashboard.sh --publish` → Uses `Templates-Production/`, outputs to PROD
 
 ## Version Management
 When making changes:
@@ -30,7 +55,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v79
+## Current Version: v80
 
 ## UI Patterns for All Dashboards
 
