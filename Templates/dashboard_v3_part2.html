@@ -21,9 +21,45 @@
         try {
             const state = {
                 currentView: currentView,
+                // Roadmap view state
                 roadmapFilters: typeof roadmapFilters !== 'undefined' ? roadmapFilters : null,
                 roadmapSortState: typeof roadmapSortState !== 'undefined' ? roadmapSortState : null,
                 roadmapTeamSummaryCollapsed: typeof roadmapTeamSummaryCollapsed !== 'undefined' ? roadmapTeamSummaryCollapsed : true,
+                // Releases view state
+                releaseHeaderFilters: typeof releaseHeaderFilters !== 'undefined' ? releaseHeaderFilters : null,
+                releasesSearchFilter: typeof releasesSearchFilter !== 'undefined' ? releasesSearchFilter : '',
+                selectedReleases: typeof selectedReleases !== 'undefined' ? selectedReleases : [],
+                // Executive view state
+                execChartFilters: typeof execChartFilters !== 'undefined' ? execChartFilters : null,
+                execTeamFilter: document.getElementById('exec-team-filter')?.value || 'all',
+                execTypeFilter: document.getElementById('exec-type-filter')?.value || 'all',
+                // Customers view state
+                customerChartFilters: typeof customerChartFilters !== 'undefined' ? customerChartFilters : null,
+                customerTeamFilter: document.getElementById('customer-team-filter')?.value || 'all',
+                // Bugs view state
+                bugsChartFilters: typeof bugsChartFilters !== 'undefined' ? bugsChartFilters : null,
+                bugTrendFilters: typeof bugTrendFilters !== 'undefined' ? bugTrendFilters : null,
+                selectedBugDateRange: typeof selectedBugDateRange !== 'undefined' ? selectedBugDateRange : 'quarter',
+                bugTrendStartDate: document.getElementById('bug-trend-start')?.value || '',
+                bugTrendEndDate: document.getElementById('bug-trend-end')?.value || '',
+                // Teams view state
+                teamLeadChartFilters: typeof teamLeadChartFilters !== 'undefined' ? teamLeadChartFilters : null,
+                currentTeamDetails: typeof currentTeamDetails !== 'undefined' ? currentTeamDetails : null,
+                selectedTimePeriod: typeof selectedTimePeriod !== 'undefined' ? selectedTimePeriod : 'all',
+                engFilters: typeof engFilters !== 'undefined' ? engFilters : null,
+                selectedEngineers: typeof selectedEngineers !== 'undefined' ? selectedEngineers : [],
+                // Tasks view state
+                tasksParentTypeFilter: document.getElementById('tasks-parent-type-filter')?.value || 'all',
+                tasksTeamFilter: document.getElementById('tasks-team-filter')?.value || 'all',
+                tasksStateFilter: typeof getSelectedTasksStates !== 'undefined' ? getSelectedTasksStates() : [],
+                // Details view state
+                detailsTypeFilter: document.getElementById('details-type-filter')?.value || 'all',
+                detailsTeamFilter: document.getElementById('details-team-filter')?.value || 'all',
+                detailsStateFilter: typeof getSelectedDetailsStates !== 'undefined' ? getSelectedDetailsStates() : [],
+                // Validation view state
+                validationTypeFilter: document.getElementById('validation-type-filter')?.value || 'all',
+                validationTeamFilter: document.getElementById('validation-team-filter')?.value || 'all',
+                validationStateFilter: typeof getSelectedValidationStates !== 'undefined' ? getSelectedValidationStates() : [],
                 timestamp: Date.now()
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -53,10 +89,24 @@
 
     // Flag to indicate state was loaded and dropdowns need syncing
     let stateWasLoaded = false;
+    let releasesStateWasLoaded = false;
+    let executiveStateWasLoaded = false;
+    let customersStateWasLoaded = false;
+    let bugsStateWasLoaded = false;
+    let teamsStateWasLoaded = false;
+    let tasksStateWasLoaded = false;
+    let detailsStateWasLoaded = false;
+    let validationStateWasLoaded = false;
+
+    // Loaded state storage (used for DOM restoration after render)
+    let loadedStateCache = null;
 
     // Apply loaded state (called after all components are initialized)
     function applyLoadedState(state) {
         if (!state) return;
+
+        // Cache state for DOM restoration after render
+        loadedStateCache = state;
 
         // Restore roadmap filters if available
         if (state.roadmapFilters && typeof roadmapFilters !== 'undefined') {
@@ -79,6 +129,87 @@
                     section.classList.toggle('collapsed', roadmapTeamSummaryCollapsed);
                 }
             }, 0);
+        }
+
+        // Restore Releases view state
+        if (state.releaseHeaderFilters && typeof releaseHeaderFilters !== 'undefined') {
+            Object.assign(releaseHeaderFilters, state.releaseHeaderFilters);
+            releasesStateWasLoaded = true;
+        }
+        if (typeof state.releasesSearchFilter !== 'undefined' && typeof releasesSearchFilter !== 'undefined') {
+            releasesSearchFilter = state.releasesSearchFilter;
+        }
+        if (state.selectedReleases && typeof selectedReleases !== 'undefined') {
+            selectedReleases = [...state.selectedReleases];
+        }
+
+        // Restore Executive view state
+        if (state.execChartFilters && typeof execChartFilters !== 'undefined') {
+            Object.assign(execChartFilters, state.execChartFilters);
+        }
+        // Always mark as loaded if we have any executive state (even if default values)
+        if (typeof state.execTeamFilter !== 'undefined' || typeof state.execTypeFilter !== 'undefined') {
+            executiveStateWasLoaded = true;
+        }
+
+        // Restore Customers view state
+        if (state.customerChartFilters && typeof customerChartFilters !== 'undefined') {
+            Object.assign(customerChartFilters, state.customerChartFilters);
+        }
+        // Always mark as loaded if we have any customer state
+        if (typeof state.customerTeamFilter !== 'undefined') {
+            customersStateWasLoaded = true;
+        }
+
+        // Restore Bugs view state
+        if (state.bugsChartFilters && typeof bugsChartFilters !== 'undefined') {
+            Object.assign(bugsChartFilters, state.bugsChartFilters);
+        }
+        if (state.bugTrendFilters && typeof bugTrendFilters !== 'undefined') {
+            Object.assign(bugTrendFilters, state.bugTrendFilters);
+        }
+        if (typeof state.selectedBugDateRange !== 'undefined' && typeof selectedBugDateRange !== 'undefined') {
+            selectedBugDateRange = state.selectedBugDateRange;
+        }
+        // Always mark as loaded if we have any bugs state
+        if (typeof state.selectedBugDateRange !== 'undefined' || state.bugTrendFilters || typeof state.bugTrendStartDate !== 'undefined') {
+            bugsStateWasLoaded = true;
+        }
+
+        // Restore Teams view state
+        if (state.teamLeadChartFilters && typeof teamLeadChartFilters !== 'undefined') {
+            Object.assign(teamLeadChartFilters, state.teamLeadChartFilters);
+        }
+        if (typeof state.currentTeamDetails !== 'undefined' && typeof currentTeamDetails !== 'undefined') {
+            currentTeamDetails = state.currentTeamDetails;
+        }
+        if (typeof state.selectedTimePeriod !== 'undefined' && typeof selectedTimePeriod !== 'undefined') {
+            selectedTimePeriod = state.selectedTimePeriod;
+        }
+        if (state.engFilters && typeof engFilters !== 'undefined') {
+            Object.assign(engFilters, state.engFilters);
+        }
+        if (state.selectedEngineers && typeof selectedEngineers !== 'undefined') {
+            selectedEngineers = [...state.selectedEngineers];
+        }
+        // Always mark as loaded if we have any teams state
+        if (typeof state.selectedTimePeriod !== 'undefined' || state.teamLeadChartFilters || state.engFilters) {
+            teamsStateWasLoaded = true;
+        }
+
+        // Mark Tasks view state for restoration - always if we have any tasks state
+        if (typeof state.tasksParentTypeFilter !== 'undefined' || typeof state.tasksTeamFilter !== 'undefined' || state.tasksStateFilter) {
+            tasksStateWasLoaded = true;
+        }
+
+        // Mark Details view state for restoration - always if we have any details state
+        if (typeof state.detailsTypeFilter !== 'undefined' || typeof state.detailsTeamFilter !== 'undefined' || state.detailsStateFilter) {
+            detailsStateWasLoaded = true;
+        }
+
+        // Mark Validation view state for restoration - always if we have any validation state
+        if (typeof state.validationTypeFilter !== 'undefined' || typeof state.validationTeamFilter !== 'undefined' || state.validationStateFilter) {
+            validationStateWasLoaded = true;
         }
 
         // Restore view (will be applied during initialization)
@@ -236,6 +367,7 @@
 
         updateReleaseHeaderDisplay();
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
         reopenDropdown();
 
@@ -245,7 +377,7 @@
             newOptionsContainer.scrollTop = scrollTop;
         }
     }
-    
+
     // Select all releases - re-render immediately
     function selectAllReleases(event) {
         if (event) event.stopPropagation();
@@ -258,10 +390,11 @@
         });
         updateReleaseHeaderDisplay();
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
         reopenDropdown();
     }
-    
+
     // Clear release selection - re-render immediately
     function clearReleaseSelection(event) {
         if (event) event.stopPropagation();
@@ -272,6 +405,7 @@
         selectedReleases = [];
         updateReleaseHeaderDisplay();
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
         reopenDropdown();
     }
@@ -332,6 +466,7 @@
         releaseHeaderFilters[filterType] = Array.from(checkboxes).map(cb => cb.value);
         updateReleaseHeaderFilterDisplay(filterType);
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
         reopenDropdown();
     }
@@ -373,10 +508,11 @@
         });
         updateReleaseHeaderFilterDisplay(filterType);
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
         reopenDropdown();
     }
-    
+
     // Clear header filter - re-render immediately
     function clearHeaderFilter(filterType, event) {
         if (event) event.stopPropagation();
@@ -387,6 +523,7 @@
         releaseHeaderFilters[filterType] = [];
         updateReleaseHeaderFilterDisplay(filterType);
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
         reopenDropdown();
     }
@@ -396,6 +533,7 @@
         const searchInput = document.getElementById('releases-search-input');
         releasesSearchFilter = searchInput ? searchInput.value : '';
         updateClearFiltersButton();
+        saveStateToStorage();
         renderReleasesView();
     }
 
@@ -424,7 +562,7 @@
             cb.checked = false;
         });
         updateReleaseHeaderDisplay();
-        
+
         // Clear all header filters
         ['type', 'bugtype', 'state', 'team', 'customer'].forEach(filterType => {
             document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
@@ -433,12 +571,38 @@
             releaseHeaderFilters[filterType] = [];
             updateReleaseHeaderFilterDisplay(filterType);
         });
-        
+
         // Hide clear button
         const clearBtn = document.getElementById('release-clear-filters-btn');
         if (clearBtn) clearBtn.classList.add('hidden');
-        
+
+        saveStateToStorage();
         renderReleasesView();
+    }
+
+    // Sync Releases view dropdowns with loaded state
+    function syncReleasesFilterDropdowns() {
+        // Restore search input
+        const searchInput = document.getElementById('releases-search-input');
+        if (searchInput && releasesSearchFilter) {
+            searchInput.value = releasesSearchFilter;
+        }
+
+        // Sync release selection checkboxes
+        document.querySelectorAll('#release-dropdown-options input[type="checkbox"]').forEach(cb => {
+            cb.checked = selectedReleases.includes(cb.value);
+        });
+        updateReleaseHeaderDisplay();
+
+        // Sync header filter checkboxes
+        ['type', 'bugtype', 'state', 'team', 'customer'].forEach(filterType => {
+            document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
+                cb.checked = releaseHeaderFilters[filterType].includes(cb.value);
+            });
+            updateReleaseHeaderFilterDisplay(filterType);
+        });
+
+        updateClearFiltersButton();
     }
     
     // Update clear button visibility

@@ -4,7 +4,8 @@
     let bugCategorizationCharts = {};
     let bugEffortCharts = {};
     let selectedBugDateRange = 'quarter'; // week, month, quarter, custom
-    
+    let bugTrendFilters = { state: [], type: [], priority: [] }; // State for bug trend filters
+
     // Team details state
     let currentTeamDetails = null;
     let teamDetailCharts = {};
@@ -23,21 +24,32 @@
     function toggleAllStates(checked) {
         const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
         checkboxes.forEach(cb => cb.checked = checked);
-        updateStateFilter();
+        bugTrendFilters.state = checked ? Array.from(checkboxes).map(cb => cb.value) : [];
+        updateStateFilterDisplay();
+        saveStateToStorage();
+        applyBugFilters();
     }
-    
+
     function updateStateFilter() {
         const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
-        const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        bugTrendFilters.state = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        updateStateFilterDisplay();
+        saveStateToStorage();
+        applyBugFilters();
+    }
+
+    function updateStateFilterDisplay() {
+        const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
+        const selected = bugTrendFilters.state;
         const displayText = document.getElementById('state-display-text');
         const selectAllCheckbox = document.getElementById('state-select-all');
-        
+
         // Update Select All checkbox state
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = selected.length === checkboxes.length;
             selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
         }
-        
+
         if (selected.length === 0) {
             displayText.textContent = 'All States';
         } else if (selected.length === checkboxes.length) {
@@ -47,8 +59,6 @@
         } else {
             displayText.textContent = `${selected.length} selected`;
         }
-        
-        applyBugFilters();
     }
     
     function getSelectedStates() {
@@ -75,21 +85,32 @@
     function toggleAllBugFilter(filterType, checked) {
         const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
         checkboxes.forEach(cb => cb.checked = checked);
-        updateBugFilter(filterType);
+        bugTrendFilters[filterType] = checked ? Array.from(checkboxes).map(cb => cb.value) : [];
+        updateBugFilterDisplay(filterType);
+        saveStateToStorage();
+        applyBugFilters();
     }
-    
+
     function updateBugFilter(filterType) {
         const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
-        const selected = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        bugTrendFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        updateBugFilterDisplay(filterType);
+        saveStateToStorage();
+        applyBugFilters();
+    }
+
+    function updateBugFilterDisplay(filterType) {
+        const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
+        const selected = bugTrendFilters[filterType];
         const displayText = document.getElementById(`bug-${filterType}-display`);
         const selectAllCheckbox = document.getElementById(`bug-${filterType}-select-all`);
-        
+
         // Update Select All checkbox state
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = selected.length === checkboxes.length;
             selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
         }
-        
+
         const allLabel = filterType === 'type' ? 'All Types' : 'All Priorities';
         if (selected.length === 0) {
             displayText.textContent = allLabel;
@@ -106,18 +127,14 @@
         } else {
             displayText.textContent = `${selected.length} selected`;
         }
-        
-        applyBugFilters();
     }
-    
+
     function getSelectedBugTypes() {
-        const checkboxes = document.querySelectorAll('#bug-type-options input[type="checkbox"]:not(#bug-type-select-all)');
-        return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        return bugTrendFilters.type;
     }
-    
+
     function getSelectedPriorities() {
-        const checkboxes = document.querySelectorAll('#bug-priority-options input[type="checkbox"]:not(#bug-priority-select-all)');
-        return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        return bugTrendFilters.priority;
     }
     
     // ==================== CUSTOMERS VIEW STATE FILTER ====================
@@ -303,13 +320,15 @@
             execChartFilters[filterType] = [];
         }
         updateExecFilterDisplay(filterType);
+        saveStateToStorage();
         renderExecutiveView();
     }
-    
+
     function updateExecFilter(filterType) {
         const checkboxes = document.querySelectorAll(`#exec-chart-${filterType}-options input[type="checkbox"]:not(#exec-chart-${filterType}-select-all)`);
         execChartFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         updateExecFilterDisplay(filterType);
+        saveStateToStorage();
         renderExecutiveView();
     }
     
@@ -388,13 +407,15 @@
             customerChartFilters[filterType] = [];
         }
         updateCustomerChartFilterDisplay(filterType);
+        saveStateToStorage();
         renderCustomersView();
     }
-    
+
     function updateCustomerChartFilter(filterType) {
         const checkboxes = document.querySelectorAll(`#customer-chart-${filterType}-options input[type="checkbox"]:not(#customer-chart-${filterType}-select-all)`);
         customerChartFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         updateCustomerChartFilterDisplay(filterType);
+        saveStateToStorage();
         renderCustomersView();
     }
     
@@ -476,13 +497,15 @@
             bugsChartFilters[filterType] = [];
         }
         updateBugsChartFilterDisplay(filterType);
+        saveStateToStorage();
         renderBugCategorizationCharts();
     }
-    
+
     function updateBugsChartFilter(filterType) {
         const checkboxes = document.querySelectorAll(`#bugs-chart-${filterType}-options input[type="checkbox"]:not(#bugs-chart-${filterType}-select-all)`);
         bugsChartFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         updateBugsChartFilterDisplay(filterType);
+        saveStateToStorage();
         renderBugCategorizationCharts();
     }
     
@@ -519,7 +542,196 @@
             if (options) options.classList.add('show');
         }
     }
-    
+
+    // Sync Bugs view state from localStorage
+    function syncBugsFilterState() {
+        // Restore bug trend filter checkboxes (state, type, priority)
+        ['state'].forEach(filterType => {
+            const checkboxes = document.querySelectorAll(`#${filterType}-options input[type="checkbox"]:not(#${filterType}-select-all)`);
+            checkboxes.forEach(cb => {
+                cb.checked = bugTrendFilters[filterType].includes(cb.value);
+            });
+        });
+        updateStateFilterDisplay();
+
+        ['type', 'priority'].forEach(filterType => {
+            const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
+            checkboxes.forEach(cb => {
+                cb.checked = bugTrendFilters[filterType].includes(cb.value);
+            });
+            updateBugFilterDisplay(filterType);
+        });
+
+        // Restore bugs chart filter checkboxes
+        restoreBugsChartFilterStates();
+
+        // Note: Date range is already restored by initBugTrendDates() during render
+    }
+
+    // Sync Executive view state from localStorage
+    function syncExecutiveFilterState() {
+        // Restore header dropdown selects
+        if (loadedStateCache) {
+            const teamFilter = document.getElementById('exec-team-filter');
+            const typeFilter = document.getElementById('exec-type-filter');
+            const teamFilterHeader = document.getElementById('exec-team-filter-header');
+            const typeFilterHeader = document.getElementById('exec-type-filter-header');
+
+            if (teamFilter && loadedStateCache.execTeamFilter) {
+                teamFilter.value = loadedStateCache.execTeamFilter;
+            }
+            if (typeFilter && loadedStateCache.execTypeFilter) {
+                typeFilter.value = loadedStateCache.execTypeFilter;
+            }
+            if (teamFilterHeader && loadedStateCache.execTeamFilter) {
+                teamFilterHeader.value = loadedStateCache.execTeamFilter;
+            }
+            if (typeFilterHeader && loadedStateCache.execTypeFilter) {
+                typeFilterHeader.value = loadedStateCache.execTypeFilter;
+            }
+        }
+
+        // Restore chart filter checkboxes
+        restoreExecFilterStates();
+    }
+
+    // Sync Customers view state from localStorage
+    function syncCustomersFilterState() {
+        // Restore header dropdown select
+        if (loadedStateCache) {
+            const teamFilter = document.getElementById('customer-team-filter');
+            if (teamFilter && loadedStateCache.customerTeamFilter) {
+                teamFilter.value = loadedStateCache.customerTeamFilter;
+            }
+        }
+
+        // Restore chart filter checkboxes
+        restoreCustomerChartFilterStates();
+    }
+
+    // Sync Tasks view state from localStorage
+    function syncTasksFilterState() {
+        if (!loadedStateCache) return;
+
+        // Restore dropdown selects
+        const parentTypeFilter = document.getElementById('tasks-parent-type-filter');
+        const teamFilter = document.getElementById('tasks-team-filter');
+
+        if (parentTypeFilter && loadedStateCache.tasksParentTypeFilter) {
+            parentTypeFilter.value = loadedStateCache.tasksParentTypeFilter;
+        }
+        if (teamFilter && loadedStateCache.tasksTeamFilter) {
+            teamFilter.value = loadedStateCache.tasksTeamFilter;
+        }
+
+        // Restore state filter checkboxes
+        if (loadedStateCache.tasksStateFilter && loadedStateCache.tasksStateFilter.length > 0) {
+            const checkboxes = document.querySelectorAll('#tasks-state-options input[type="checkbox"]:not(#tasks-state-select-all)');
+            checkboxes.forEach(cb => {
+                cb.checked = loadedStateCache.tasksStateFilter.includes(cb.value);
+            });
+            // Update display
+            const displayText = document.getElementById('tasks-state-display');
+            const selectAllCheckbox = document.getElementById('tasks-state-select-all');
+            const selected = loadedStateCache.tasksStateFilter;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = selected.length === checkboxes.length;
+                selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+            }
+            if (displayText) {
+                if (selected.length === 0 || selected.length === checkboxes.length) {
+                    displayText.textContent = 'All States';
+                } else if (selected.length <= 2) {
+                    displayText.textContent = selected.join(', ');
+                } else {
+                    displayText.textContent = `${selected.length} selected`;
+                }
+            }
+        }
+    }
+
+    // Sync Details view state from localStorage
+    function syncDetailsFilterState() {
+        if (!loadedStateCache) return;
+
+        // Restore dropdown selects
+        const typeFilter = document.getElementById('details-type-filter');
+        const teamFilter = document.getElementById('details-team-filter');
+
+        if (typeFilter && loadedStateCache.detailsTypeFilter) {
+            typeFilter.value = loadedStateCache.detailsTypeFilter;
+        }
+        if (teamFilter && loadedStateCache.detailsTeamFilter) {
+            teamFilter.value = loadedStateCache.detailsTeamFilter;
+        }
+
+        // Restore state filter checkboxes
+        if (loadedStateCache.detailsStateFilter && loadedStateCache.detailsStateFilter.length > 0) {
+            const checkboxes = document.querySelectorAll('#details-state-options input[type="checkbox"]:not(#details-state-select-all)');
+            checkboxes.forEach(cb => {
+                cb.checked = loadedStateCache.detailsStateFilter.includes(cb.value);
+            });
+            // Update display
+            const displayText = document.getElementById('details-state-display');
+            const selectAllCheckbox = document.getElementById('details-state-select-all');
+            const selected = loadedStateCache.detailsStateFilter;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = selected.length === checkboxes.length;
+                selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+            }
+            if (displayText) {
+                if (selected.length === 0 || selected.length === checkboxes.length) {
+                    displayText.textContent = 'All States';
+                } else if (selected.length <= 2) {
+                    displayText.textContent = selected.join(', ');
+                } else {
+                    displayText.textContent = `${selected.length} selected`;
+                }
+            }
+        }
+    }
+
+    // Sync Validation view state from localStorage
+    function syncValidationFilterState() {
+        if (!loadedStateCache) return;
+
+        // Restore dropdown selects
+        const typeFilter = document.getElementById('validation-type-filter');
+        const teamFilter = document.getElementById('validation-team-filter');
+
+        if (typeFilter && loadedStateCache.validationTypeFilter) {
+            typeFilter.value = loadedStateCache.validationTypeFilter;
+        }
+        if (teamFilter && loadedStateCache.validationTeamFilter) {
+            teamFilter.value = loadedStateCache.validationTeamFilter;
+        }
+
+        // Restore state filter checkboxes
+        if (loadedStateCache.validationStateFilter && loadedStateCache.validationStateFilter.length > 0) {
+            const checkboxes = document.querySelectorAll('#validation-state-options input[type="checkbox"]:not(#validation-state-select-all)');
+            checkboxes.forEach(cb => {
+                cb.checked = loadedStateCache.validationStateFilter.includes(cb.value);
+            });
+            // Update display
+            const displayText = document.getElementById('validation-state-display');
+            const selectAllCheckbox = document.getElementById('validation-state-select-all');
+            const selected = loadedStateCache.validationStateFilter;
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = selected.length === checkboxes.length;
+                selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+            }
+            if (displayText) {
+                if (selected.length === 0 || selected.length === checkboxes.length) {
+                    displayText.textContent = 'All States';
+                } else if (selected.length <= 2) {
+                    displayText.textContent = selected.join(', ');
+                } else {
+                    displayText.textContent = `${selected.length} selected`;
+                }
+            }
+        }
+    }
+
     function getBugsChartFilteredItems(bugs) {
         let filtered = [...bugs];
         if (bugsChartFilters.bugtype.length > 0) {
@@ -564,13 +776,15 @@
             teamLeadChartFilters[filterType] = [];
         }
         updateTeamLeadChartFilterDisplay(filterType);
+        saveStateToStorage();
         renderTeamLeadView();
     }
-    
+
     function updateTeamLeadChartFilter(filterType) {
         const checkboxes = document.querySelectorAll(`#teamlead-chart-${filterType}-options input[type="checkbox"]:not(#teamlead-chart-${filterType}-select-all)`);
         teamLeadChartFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         updateTeamLeadChartFilterDisplay(filterType);
+        saveStateToStorage();
         renderTeamLeadView();
     }
     
@@ -853,15 +1067,17 @@
         const section = document.getElementById('team-details-section');
         if (section) section.style.display = 'none';
         currentTeamDetails = null;
+        saveStateToStorage();
         // Destroy charts
         Object.values(teamDetailCharts).forEach(chart => {
             if (chart) chart.destroy();
         });
         teamDetailCharts = {};
     }
-    
+
     function expandTeamDetails(teamName) {
         currentTeamDetails = teamName;
+        saveStateToStorage();
         const section = document.getElementById('team-details-section');
         const title = document.getElementById('team-details-title');
         
@@ -1450,14 +1666,16 @@
             checkboxes.forEach(cb => cb.checked = false);
         }
         updateEngFilterDisplay(filterType);
+        saveStateToStorage();
         updateEngineerSection();
     }
-    
+
     function updateEngFilter(filterType) {
         const options = document.getElementById(`eng-${filterType}-options`);
         const checkboxes = options.querySelectorAll('input[type="checkbox"]:not([id$="-select-all"])');
         engFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         updateEngFilterDisplay(filterType);
+        saveStateToStorage();
         updateEngineerSection();
     }
     
@@ -1492,7 +1710,55 @@
             updateEngFilterDisplay(filterType);
         });
     }
-    
+
+    // Sync Teams view state from localStorage
+    function syncTeamsFilterState() {
+        // Restore time period button state
+        document.querySelectorAll('#team-time-selector .time-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.period === selectedTimePeriod);
+        });
+
+        // Restore team lead chart filter checkboxes
+        restoreTeamLeadChartFilterStates();
+
+        // Restore team details if it was open
+        if (currentTeamDetails) {
+            // Save engineer filters before expandTeamDetails resets them
+            const savedEngFilters = JSON.parse(JSON.stringify(engFilters));
+            const savedSelectedEngineers = [...selectedEngineers];
+
+            expandTeamDetails(currentTeamDetails);
+
+            // Restore engineer filters after team details are expanded
+            setTimeout(() => {
+                // Restore engFilters from saved state
+                engFilters = savedEngFilters;
+
+                // Restore engineer filter checkboxes
+                ['state', 'priority', 'type'].forEach(filterType => {
+                    const options = document.getElementById(`eng-${filterType}-options`);
+                    if (options) {
+                        options.querySelectorAll('input[type="checkbox"]:not([id$="-select-all"])').forEach(cb => {
+                            cb.checked = engFilters[filterType].includes(cb.value);
+                        });
+                    }
+                    updateEngFilterDisplay(filterType);
+                });
+
+                // Restore selected engineers
+                selectedEngineers = savedSelectedEngineers;
+                const engineerCheckboxes = document.querySelectorAll('#engineer-filter-options input[type="checkbox"]:not(#engineer-select-all)');
+                engineerCheckboxes.forEach(cb => {
+                    cb.checked = selectedEngineers.includes(cb.value);
+                });
+                updateEngineerFilterDisplay();
+
+                // Re-render engineer details with restored filters
+                renderEngineerDetails();
+            }, 150);
+        }
+    }
+
     function populateEngStateFilter(teamName) {
         // Get all unique states from work items for this team
         const teamItems = teamName === 'All Teams' ? workItems : workItems.filter(w => w.team === teamName);
@@ -1753,13 +2019,15 @@
             selectedEngineers = [];
         }
         updateEngineerFilterDisplay();
+        saveStateToStorage();
         renderEngineerDetails();
     }
-    
+
     function updateEngineerFilter() {
         const checkboxes = document.querySelectorAll('#engineer-filter-options input[type="checkbox"]:not(#engineer-select-all)');
         selectedEngineers = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
         updateEngineerFilterDisplay();
+        saveStateToStorage();
         renderEngineerDetails();
     }
     
@@ -2128,12 +2396,12 @@
     // Set bug date range from buttons
     function setBugDateRange(range) {
         selectedBugDateRange = range;
-        
+
         // Update button states
         document.querySelectorAll('.date-range-buttons .time-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.range === range);
         });
-        
+
         // Show/hide custom date inputs
         const dateInputs = document.getElementById('bug-date-inputs');
         if (range === 'custom') {
@@ -2143,7 +2411,7 @@
             // Set dates based on range
             const endDate = new Date();
             const startDate = new Date();
-            
+
             if (range === 'week') {
                 startDate.setDate(startDate.getDate() - 7);
             } else if (range === 'month') {
@@ -2151,16 +2419,18 @@
             } else if (range === 'quarter') {
                 startDate.setMonth(startDate.getMonth() - 3);
             }
-            
+
             document.getElementById('bug-trend-start').value = startDate.toISOString().split('T')[0];
             document.getElementById('bug-trend-end').value = endDate.toISOString().split('T')[0];
         }
-        
+
+        saveStateToStorage();
         applyBugFilters();
     }
     
     // Apply filters to all bug visuals
     function applyBugFilters() {
+        saveStateToStorage();
         renderBugStats();
         renderBugTrendSection();
         renderBugCategorizationCharts();
@@ -2937,14 +3207,59 @@
     
     // Bug Trend Functions
     function initBugTrendDates() {
+        // If state was loaded from localStorage, use the cached state to set dates
+        if (bugsStateWasLoaded && loadedStateCache) {
+            // Use the restored date range
+            const range = selectedBugDateRange;
+
+            // Update button state
+            document.querySelectorAll('.date-range-buttons .time-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.range === range);
+            });
+
+            // Show/hide custom date inputs
+            const dateInputs = document.getElementById('bug-date-inputs');
+            if (dateInputs) {
+                dateInputs.style.display = range === 'custom' ? 'flex' : 'none';
+            }
+
+            // Set dates based on range
+            if (range === 'custom' && loadedStateCache.bugTrendStartDate && loadedStateCache.bugTrendEndDate) {
+                // Use saved custom dates
+                document.getElementById('bug-trend-start').value = loadedStateCache.bugTrendStartDate;
+                document.getElementById('bug-trend-end').value = loadedStateCache.bugTrendEndDate;
+            } else {
+                // Calculate dates for preset range
+                const endDate = new Date();
+                let startDate = new Date();
+
+                switch(range) {
+                    case 'week':
+                        startDate.setDate(endDate.getDate() - 7);
+                        break;
+                    case 'month':
+                        startDate.setMonth(endDate.getMonth() - 1);
+                        break;
+                    case 'quarter':
+                    default:
+                        startDate.setMonth(endDate.getMonth() - 3);
+                        break;
+                }
+
+                document.getElementById('bug-trend-start').value = startDate.toISOString().split('T')[0];
+                document.getElementById('bug-trend-end').value = endDate.toISOString().split('T')[0];
+            }
+            return;
+        }
+
         // Set initial dates for quarter (default)
         const endDate = new Date();
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - 3);
-        
+
         document.getElementById('bug-trend-start').value = startDate.toISOString().split('T')[0];
         document.getElementById('bug-trend-end').value = endDate.toISOString().split('T')[0];
-        
+
         // Set initial button state
         selectedBugDateRange = 'quarter';
     }
@@ -4195,7 +4510,7 @@
     
     function selectRelease(release, event) {
         const isCtrlClick = event && (event.ctrlKey || event.metaKey);
-        
+
         if (isCtrlClick) {
             // Multi-select mode
             const index = selectedReleases.indexOf(release);
@@ -4212,11 +4527,13 @@
                 selectedReleases = [release];
             }
         }
+        saveStateToStorage();
         renderReleasesView();
     }
-    
+
     function clearReleaseSelection() {
         selectedReleases = [];
+        saveStateToStorage();
         renderReleasesView();
     }
     
@@ -4239,6 +4556,7 @@
     }
     
     function applyValidationFilters() {
+        saveStateToStorage();
         renderValidationView();
     }
 
@@ -4836,6 +5154,7 @@
     }
     
     function applyDetailsFilters() {
+        saveStateToStorage();
         renderDetailsView();
     }
     
@@ -4938,7 +5257,11 @@
     function switchView(view) {
         currentView = view;
         closeDrilldown();
-        selectedReleases = [];
+
+        // Only clear selectedReleases if state wasn't loaded from localStorage
+        if (!releasesStateWasLoaded) {
+            selectedReleases = [];
+        }
 
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.view === view);
@@ -4974,6 +5297,49 @@
             case 'details': renderDetailsView(); break;
         }
 
+        // Sync filter dropdowns with loaded state after render (if state was loaded)
+        // Then re-render to apply the restored filters
+        if (executiveStateWasLoaded && view === 'executive') {
+            syncExecutiveFilterState();
+            executiveStateWasLoaded = false;
+            renderExecutiveView(); // Re-render with restored filters
+        }
+        if (customersStateWasLoaded && view === 'customers') {
+            syncCustomersFilterState();
+            customersStateWasLoaded = false;
+            renderCustomersView(); // Re-render with restored filters
+        }
+        if (releasesStateWasLoaded && view === 'releases') {
+            syncReleasesFilterDropdowns();
+            releasesStateWasLoaded = false;
+        }
+        if (bugsStateWasLoaded && view === 'bugs') {
+            // Date range is already restored by initBugTrendDates() during render
+            // Sync the checkbox filters and re-render with restored filters
+            syncBugsFilterState();
+            bugsStateWasLoaded = false;
+            applyBugFilters(); // Re-render with restored filters
+        }
+        if (teamsStateWasLoaded && view === 'teams') {
+            syncTeamsFilterState();
+            teamsStateWasLoaded = false;
+        }
+        if (tasksStateWasLoaded && view === 'tasks') {
+            syncTasksFilterState();
+            tasksStateWasLoaded = false;
+            applyTasksFiltersInternal(); // Re-render with restored filters
+        }
+        if (detailsStateWasLoaded && view === 'details') {
+            syncDetailsFilterState();
+            detailsStateWasLoaded = false;
+            renderDetailsView(); // Re-render with restored filters
+        }
+        if (validationStateWasLoaded && view === 'validation') {
+            syncValidationFilterState();
+            validationStateWasLoaded = false;
+            renderValidationView(); // Re-render with restored filters
+        }
+
         updateBreadcrumb();
 
         // Save state to localStorage for persistence across refreshes
@@ -4986,8 +5352,9 @@
             selectedTimePeriod = btn.dataset.period;
             document.querySelectorAll('#team-time-selector .time-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            saveStateToStorage();
             renderTeamLeadView();
-            
+
             // Also refresh team details if currently expanded
             if (currentTeamDetails) {
                 applyTeamDetailFilters();
@@ -5037,9 +5404,9 @@
         const parentTypeFilter = document.getElementById('tasks-parent-type-filter')?.value || 'all';
         const selectedStates = getSelectedTasksStates();
         const teamFilter = document.getElementById('tasks-team-filter')?.value || 'all';
-        
+
         let filtered = [...tasksData.all];
-        
+
         // Filter by parent type
         if (parentTypeFilter === 'orphan') {
             filtered = filtered.filter(t => !t.parentId);
@@ -5050,18 +5417,19 @@
                 return parent && parent.type === parentTypeFilter;
             });
         }
-        
+
         // Filter by state (multi-select)
         if (selectedStates.length > 0) {
             filtered = filtered.filter(t => selectedStates.includes(t.state));
         }
-        
+
         // Filter by team
         if (teamFilter !== 'all') {
             filtered = filtered.filter(t => t.team === teamFilter);
         }
-        
+
         tasksData.filtered = filtered;
+        saveStateToStorage();
         renderTasksView();
     }
     

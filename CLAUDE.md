@@ -30,7 +30,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v78
+## Current Version: v79
 
 ## UI Patterns for All Dashboards
 
@@ -137,6 +137,144 @@ if (roadmapFilters.tags.length > 0) {
             return featureTags.some(tag => roadmapFilters.tags.includes(tag));
         });
     }
+}
+```
+
+## v79 Summary (December 2024)
+**State Persistence for ALL Dashboard Views:**
+Extended localStorage state persistence (originally from v75 Roadmap) to ALL dashboard views. Filter selections now survive page refresh with 24-hour expiration.
+
+**Views Updated:**
+- **Executive:** Team/Type header dropdowns and chart filters persist
+- **Customers:** Team filter and chart filters persist
+- **Bugs:** Date range, custom dates, State/Type/Priority trend filters, categorization chart filters
+- **Teams:** Time period, team details selection, engineer filter selection
+- **Tasks:** Parent type, team, and state filters
+- **Details:** Type, team, and state filters
+- **Validation:** Type, team, and state filters
+- **Releases:** Already working (from earlier implementation)
+- **Roadmap:** Already working (from v75)
+
+**Implementation Pattern - Multi-View State Persistence:**
+```javascript
+// 1. Add state flags for each view
+let executiveStateWasLoaded = false;
+let customersStateWasLoaded = false;
+let bugsStateWasLoaded = false;
+// ... etc for each view
+
+// 2. Cache loaded state for DOM restoration
+let loadedStateCache = null;
+
+// 3. In saveStateToStorage(), capture all view states:
+const state = {
+    currentView: currentView,
+    // Executive
+    execChartFilters: execChartFilters,
+    execTeamFilter: document.getElementById('exec-team-filter')?.value || 'all',
+    // Bugs
+    bugTrendFilters: bugTrendFilters,
+    selectedBugDateRange: selectedBugDateRange,
+    bugTrendStartDate: document.getElementById('bug-trend-start')?.value || '',
+    // ... etc
+    timestamp: Date.now()
+};
+
+// 4. In applyLoadedState(), restore state variables and set flags:
+if (state.bugTrendFilters) {
+    Object.assign(bugTrendFilters, state.bugTrendFilters);
+}
+bugsStateWasLoaded = true;
+
+// 5. In switchView(), sync UI after render and re-render with filters:
+if (bugsStateWasLoaded && view === 'bugs') {
+    syncBugsFilterState();
+    bugsStateWasLoaded = false;
+    applyBugFilters(); // IMPORTANT: Re-render with restored filters
+}
+```
+
+**Key Implementation Detail - Sync Then Re-render:**
+After syncing checkbox states from localStorage, you MUST call the view's render/apply function:
+```javascript
+// Wrong - checkboxes are synced but data doesn't reflect the filter
+syncBugsFilterState();
+bugsStateWasLoaded = false;
+
+// Correct - checkboxes are synced AND data is re-rendered with filters
+syncBugsFilterState();
+bugsStateWasLoaded = false;
+applyBugFilters(); // Re-render with restored filters
+```
+
+**Pattern - Sync Function for Checkbox Filters:**
+```javascript
+function syncBugsFilterState() {
+    // State filter uses #state-options (no prefix)
+    ['state'].forEach(filterType => {
+        const checkboxes = document.querySelectorAll(`#${filterType}-options input[type="checkbox"]:not(#${filterType}-select-all)`);
+        checkboxes.forEach(cb => {
+            cb.checked = bugTrendFilters[filterType].includes(cb.value);
+        });
+    });
+    updateStateFilterDisplay();
+
+    // Type/Priority use #bug-type-options pattern
+    ['type', 'priority'].forEach(filterType => {
+        const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
+        checkboxes.forEach(cb => {
+            cb.checked = bugTrendFilters[filterType].includes(cb.value);
+        });
+        updateBugFilterDisplay(filterType);
+    });
+}
+```
+
+**Pattern - Teams View Engineer Filter Preservation:**
+When a view has a function that resets filters (like `expandTeamDetails()` calling `resetEngFilters()`):
+```javascript
+function syncTeamsFilterState() {
+    // ... time period restoration ...
+
+    if (currentTeamDetails) {
+        // Save filters BEFORE expandTeamDetails() resets them
+        const savedEngFilters = JSON.parse(JSON.stringify(engFilters));
+        const savedSelectedEngineers = [...selectedEngineers];
+
+        expandTeamDetails(currentTeamDetails);
+
+        // Restore after expansion completes
+        setTimeout(() => {
+            engFilters = savedEngFilters;
+            selectedEngineers = savedSelectedEngineers;
+            // Sync checkboxes...
+            renderEngineerDetails();
+        }, 150);
+    }
+}
+```
+
+**Pattern - Date Range Restoration:**
+For views with date range selectors that initialize with defaults:
+```javascript
+function initBugTrendDates() {
+    // Check if we should use restored state instead of defaults
+    if (bugsStateWasLoaded && loadedStateCache) {
+        const range = selectedBugDateRange;
+        // Update button state
+        document.querySelectorAll('.date-range-buttons .time-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.range === range);
+        });
+        // Set dates from cache or calculate from range
+        if (range === 'custom' && loadedStateCache.bugTrendStartDate) {
+            document.getElementById('bug-trend-start').value = loadedStateCache.bugTrendStartDate;
+            document.getElementById('bug-trend-end').value = loadedStateCache.bugTrendEndDate;
+        } else {
+            // Calculate dates based on range (week/month/quarter)
+        }
+        return; // Skip default initialization
+    }
+    // Default initialization...
 }
 ```
 
