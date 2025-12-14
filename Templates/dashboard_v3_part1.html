@@ -757,14 +757,10 @@
             overflow-y: visible;
         }
 
-        /* Auto-expanding table for Customers view - no fixed max-height */
-        #customer-issues-table.table-container {
-            max-height: none;
-            overflow-y: visible;
-        }
+        /* Scrollable table for Customers view with fixed max-height */
         #customer-issues-table .table-scroll-container {
-            max-height: none;
-            overflow-y: visible;
+            max-height: 600px;
+            overflow-y: auto;
         }
 
         /* Sticky table headers for scrolling tables */
