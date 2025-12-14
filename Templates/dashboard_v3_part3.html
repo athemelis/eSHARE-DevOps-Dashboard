@@ -1259,10 +1259,8 @@
                     aVal = a.priority || 999;
                     bVal = b.priority || 999;
                     return (aVal - bVal) * multiplier;
-                case 'createdDate':
-                    return (a.createdDate || '').localeCompare(b.createdDate || '') * multiplier;
-                case 'closedDate':
-                    return (a.closedDate || '').localeCompare(b.closedDate || '') * multiplier;
+                case 'ticketCategory':
+                    return (a.ticketCategory || '').localeCompare(b.ticketCategory || '') * multiplier;
                 case 'aging':
                     aVal = calculateAgeDays(a);
                     bVal = calculateAgeDays(b);
@@ -1275,8 +1273,6 @@
                     return (a.releaseVersion || '').localeCompare(b.releaseVersion || '') * multiplier;
                 case 'targetDate':
                     return (a.targetDate || '').localeCompare(b.targetDate || '') * multiplier;
-                case 'category':
-                    return (a.ticketCategory || '').localeCompare(b.ticketCategory || '') * multiplier;
                 default:
                     return 0;
             }
@@ -1307,6 +1303,53 @@
     function isCustomersSortNonDefault() {
         return customersSortState.column !== defaultCustomersSortState.column ||
                customersSortState.direction !== defaultCustomersSortState.direction;
+    }
+
+    // Helper to count relationships for a work item (for displaying pills in table)
+    function countRelationshipsForWorkItem(workItemId) {
+        let childrenCount = 0;
+        let relatedCount = 0;
+        let hasParent = false;
+
+        // Count links where this item is the source (children, related-forward)
+        workItemLinks.forEach(link => {
+            if (link.source === workItemId) {
+                if (link.type === 'Child') {
+                    childrenCount++;
+                } else if (link.type === 'Related') {
+                    relatedCount++;
+                }
+            }
+            // Check if this item is a target of a Child link (meaning source is parent)
+            if (link.target === workItemId && link.type === 'Child') {
+                hasParent = true;
+            }
+        });
+
+        return { childrenCount, relatedCount, hasParent };
+    }
+
+    // Build relationship pills HTML for a work item
+    function buildRelationshipPills(workItemId) {
+        const counts = countRelationshipsForWorkItem(workItemId);
+        const pills = [];
+
+        if (counts.hasParent) {
+            pills.push('<span class="rel-pill rel-pill-parent">has parent</span>');
+        }
+        if (counts.childrenCount > 0) {
+            pills.push(`<span class="rel-pill rel-pill-children">${counts.childrenCount} ${counts.childrenCount === 1 ? 'child' : 'children'}</span>`);
+        }
+        if (counts.relatedCount > 0) {
+            pills.push(`<span class="rel-pill rel-pill-related">${counts.relatedCount} related</span>`);
+        }
+
+        // If no relationships, show "no links" pill
+        if (pills.length === 0) {
+            pills.push('<span class="rel-pill rel-pill-none">no links</span>');
+        }
+
+        return pills.join('');
     }
 
     // Customers View
@@ -1439,8 +1482,7 @@
             { key: 'state', label: 'State', class: 'col-state' },
             { key: 'customers', label: 'Customers', class: 'col-customers' },
             { key: 'priority', label: 'Priority', class: 'col-priority' },
-            { key: 'createdDate', label: 'Created', class: 'col-created' },
-            { key: 'closedDate', label: 'Closed', class: 'col-closed' },
+            { key: 'ticketCategory', label: 'Category', class: 'col-category' },
             { key: 'aging', label: 'Aging', class: 'col-aging' },
             { key: 'tags', label: 'Tags', class: 'col-tags' },
             { key: 'csOwner', label: 'CS Owner', class: 'col-csowner' },
@@ -1463,6 +1505,7 @@
         tableContainer.innerHTML = `
             <div class="table-header">
                 <span>Showing ${sortedIssues.length} issues</span>
+                <span class="table-hint">Click on a row to view all relationships</span>
                 ${resetButton}
             </div>
             <div class="table-scroll-container">
@@ -1473,34 +1516,31 @@
                         </tr>
                     </thead>
                 <tbody>
-                    ${sortedIssues.map(issue => `
-                        <tr>
-                            <td class="col-id"><a href="${issue.url}" target="_blank">${issue.id}</a></td>
-                            <td class="col-title" title="${(issue.title || '').replace(/"/g, '&quot;')}">${issue.title || ''}</td>
+                    ${sortedIssues.map(issue => {
+                        // Escape title for use in onclick attribute: escape quotes for both JS string and HTML attribute
+                        const escapedTitle = (issue.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        return `
+                        <tr class="clickable-row" onclick="showIssueRelationships(${issue.id}, '${escapedTitle}', '${issue.ticketCategory || ''}')">
+                            <td class="col-id"><a href="${issue.url}" target="_blank" onclick="event.stopPropagation()">${issue.id}</a></td>
+                            <td class="col-title" title="${(issue.title || '').replace(/"/g, '&quot;')}">
+                                <span class="title-text">${issue.title || ''}</span>
+                                <span class="rel-pills">${buildRelationshipPills(issue.id)}</span>
+                            </td>
                             <td class="col-state"><span class="state-badge state-${(issue.state || '').toLowerCase().replace(/\s+/g, '-')}">${issue.state || ''}</span></td>
                             <td class="col-customers" title="${(issue.customers || '').replace(/"/g, '&quot;')}">${issue.customers || ''}</td>
                             <td class="col-priority">${issue.priority ? 'P' + issue.priority : ''}</td>
-                            <td class="col-created">${formatDateTime(issue.createdDate)}</td>
-                            <td class="col-closed">${formatDateTime(issue.closedDate)}</td>
+                            <td class="col-category"><span class="category-badge category-${(issue.ticketCategory || '').toLowerCase().replace(/\s+/g, '-')}">${issue.ticketCategory || ''}</span></td>
                             <td class="col-aging"><span class="aging-badge aging-${calculateAgingBucket(issue).replace(/\s+/g, '-')}">${calculateAgingBucket(issue)}</span></td>
                             <td class="col-tags" title="${(issue.tags || '').replace(/"/g, '&quot;')}">${issue.tags || ''}</td>
                             <td class="col-csowner">${issue.csOwner || ''}</td>
                             <td class="col-release">${issue.releaseVersion || ''}</td>
                             <td class="col-date">${formatTargetDate(issue.targetDate)}</td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
                 </table>
             </div>
         `;
-
-        // Auto-adjust table height: enable scroll mode if more than 20 items
-        const SCROLL_THRESHOLD = 20;
-        if (sortedIssues.length > SCROLL_THRESHOLD) {
-            tableContainer.classList.add('scroll-mode');
-        } else {
-            tableContainer.classList.remove('scroll-mode');
-        }
 
         // Populate filter dropdowns on first render
         populateCustomersFilterDropdowns();

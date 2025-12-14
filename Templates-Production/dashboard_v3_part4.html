@@ -7138,6 +7138,7 @@ function closeFeatureModal() {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeFeatureModal();
+        closeIssueRelationshipsModal();
     }
 });
 
@@ -7147,6 +7148,460 @@ document.getElementById('feature-slices-modal')?.addEventListener('click', funct
         closeFeatureModal();
     }
 });
+</script>
+
+<!-- Issue Relationships Modal -->
+<div id="issue-relationships-modal" class="issue-rel-modal-overlay" style="display: none;">
+    <div class="issue-rel-modal">
+        <div class="issue-rel-modal-header">
+            <div class="issue-rel-modal-title-section">
+                <h3 id="issue-rel-modal-title">Issue Relationships</h3>
+                <span id="issue-rel-modal-category" class="issue-rel-category-badge"></span>
+            </div>
+            <button class="issue-rel-modal-close" onclick="closeIssueRelationshipsModal()">&times;</button>
+        </div>
+        <div class="issue-rel-modal-body">
+            <div id="issue-rel-modal-content"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.issue-rel-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.issue-rel-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.issue-rel-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.issue-rel-modal-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.issue-rel-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.issue-rel-category-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(100, 116, 139, 0.3);
+    color: var(--text-secondary);
+}
+
+.issue-rel-category-badge.enhancement-request {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent-blue);
+}
+
+.issue-rel-category-badge.bug {
+    background: rgba(251, 146, 60, 0.2);
+    color: var(--accent-orange);
+}
+
+.issue-rel-category-badge.task {
+    background: rgba(168, 85, 247, 0.2);
+    color: var(--accent-purple);
+}
+
+.issue-rel-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.issue-rel-modal-close:hover {
+    color: var(--text-primary);
+}
+
+.issue-rel-modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    padding: 1rem 1.25rem;
+}
+
+#issue-rel-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    overflow-y: auto;
+    max-height: calc(80vh - 100px);
+}
+
+.issue-rel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.issue-rel-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.issue-rel-section-header .section-icon {
+    font-size: 1rem;
+}
+
+.issue-rel-section-header .section-count {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.issue-rel-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.issue-rel-item {
+    display: grid;
+    grid-template-columns: 60px 80px 1fr 100px;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-elevated);
+    border-radius: 4px;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.issue-rel-item:hover {
+    background: var(--bg-hover);
+}
+
+.issue-rel-item-id a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+}
+
+.issue-rel-item-id a:hover {
+    text-decoration: underline;
+}
+
+.issue-rel-item-type {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(100, 116, 139, 0.2);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.issue-rel-item-type.type-feature {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent-blue);
+}
+
+.issue-rel-item-type.type-delivery-slice {
+    background: rgba(168, 85, 247, 0.2);
+    color: var(--accent-purple);
+}
+
+.issue-rel-item-type.type-bug {
+    background: rgba(251, 146, 60, 0.2);
+    color: var(--accent-orange);
+}
+
+.issue-rel-item-type.type-task {
+    background: rgba(52, 211, 153, 0.2);
+    color: var(--accent-green);
+}
+
+.issue-rel-item-type.type-issue {
+    background: rgba(251, 191, 36, 0.2);
+    color: var(--accent-yellow);
+}
+
+.issue-rel-item-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.issue-rel-item-state {
+    text-align: right;
+}
+
+.issue-rel-item-state .state-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+}
+
+.issue-rel-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.issue-rel-comment {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 0.25rem;
+    padding-left: 60px;
+}
+
+/* Parent section has a different header color */
+.issue-rel-section.parent-section .issue-rel-section-header {
+    color: var(--accent-orange);
+}
+
+.issue-rel-section.children-section .issue-rel-section-header {
+    color: var(--accent-cyan);
+}
+
+.issue-rel-section.related-section .issue-rel-section-header {
+    color: var(--accent-purple);
+}
+</style>
+
+<script>
+function closeIssueRelationshipsModal() {
+    const modal = document.getElementById('issue-relationships-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close modal when clicking outside
+document.getElementById('issue-relationships-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeIssueRelationshipsModal();
+    }
+});
+
+// Helper to get work item by ID
+function getWorkItemById(id) {
+    return workItems.find(w => w.id === id);
+}
+
+// Helper to get relationships for a work item from workItemLinks
+function getRelationshipsForWorkItem(workItemId) {
+    // Links where this work item is the source (children, related-forward)
+    const asSource = workItemLinks.filter(l => l.source === workItemId);
+    // Links where this work item is the target (we need to find parent)
+    // Since we only store forward links, if workItemId is a target with type "Child",
+    // then the source is the parent
+    const asTarget = workItemLinks.filter(l => l.target === workItemId);
+
+    const result = {
+        parent: null,
+        children: [],
+        related: []
+    };
+
+    // Process links where this item is the source
+    asSource.forEach(link => {
+        const targetItem = getWorkItemById(link.target);
+        if (!targetItem) return;
+
+        const linkData = {
+            id: link.target,
+            type: targetItem.type,
+            title: targetItem.title,
+            state: targetItem.state,
+            url: targetItem.url,
+            comment: link.comment
+        };
+
+        if (link.type === 'Child') {
+            result.children.push(linkData);
+        } else if (link.type === 'Related') {
+            result.related.push(linkData);
+        }
+    });
+
+    // Process links where this item is the target (find parent)
+    asTarget.forEach(link => {
+        if (link.type === 'Child') {
+            // This means source is the parent
+            const parentItem = getWorkItemById(link.source);
+            if (parentItem) {
+                result.parent = {
+                    id: link.source,
+                    type: parentItem.type,
+                    title: parentItem.title,
+                    state: parentItem.state,
+                    url: parentItem.url
+                };
+            }
+        }
+        // Related links as target are duplicates (bidirectional), skip them
+    });
+
+    return result;
+}
+
+// Main function to show the Issue Relationships modal
+function showIssueRelationships(issueId, issueTitle, ticketCategory) {
+    const modal = document.getElementById('issue-relationships-modal');
+    const titleEl = document.getElementById('issue-rel-modal-title');
+    const categoryEl = document.getElementById('issue-rel-modal-category');
+    const contentEl = document.getElementById('issue-rel-modal-content');
+
+    if (!modal || !titleEl || !contentEl) {
+        console.error('[Customers] Issue relationships modal elements not found');
+        return;
+    }
+
+    // Set title
+    titleEl.textContent = `Issue ${issueId}: ${issueTitle}`;
+
+    // Set category badge
+    if (ticketCategory) {
+        categoryEl.textContent = ticketCategory;
+        categoryEl.className = 'issue-rel-category-badge ' + ticketCategory.toLowerCase().replace(/\s+/g, '-');
+        categoryEl.style.display = 'inline-block';
+    } else {
+        categoryEl.style.display = 'none';
+    }
+
+    // Get relationships
+    const relationships = getRelationshipsForWorkItem(issueId);
+
+    // Check if there are any relationships
+    const hasParent = relationships.parent !== null;
+    const hasChildren = relationships.children.length > 0;
+    const hasRelated = relationships.related.length > 0;
+
+    if (!hasParent && !hasChildren && !hasRelated) {
+        contentEl.innerHTML = `<div class="issue-rel-empty">No relationships found for this issue.</div>`;
+    } else {
+        let html = '';
+
+        // Parent section
+        if (hasParent) {
+            const p = relationships.parent;
+            html += `
+                <div class="issue-rel-section parent-section">
+                    <div class="issue-rel-section-header">
+                        <span class="section-icon">⬆️</span>
+                        <span>Parent</span>
+                    </div>
+                    <div class="issue-rel-items">
+                        <div class="issue-rel-item">
+                            <div class="issue-rel-item-id"><a href="${p.url}" target="_blank">${p.id}</a></div>
+                            <div class="issue-rel-item-type type-${(p.type || '').toLowerCase().replace(/\s+/g, '-')}">${p.type || ''}</div>
+                            <div class="issue-rel-item-title" title="${(p.title || '').replace(/"/g, '&quot;')}">${p.title || ''}</div>
+                            <div class="issue-rel-item-state"><span class="state-badge state-${(p.state || '').toLowerCase().replace(/\s+/g, '-')}">${p.state || ''}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Children section
+        if (hasChildren) {
+            const childrenHtml = relationships.children.map(c => `
+                <div class="issue-rel-item">
+                    <div class="issue-rel-item-id"><a href="${c.url}" target="_blank">${c.id}</a></div>
+                    <div class="issue-rel-item-type type-${(c.type || '').toLowerCase().replace(/\s+/g, '-')}">${c.type || ''}</div>
+                    <div class="issue-rel-item-title" title="${(c.title || '').replace(/"/g, '&quot;')}">${c.title || ''}</div>
+                    <div class="issue-rel-item-state"><span class="state-badge state-${(c.state || '').toLowerCase().replace(/\s+/g, '-')}">${c.state || ''}</span></div>
+                </div>
+            `).join('');
+
+            html += `
+                <div class="issue-rel-section children-section">
+                    <div class="issue-rel-section-header">
+                        <span class="section-icon">⬇️</span>
+                        <span>Children</span>
+                        <span class="section-count">(${relationships.children.length})</span>
+                    </div>
+                    <div class="issue-rel-items">
+                        ${childrenHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Related section
+        if (hasRelated) {
+            const relatedHtml = relationships.related.map(r => {
+                let itemHtml = `
+                    <div class="issue-rel-item">
+                        <div class="issue-rel-item-id"><a href="${r.url}" target="_blank">${r.id}</a></div>
+                        <div class="issue-rel-item-type type-${(r.type || '').toLowerCase().replace(/\s+/g, '-')}">${r.type || ''}</div>
+                        <div class="issue-rel-item-title" title="${(r.title || '').replace(/"/g, '&quot;')}">${r.title || ''}</div>
+                        <div class="issue-rel-item-state"><span class="state-badge state-${(r.state || '').toLowerCase().replace(/\s+/g, '-')}">${r.state || ''}</span></div>
+                    </div>
+                `;
+                // Add comment if present
+                if (r.comment) {
+                    itemHtml += `<div class="issue-rel-comment">${r.comment}</div>`;
+                }
+                return itemHtml;
+            }).join('');
+
+            html += `
+                <div class="issue-rel-section related-section">
+                    <div class="issue-rel-section-header">
+                        <span class="section-icon">🔗</span>
+                        <span>Related</span>
+                        <span class="section-count">(${relationships.related.length})</span>
+                    </div>
+                    <div class="issue-rel-items">
+                        ${relatedHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        contentEl.innerHTML = html;
+    }
+
+    // Show modal
+    modal.style.display = 'flex';
+}
 </script>
 
 </body>

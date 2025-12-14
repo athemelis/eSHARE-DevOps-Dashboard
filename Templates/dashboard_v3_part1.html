@@ -629,7 +629,15 @@
         }
         
         .work-items-table tr:hover { background: var(--hover-bg); }
-        
+
+        /* Clickable row styling for tables with relationship popups */
+        .work-items-table tr.clickable-row {
+            cursor: pointer;
+        }
+        .work-items-table tr.clickable-row:hover {
+            background: var(--bg-hover);
+        }
+
         .work-item-id {
             color: var(--accent-cyan);
             text-decoration: none;
@@ -675,7 +683,68 @@
         .aging-4-weeks { background: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
         .aging-Older { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
         .aging-TBD { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
-        
+
+        /* Category badges for Customers table */
+        .category-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .category-enhancement-request {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+        }
+        .category-bug {
+            background: rgba(251, 146, 60, 0.2);
+            color: var(--accent-orange);
+        }
+        .category-task {
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--accent-purple);
+        }
+        .col-category { width: 110px; min-width: 90px; }
+
+        /* Relationship pills for Customers table */
+        .col-title .title-text {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .col-title .rel-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+        }
+        .rel-pill {
+            display: inline-block;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .rel-pill-parent {
+            background: rgba(251, 146, 60, 0.2);
+            color: var(--accent-orange);
+        }
+        .rel-pill-children {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--accent-cyan);
+        }
+        .rel-pill-related {
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--accent-purple);
+        }
+        .rel-pill-none {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted);
+        }
+
         .table-container {
             max-height: 500px;
             overflow-y: auto;
@@ -688,18 +757,14 @@
             overflow-y: visible;
         }
 
-        /* Auto-adjusting table height for Customers view */
+        /* Auto-expanding table for Customers view - no fixed max-height */
         #customer-issues-table.table-container {
             max-height: none;
             overflow-y: visible;
         }
-        #customer-issues-table.table-container.scroll-mode {
+        #customer-issues-table .table-scroll-container {
             max-height: none;
             overflow-y: visible;
-        }
-        #customer-issues-table.table-container.scroll-mode .table-scroll-container {
-            max-height: 600px;
-            overflow-y: auto;
         }
 
         /* Sticky table headers for scrolling tables */
@@ -737,8 +802,14 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 1rem;
         }
-        
+        .table-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2916,7 +2987,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v81</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v82</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>

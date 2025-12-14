@@ -61,20 +61,22 @@ except ImportError:
 # Configuration - Default paths (can be overridden via command line)
 DEFAULT_CSV_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ALL Items.csv'
 DEFAULT_ORG_CHART_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/Org Chart.csv'
+DEFAULT_LINKS_CSV_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/WorkItemLinks.csv'
 DEFAULT_TEMPLATE_DIR = './Templates'
 
 # Output paths
 LOCAL_OUTPUT_PATH = '/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html'
 PUBLISH_OUTPUT_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html'
 
-CURRENT_VERSION = 81  # Increment this with each code change
+CURRENT_VERSION = 82  # Increment this with each code change
 
 # Placeholders that MUST be replaced
 PLACEHOLDERS = {
     'WORK_ITEMS_PLACEHOLDER': 'Work items data array',
     'REFRESH_TIMESTAMP_PLACEHOLDER': 'Refresh timestamp string',
     'ORG_CHART_DATA_PLACEHOLDER': 'Org chart data array',
-    'CSV_VALIDATION_DATA_PLACEHOLDER': 'CSV validation metadata'
+    'CSV_VALIDATION_DATA_PLACEHOLDER': 'CSV validation metadata',
+    'WORK_ITEM_LINKS_PLACEHOLDER': 'Work item links data array'
 }
 
 
@@ -186,8 +188,80 @@ def process_org_chart(csv_path):
     
     # Sort by lead name for consistent output
     result.sort(key=lambda x: x['lead'])
-    
+
     return result
+
+
+def process_work_item_links(csv_path, max_retries=5, retry_delay=5):
+    """
+    Process WorkItemLinks.csv and convert to a compact format for JavaScript.
+
+    CSV columns: WorkItemLinkSK, SourceWorkItemId, TargetWorkItemId, CreatedDate,
+                 DeletedDate, Comment, LinkTypeId, LinkTypeReferenceName, LinkTypeName,
+                 LinkTypeIsAcyclic, LinkTypeIsDirectional, AnalyticsUpdatedDate, ProjectSK
+
+    Output format (optimized for JavaScript lookup):
+    [
+        { source: 1082, target: 2776, type: 'Child', comment: '' },
+        { source: 1082, target: 1940, type: 'Related', comment: 'mentioned...' },
+        ...
+    ]
+
+    We only include forward links (LinkTypeId > 0) to avoid duplicates.
+    """
+    if not os.path.exists(csv_path):
+        print(f"WARNING: WorkItemLinks CSV not found: {csv_path}")
+        return []
+
+    print(f"Reading WorkItemLinks CSV: {csv_path}")
+
+    # Retry logic for handling file locks
+    df = None
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            df = pd.read_csv(csv_path, encoding='utf-8-sig')
+            break
+        except OSError as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                wait_time = retry_delay * (attempt + 1)
+                print(f"  File locked (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                print(f"WARNING: Could not read WorkItemLinks CSV after {max_retries} attempts")
+                return []
+
+    print(f"Found {len(df)} link rows")
+
+    # Filter to only forward links (positive LinkTypeId) to avoid duplicates
+    # LinkTypeId > 0 = forward direction (Child, Related-Forward)
+    # LinkTypeId < 0 = reverse direction (Parent, Related-Reverse) - skip these
+    forward_links = df[df['LinkTypeId'] > 0]
+    print(f"Filtered to {len(forward_links)} forward links (excluding reverse duplicates)")
+
+    records = []
+    for _, row in forward_links.iterrows():
+        source_id = int(row['SourceWorkItemId']) if pd.notna(row['SourceWorkItemId']) else None
+        target_id = int(row['TargetWorkItemId']) if pd.notna(row['TargetWorkItemId']) else None
+
+        if source_id is None or target_id is None:
+            continue
+
+        # Simplify LinkTypeName to just the core type
+        link_type_name = str(row.get('LinkTypeName', '')).strip()
+        # "Child" stays "Child", "Related" stays "Related"
+
+        comment = clean_string(row.get('Comment', ''))
+
+        records.append({
+            'source': source_id,
+            'target': target_id,
+            'type': link_type_name,
+            'comment': comment
+        })
+
+    return records
 
 
 def parse_datetime(val):
@@ -233,12 +307,16 @@ def parse_date_only(val):
     try:
         val_str = str(val).strip()
 
-        # Handle ISO format with timezone (from PA export): 2025-10-03T21:00:00Z
+        # Handle ISO format with timezone (from PA export): 2025-10-03T21:00:00Z or 2025-11-11T03:04:24.25Z
         # Convert from UTC to Athens timezone to get the intended date
         if 'T' in val_str and val_str.endswith('Z'):
             from zoneinfo import ZoneInfo
-            # Parse as UTC
-            utc_str = val_str.replace('Z', '+00:00')
+            # Remove trailing Z and any fractional seconds for parsing
+            utc_str = val_str.rstrip('Z')
+            # Remove fractional seconds if present (e.g., ".25" or ".123456")
+            if '.' in utc_str:
+                utc_str = utc_str.split('.')[0]
+            utc_str += '+00:00'
             utc_dt = datetime.fromisoformat(utc_str)
             # Convert to Athens timezone
             athens_tz = ZoneInfo('Europe/Athens')
@@ -529,7 +607,11 @@ Examples:
     parser.add_argument('-g', '--org',
                         default=DEFAULT_ORG_CHART_PATH,
                         help=f'Path to Org_Chart.csv (default: {DEFAULT_ORG_CHART_PATH})')
-    
+
+    parser.add_argument('-l', '--links',
+                        default=DEFAULT_LINKS_CSV_PATH,
+                        help=f'Path to WorkItemLinks.csv (default: {DEFAULT_LINKS_CSV_PATH})')
+
     parser.add_argument('-t', '--templates',
                         default=DEFAULT_TEMPLATE_DIR,
                         help=f'Folder containing template part files (default: {DEFAULT_TEMPLATE_DIR})')
@@ -563,6 +645,7 @@ def main():
     # Resolve paths
     csv_path = os.path.expanduser(args.csv)
     org_chart_path = os.path.expanduser(args.org)
+    links_csv_path = os.path.expanduser(args.links)
     template_dir = os.path.expanduser(args.templates)
 
     # Check CSV exists
@@ -573,6 +656,7 @@ def main():
     # Print configuration
     print(f"CSV file:      {csv_path}")
     print(f"Org Chart:     {org_chart_path}")
+    print(f"Links CSV:     {links_csv_path}")
     print(f"Templates:     {template_dir}")
     print(f"Output:        {output_path}")
     print("-" * 60)
@@ -593,6 +677,10 @@ def main():
     org_chart_data = process_org_chart(org_chart_path)
     print(f"Processed {len(org_chart_data)} org chart entries")
 
+    # Process Work Item Links
+    work_item_links = process_work_item_links(links_csv_path)
+    print(f"Processed {len(work_item_links)} work item links")
+
     # Validate schema
     validate_schema(records)
 
@@ -606,12 +694,15 @@ def main():
     json_data = json.dumps(records, indent=None)
     org_chart_json = json.dumps(org_chart_data, indent=None)
     csv_validation_json = json.dumps(csv_validation_data, indent=None)
+    work_item_links_json = json.dumps(work_item_links, indent=None)
     print(f"JSON data size: {len(json_data):,} chars")
+    print(f"Links data size: {len(work_item_links_json):,} chars")
 
     output = template.replace('WORK_ITEMS_PLACEHOLDER', json_data)
     output = output.replace('REFRESH_TIMESTAMP_PLACEHOLDER', refresh_timestamp)
     output = output.replace('ORG_CHART_DATA_PLACEHOLDER', org_chart_json)
     output = output.replace('CSV_VALIDATION_DATA_PLACEHOLDER', csv_validation_json)
+    output = output.replace('WORK_ITEM_LINKS_PLACEHOLDER', work_item_links_json)
     
     # Validate placeholders replaced
     validate_output(output)
