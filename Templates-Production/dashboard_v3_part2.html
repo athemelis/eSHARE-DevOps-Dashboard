@@ -14,7 +14,8 @@
     let selectedTimePeriod = 'all';
 
     // ==================== STATE PERSISTENCE (localStorage) ====================
-    const STORAGE_KEY = 'eshare-devops-dashboard-state';
+    // Use pathname-based key to keep DEV and PROD states independent
+    const STORAGE_KEY = 'eshare-devops-dashboard-state-' + (window.location.pathname.includes('eSHARE-DevOps-Dashboard.html') ? 'dev' : 'prod');
 
     // Save current state to localStorage
     function saveStateToStorage() {
@@ -36,6 +37,7 @@
                 // Customers view state (v80: Issues only, with filters for customers, categories, states, priorities, releases)
                 customersFilters: typeof customersFilters !== 'undefined' ? customersFilters : null,
                 customersSortState: typeof customersSortState !== 'undefined' ? customersSortState : null,
+                customersColumnWidths: typeof customersColumnWidths !== 'undefined' ? customersColumnWidths : {},
                 // Bugs view state
                 bugsChartFilters: typeof bugsChartFilters !== 'undefined' ? bugsChartFilters : null,
                 bugTrendFilters: typeof bugTrendFilters !== 'undefined' ? bugTrendFilters : null,
@@ -159,8 +161,11 @@
         if (state.customersSortState && typeof customersSortState !== 'undefined') {
             Object.assign(customersSortState, state.customersSortState);
         }
+        if (state.customersColumnWidths && typeof customersColumnWidths !== 'undefined') {
+            Object.assign(customersColumnWidths, state.customersColumnWidths);
+        }
         // Always mark as loaded if we have any customer state
-        if (state.customersFilters || state.customersSortState) {
+        if (state.customersFilters || state.customersSortState || state.customersColumnWidths) {
             customersStateWasLoaded = true;
         }
 

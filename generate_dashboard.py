@@ -67,7 +67,7 @@ DEFAULT_TEMPLATE_DIR = './Templates'
 LOCAL_OUTPUT_PATH = '/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html'
 PUBLISH_OUTPUT_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html'
 
-CURRENT_VERSION = 80  # Increment this with each code change
+CURRENT_VERSION = 81  # Increment this with each code change
 
 # Placeholders that MUST be replaced
 PLACEHOLDERS = {
@@ -218,18 +218,21 @@ def parse_datetime(val):
         return None
 
 
-def parse_target_date(val):
-    """Parse target date with timezone adjustment. Returns DATE-ONLY format (no time).
-    
-    ADO stores date-only fields as midnight in the organization's timezone (Athens).
-    PA exports convert this to UTC, which can shift the date back by one day.
+def parse_date_only(val):
+    """Parse date-only fields with timezone adjustment. Returns DATE-ONLY format (no time).
+
+    ADO stores date-only fields (like ClosedDate, TargetDate) as midnight in the
+    organization's timezone (Athens). Power Automate exports convert this to UTC,
+    which can shift the date back by one day.
     We convert UTC back to Athens timezone to get the intended date.
+
+    Used for: closedDate, targetDate, and any other date-only ADO fields.
     """
     if pd.isna(val) or str(val).strip() == '':
         return None
     try:
         val_str = str(val).strip()
-        
+
         # Handle ISO format with timezone (from PA export): 2025-10-03T21:00:00Z
         # Convert from UTC to Athens timezone to get the intended date
         if 'T' in val_str and val_str.endswith('Z'):
@@ -241,11 +244,11 @@ def parse_target_date(val):
             athens_tz = ZoneInfo('Europe/Athens')
             athens_dt = utc_dt.astimezone(athens_tz)
             return athens_dt.strftime('%Y-%m-%d')
-        
+
         # Handle ISO format without Z (just extract date)
         if 'T' in val_str:
             return val_str.split('T')[0]
-        
+
         # Handle legacy formats with time component
         for fmt in ['%m/%d/%Y %I:%M:%S %p', '%m/%d/%Y %H:%M:%S']:
             try:
@@ -266,6 +269,11 @@ def parse_target_date(val):
         return val_str
     except:
         return None
+
+
+def parse_target_date(val):
+    """Parse target date. Wrapper for parse_date_only for backward compatibility."""
+    return parse_date_only(val)
 
 
 def clean_float(val):
@@ -359,7 +367,7 @@ def process_csv(csv_path, max_retries=5, retry_delay=5):
             'iteration': get_iteration_name(get_col(row, 'System.IterationPath', 'Iteration Path')),
             'createdDate': parse_datetime(get_col(row, 'System.CreatedDate', 'Created Date')),
             'stateChangeDate': parse_datetime(get_col(row, 'Microsoft.VSTS.Common.StateChangeDate', 'State Change Date')),
-            'closedDate': parse_datetime(get_col(row, 'Microsoft.VSTS.Common.ClosedDate', 'Closed Date')),
+            'closedDate': parse_date_only(get_col(row, 'Microsoft.VSTS.Common.ClosedDate', 'Closed Date')),
             'targetDate': parse_target_date(get_col(row, 'Microsoft.VSTS.Scheduling.TargetDate', 'Target Date')),
             'priority': clean_int(get_col(row, 'Microsoft.VSTS.Common.Priority', 'Priority')),
             'severity': clean_string(get_col(row, 'Microsoft.VSTS.Common.Severity', 'Severity')),

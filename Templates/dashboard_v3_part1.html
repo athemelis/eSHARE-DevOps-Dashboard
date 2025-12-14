@@ -694,8 +694,49 @@
             overflow-y: visible;
         }
         #customer-issues-table.table-container.scroll-mode {
+            max-height: none;
+            overflow-y: visible;
+        }
+        #customer-issues-table.table-container.scroll-mode .table-scroll-container {
             max-height: 600px;
             overflow-y: auto;
+        }
+
+        /* Sticky table headers for scrolling tables */
+        .table-scroll-container {
+            position: relative;
+        }
+        .table-scroll-container thead th {
+            position: sticky;
+            top: 0;
+            background: var(--bg-tertiary);
+            z-index: 10;
+            box-shadow: 0 1px 0 var(--border-color);
+        }
+
+        /* Reset sort button */
+        .reset-sort-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            margin-left: auto;
+            transition: all 0.15s;
+        }
+        .reset-sort-btn:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        /* Table header with reset button */
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         
         .stats-grid {
@@ -2158,39 +2199,49 @@
         }
 
         /* Resizable columns */
-        .resizable-header {
-            position: relative;
+        .resizable-table {
+            table-layout: fixed;
+            width: 100%;
         }
-        
+
+        .resizable-table th {
+            position: relative;
+            user-select: none;
+        }
+
         .resize-handle {
             position: absolute;
             right: 0;
             top: 0;
             bottom: 0;
-            width: 5px;
+            width: 6px;
             cursor: col-resize;
             background: transparent;
+            z-index: 1;
         }
-        
+
         .resize-handle:hover,
         .resize-handle.resizing {
             background: var(--accent-blue);
         }
-        
-        /* Column width presets */
-        .col-id { width: 60px; min-width: 60px; }
-        .col-title { min-width: 200px; }
-        .col-type { width: 100px; min-width: 80px; }
-        .col-state { width: 100px; min-width: 80px; }
-        .col-assignee { width: 150px; min-width: 100px; }
-        .col-release { width: 120px; min-width: 80px; }
-        .col-team { width: 120px; min-width: 80px; }
-        .col-date { width: 100px; min-width: 90px; }
-        .col-effort { width: 70px; min-width: 60px; }
-        .col-priority { width: 70px; min-width: 60px; }
-        .col-tags { width: 150px; min-width: 100px; max-width: 200px; }
-        .col-customers { width: 150px; min-width: 100px; }
-        .col-csowner { width: 130px; min-width: 100px; }
+
+        /* Column width presets (used as defaults, can be overridden by user) */
+        .col-id { width: 55px; min-width: 45px; }
+        .col-title { width: auto; min-width: 150px; }
+        .col-type { width: 90px; min-width: 70px; }
+        .col-state { width: 90px; min-width: 70px; }
+        .col-assignee { width: 120px; min-width: 80px; }
+        .col-release { width: 100px; min-width: 70px; }
+        .col-team { width: 100px; min-width: 70px; }
+        .col-date { width: 90px; min-width: 80px; }
+        .col-effort { width: 60px; min-width: 50px; }
+        .col-priority { width: 60px; min-width: 50px; }
+        .col-created { width: 90px; min-width: 80px; }
+        .col-closed { width: 90px; min-width: 80px; }
+        .col-aging { width: 75px; min-width: 60px; }
+        .col-tags { width: 120px; min-width: 80px; }
+        .col-customers { width: 120px; min-width: 80px; }
+        .col-csowner { width: 100px; min-width: 70px; }
         .priority-cell { text-align: center; font-weight: 500; color: var(--text-secondary); }
         .tags-cell {
             max-width: 200px;
@@ -2865,7 +2916,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v80</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v81</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>

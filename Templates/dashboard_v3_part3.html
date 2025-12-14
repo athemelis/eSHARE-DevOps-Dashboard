@@ -595,14 +595,107 @@
         aging: []
     };
 
-    // Customers View sort state
+    // Customers View sort state (default: Aging ascending)
     let customersSortState = {
-        column: 'id',
-        direction: 'desc'
+        column: 'aging',
+        direction: 'asc'
     };
+
+    // Default sort state for reset
+    const defaultCustomersSortState = {
+        column: 'aging',
+        direction: 'asc'
+    };
+
+    // Customers View column widths (persisted)
+    let customersColumnWidths = {};
+
+    // Column resize state
+    let resizeState = {
+        isResizing: false,
+        didResize: false,  // Track if an actual resize occurred
+        startX: 0,
+        startWidth: 0,
+        th: null,
+        handle: null
+    };
+
+    // Start column resize
+    function startCustomersColumnResize(e, handle) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const th = handle.parentElement;
+        resizeState = {
+            isResizing: true,
+            didResize: false,
+            startX: e.pageX,
+            startWidth: th.offsetWidth,
+            th: th,
+            handle: handle
+        };
+
+        handle.classList.add('resizing');
+        document.addEventListener('mousemove', doCustomersColumnResize);
+        document.addEventListener('mouseup', stopCustomersColumnResize);
+    }
+
+    // Perform column resize
+    function doCustomersColumnResize(e) {
+        if (!resizeState.isResizing) return;
+
+        const diff = e.pageX - resizeState.startX;
+        // Only mark as resized if user moved more than 3 pixels
+        if (Math.abs(diff) > 3) {
+            resizeState.didResize = true;
+        }
+        const newWidth = Math.max(50, resizeState.startWidth + diff);
+        resizeState.th.style.width = newWidth + 'px';
+    }
+
+    // Stop column resize and save
+    function stopCustomersColumnResize(e) {
+        if (!resizeState.isResizing) return;
+
+        const colKey = resizeState.th.getAttribute('data-col');
+        const newWidth = resizeState.th.offsetWidth;
+
+        if (colKey && resizeState.didResize) {
+            customersColumnWidths[colKey] = newWidth;
+            saveStateToStorage();
+        }
+
+        resizeState.handle.classList.remove('resizing');
+        resizeState.isResizing = false;
+
+        // Prevent the click event from firing if we actually resized
+        if (resizeState.didResize) {
+            // Set a brief timeout to block the click handler
+            setTimeout(() => { resizeState.didResize = false; }, 50);
+        }
+
+        document.removeEventListener('mousemove', doCustomersColumnResize);
+        document.removeEventListener('mouseup', stopCustomersColumnResize);
+    }
+
+    // Wrapper for sort that checks if we just finished resizing
+    function sortCustomersTableIfNotResizing(column) {
+        if (resizeState.didResize) return;
+        sortCustomersTable(column);
+    }
 
     // Aging buckets in display order
     const AGING_BUCKETS = ['1 day', '1 week', '2 weeks', '4 weeks', 'Older', 'TBD'];
+
+    // Helper to parse date string to midnight local time (strips time component)
+    function parseToLocalDate(dateStr) {
+        if (!dateStr) return null;
+        // Extract just the date part (YYYY-MM-DD) regardless of format
+        const datePart = dateStr.split('T')[0];
+        // Parse as local date at midnight
+        const [year, month, day] = datePart.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
 
     // Calculate aging bucket for an issue (based on DAX logic)
     function calculateAgingBucket(issue) {
@@ -623,12 +716,12 @@
 
         if (state === 'New' || state === 'To Do' || state === 'In Progress' || state === 'Triaged' || state === 'Ready For Review') {
             // Open states: days since created
-            const created = new Date(createdDate);
+            const created = parseToLocalDate(createdDate);
             ageDays = Math.floor((today - created) / (1000 * 60 * 60 * 24));
         } else if (state === 'Closed' || state === 'Done') {
             // Closed states: days from created to closed
-            const created = new Date(createdDate);
-            const closed = new Date(closedDate);
+            const created = parseToLocalDate(createdDate);
+            const closed = parseToLocalDate(closedDate);
             ageDays = Math.floor((closed - created) / (1000 * 60 * 60 * 24));
         } else {
             // Unexpected state (Removed, etc.)
@@ -656,13 +749,13 @@
 
         if (state === 'Closed' || state === 'Done') {
             if (!closedDate) return -1;
-            const created = new Date(createdDate);
-            const closed = new Date(closedDate);
+            const created = parseToLocalDate(createdDate);
+            const closed = parseToLocalDate(closedDate);
             return Math.floor((closed - created) / (1000 * 60 * 60 * 24));
         } else if (state === 'Removed') {
             return -1;
         } else {
-            const created = new Date(createdDate);
+            const created = parseToLocalDate(createdDate);
             return Math.floor((today - created) / (1000 * 60 * 60 * 24));
         }
     }
@@ -1166,6 +1259,10 @@
                     aVal = a.priority || 999;
                     bVal = b.priority || 999;
                     return (aVal - bVal) * multiplier;
+                case 'createdDate':
+                    return (a.createdDate || '').localeCompare(b.createdDate || '') * multiplier;
+                case 'closedDate':
+                    return (a.closedDate || '').localeCompare(b.closedDate || '') * multiplier;
                 case 'aging':
                     aVal = calculateAgeDays(a);
                     bVal = calculateAgeDays(b);
@@ -1196,6 +1293,20 @@
         }
         saveStateToStorage();
         renderCustomersView();
+    }
+
+    // Reset sort to default (Aging ascending)
+    function resetCustomersSort() {
+        customersSortState.column = defaultCustomersSortState.column;
+        customersSortState.direction = defaultCustomersSortState.direction;
+        saveStateToStorage();
+        renderCustomersView();
+    }
+
+    // Check if current sort is different from default
+    function isCustomersSortNonDefault() {
+        return customersSortState.column !== defaultCustomersSortState.column ||
+               customersSortState.direction !== defaultCustomersSortState.direction;
     }
 
     // Customers View
@@ -1313,25 +1424,54 @@
             return datePart;
         };
 
+        // Helper to format datetime (for Created/Closed dates)
+        const formatDateTime = (dateStr) => {
+            if (!dateStr) return '';
+            // dateStr is in ISO format "YYYY-MM-DDTHH:MM:SS"
+            const datePart = dateStr.split('T')[0];
+            return datePart;
+        };
+
+        // Column definitions for resizable table
+        const customerColumns = [
+            { key: 'id', label: 'ID', class: 'col-id' },
+            { key: 'title', label: 'Title', class: 'col-title' },
+            { key: 'state', label: 'State', class: 'col-state' },
+            { key: 'customers', label: 'Customers', class: 'col-customers' },
+            { key: 'priority', label: 'Priority', class: 'col-priority' },
+            { key: 'createdDate', label: 'Created', class: 'col-created' },
+            { key: 'closedDate', label: 'Closed', class: 'col-closed' },
+            { key: 'aging', label: 'Aging', class: 'col-aging' },
+            { key: 'tags', label: 'Tags', class: 'col-tags' },
+            { key: 'csOwner', label: 'CS Owner', class: 'col-csowner' },
+            { key: 'release', label: 'Release', class: 'col-release' },
+            { key: 'targetDate', label: 'Target Date', class: 'col-date' }
+        ];
+
+        // Build header with resize handles (all columns including last)
+        const headerCells = customerColumns.map((col, idx) => {
+            const widthStyle = customersColumnWidths[col.key] ? `style="width: ${customersColumnWidths[col.key]}px"` : '';
+            const resizeHandle = '<div class="resize-handle" onmousedown="startCustomersColumnResize(event, this)"></div>';
+            return `<th class="sortable ${col.class}" data-col="${col.key}" onclick="sortCustomersTableIfNotResizing('${col.key}')" ${widthStyle}>${col.label}${sortIcon(col.key)}${resizeHandle}</th>`;
+        }).join('');
+
+        // Show reset button only if sort is not default
+        const resetButton = isCustomersSortNonDefault()
+            ? `<button class="reset-sort-btn" onclick="resetCustomersSort()">↺ Reset Sort</button>`
+            : '';
+
         tableContainer.innerHTML = `
             <div class="table-header">
                 <span>Showing ${sortedIssues.length} issues</span>
+                ${resetButton}
             </div>
-            <table class="work-items-table">
-                <thead>
-                    <tr>
-                        <th class="sortable col-id" onclick="sortCustomersTable('id')">ID${sortIcon('id')}</th>
-                        <th class="sortable col-title" onclick="sortCustomersTable('title')">Title${sortIcon('title')}</th>
-                        <th class="sortable col-state" onclick="sortCustomersTable('state')">State${sortIcon('state')}</th>
-                        <th class="sortable col-customers" onclick="sortCustomersTable('customers')">Customers${sortIcon('customers')}</th>
-                        <th class="sortable col-priority" onclick="sortCustomersTable('priority')">Priority${sortIcon('priority')}</th>
-                        <th class="sortable col-aging" onclick="sortCustomersTable('aging')">Aging${sortIcon('aging')}</th>
-                        <th class="sortable col-tags" onclick="sortCustomersTable('tags')">Tags${sortIcon('tags')}</th>
-                        <th class="sortable col-csowner" onclick="sortCustomersTable('csOwner')">CS Owner${sortIcon('csOwner')}</th>
-                        <th class="sortable col-release" onclick="sortCustomersTable('release')">Release Version${sortIcon('release')}</th>
-                        <th class="sortable col-date" onclick="sortCustomersTable('targetDate')">Target Date${sortIcon('targetDate')}</th>
-                    </tr>
-                </thead>
+            <div class="table-scroll-container">
+                <table class="work-items-table resizable-table" id="customers-table">
+                    <thead>
+                        <tr>
+                            ${headerCells}
+                        </tr>
+                    </thead>
                 <tbody>
                     ${sortedIssues.map(issue => `
                         <tr>
@@ -1340,6 +1480,8 @@
                             <td class="col-state"><span class="state-badge state-${(issue.state || '').toLowerCase().replace(/\s+/g, '-')}">${issue.state || ''}</span></td>
                             <td class="col-customers" title="${(issue.customers || '').replace(/"/g, '&quot;')}">${issue.customers || ''}</td>
                             <td class="col-priority">${issue.priority ? 'P' + issue.priority : ''}</td>
+                            <td class="col-created">${formatDateTime(issue.createdDate)}</td>
+                            <td class="col-closed">${formatDateTime(issue.closedDate)}</td>
                             <td class="col-aging"><span class="aging-badge aging-${calculateAgingBucket(issue).replace(/\s+/g, '-')}">${calculateAgingBucket(issue)}</span></td>
                             <td class="col-tags" title="${(issue.tags || '').replace(/"/g, '&quot;')}">${issue.tags || ''}</td>
                             <td class="col-csowner">${issue.csOwner || ''}</td>
@@ -1348,7 +1490,8 @@
                         </tr>
                     `).join('')}
                 </tbody>
-            </table>
+                </table>
+            </div>
         `;
 
         // Auto-adjust table height: enable scroll mode if more than 20 items
