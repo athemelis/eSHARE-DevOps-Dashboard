@@ -830,7 +830,7 @@
     /**
      * Get Customers issues filtered by all filters EXCEPT the specified one
      * Used for cross-filter dropdown population
-     * @param {string} excludeFilter - Filter to exclude: 'priority', 'release', 'customer', 'categories', 'states', 'aging'
+     * @param {string} excludeFilter - Filter to exclude: 'priority', 'release', 'customer', 'state', 'categories', 'aging'
      */
     function getCustomersIssuesExcludingFilter(excludeFilter) {
         let issues = getAllIssues();
@@ -855,8 +855,8 @@
             });
         }
 
-        // Apply state filter (unless excluded)
-        if (excludeFilter !== 'states' && customersFilters.states.length > 0) {
+        // Apply state filter (unless excluded) - accept both 'state' and 'states' for compatibility
+        if (excludeFilter !== 'state' && excludeFilter !== 'states' && customersFilters.states.length > 0) {
             issues = issues.filter(i => customersFilters.states.includes(i.state));
         }
 
@@ -1164,9 +1164,15 @@
             categoryMenu.innerHTML = buildCustomersDropdownHtml('categories', allCategories, customersFilters.categories);
         }
 
+        // Build state dropdown using generic component (cross-filter aware)
         const stateMenu = document.getElementById('customers-state-menu');
         if (stateMenu) {
-            stateMenu.innerHTML = buildCustomersDropdownHtml('states', allStates, customersFilters.states);
+            const stateFilteredIssues = getCustomersIssuesExcludingFilter('state');
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'customers',
+                items: stateFilteredIssues,
+                selectedStates: customersFilters.states
+            });
         }
 
         // Build priority dropdown using generic component (cross-filter aware)
@@ -1202,8 +1208,9 @@
         updateGenericCustomerDisplay('customers');
         updateGenericPriorityDisplay('customers');
         updateGenericReleaseDisplay('customers');
+        updateGenericStateDisplay('customers');
         // Dashboard-specific filters
-        ['categories', 'states', 'aging'].forEach(ft => {
+        ['categories', 'aging'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
         });
     }
@@ -2553,27 +2560,15 @@
         });
         const tags = [...tagsSet].sort();
 
-        // Populate State dropdown
+        // Populate State dropdown using generic component (cross-filter aware)
         const stateMenu = document.getElementById('roadmap-state-menu');
-        if (stateMenu && !stateMenu.dataset.populated) {
-            stateMenu.innerHTML = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search states..." oninput="filterRoadmapDropdownOptions('state', this.value)">
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-state-options">
-                    ${states.map(s => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.states.includes(s) ? 'checked' : ''} onchange="handleRoadmapFilterChange('state', '${s}', this.checked)">
-                            <span class="option-label">${s}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('state')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('state')">Clear</button>
-                </div>
-            `;
-            stateMenu.dataset.populated = 'true';
+        if (stateMenu) {
+            const stateFilteredFeatures = getRoadmapFeaturesExcludingFilter('state');
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'roadmap',
+                items: stateFilteredFeatures,
+                selectedStates: roadmapFilters.states
+            });
         }
 
         // Populate Customer dropdown using generic component (cross-filter aware)
@@ -2722,10 +2717,9 @@
     // Sync all roadmap filter dropdown checkboxes with current filter state
     // Called after state is loaded from localStorage to update UI
     function syncRoadmapFilterDropdowns() {
-        // Filters handled by dashboard-specific logic
-        const filterTypes = ['state', 'assignee', 'team', 'iteration', 'tag'];
+        // Filters handled by dashboard-specific logic (excludes state which uses generic component)
+        const filterTypes = ['assignee', 'team', 'iteration', 'tag'];
         const filterKeyMap = {
-            'state': 'states',
             'assignee': 'assignees',
             'team': 'teams',
             'iteration': 'iterations',
@@ -2751,10 +2745,11 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Sync generic components (customer, priority, release)
+        // Sync generic components (customer, priority, release, state)
         syncGenericCustomerFilter('roadmap');
         syncGenericPriorityFilter('roadmap');
         syncGenericReleaseFilter('roadmap');
+        syncGenericStateFilter('roadmap');
 
         // Sync tag logic mode buttons
         document.querySelectorAll('.tag-logic-btn').forEach(btn => {
@@ -2984,8 +2979,8 @@
         roadmapFilters.tagsExclusionMode = false;
         // Note: tagsLogicMode is not reset - user preference is preserved
 
-        // Reset dashboard-specific dropdowns
-        ['state', 'assignee', 'team', 'iteration', 'tag'].forEach(type => {
+        // Reset dashboard-specific dropdowns (excludes state which uses generic component)
+        ['assignee', 'team', 'iteration', 'tag'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -2993,8 +2988,8 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Reset generic component dropdowns (customer, priority, release)
-        ['customer', 'priority', 'release'].forEach(type => {
+        // Reset generic component dropdowns (customer, priority, release, state)
+        ['customer', 'priority', 'release', 'state'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -3003,6 +2998,7 @@
         updateGenericCustomerDisplay('roadmap');
         updateGenericPriorityDisplay('roadmap');
         updateGenericReleaseDisplay('roadmap');
+        updateGenericStateDisplay('roadmap');
 
         renderRoadmapView();
         saveStateToStorage(); // Persist filter changes

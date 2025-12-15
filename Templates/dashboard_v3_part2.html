@@ -599,8 +599,8 @@
         });
         updateReleaseHeaderDisplay();
 
-        // Sync header filter checkboxes (except customer which uses generic component)
-        ['type', 'bugtype', 'state', 'team'].forEach(filterType => {
+        // Sync header filter checkboxes (type, bugtype, team - not state which uses generic component)
+        ['type', 'bugtype', 'team'].forEach(filterType => {
             document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
                 cb.checked = releaseHeaderFilters[filterType].includes(cb.value);
             });
@@ -612,6 +612,9 @@
 
         // Sync priority using generic component
         syncGenericPriorityFilter('releases');
+
+        // Sync state using generic component
+        syncGenericStateFilter('releases');
 
         updateClearFiltersButton();
     }
@@ -1754,6 +1757,299 @@
     }
 
     // ==================== END GENERIC PRIORITY FILTER COMPONENT ====================
+
+    // ==================== GENERIC STATE FILTER COMPONENT ====================
+    // Shared State filter used by Releases, Roadmap, and Customers dashboards
+    // Features: search box, semantic state ordering, item counts, cross-filter support
+
+    // Standard state order (semantic ordering for work items)
+    const STATE_ORDER = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+
+    /**
+     * Compute state information from a list of items
+     * @param {Array} items - Array of work items
+     * @returns {Object} { states: [], stateInfo: {}, noStateCount: number }
+     */
+    function computeStateInfo(items) {
+        const stateInfo = {};
+        let noStateCount = 0;
+
+        items.forEach(item => {
+            if (!item.state) {
+                noStateCount++;
+                return;
+            }
+            const state = item.state;
+            if (!stateInfo[state]) {
+                stateInfo[state] = { count: 0, items: [] };
+            }
+            stateInfo[state].count++;
+        });
+
+        // Sort states using semantic order
+        const states = Object.keys(stateInfo).sort((a, b) => {
+            const aIdx = STATE_ORDER.indexOf(a);
+            const bIdx = STATE_ORDER.indexOf(b);
+            if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+            if (aIdx === -1) return 1;
+            if (bIdx === -1) return -1;
+            return aIdx - bIdx;
+        });
+
+        return { states, stateInfo, noStateCount };
+    }
+
+    /**
+     * Build State filter dropdown HTML
+     * @param {Object} config - { dashboardId, items, selectedStates }
+     * @returns {string} HTML string for dropdown content
+     */
+    function buildStateFilterDropdown(config) {
+        const { dashboardId, items, selectedStates } = config;
+        const { states, stateInfo, noStateCount } = computeStateInfo(items);
+
+        if (states.length === 0 && noStateCount === 0) {
+            return '<div class="filter-dropdown-empty">No states available</div>';
+        }
+
+        const optionsId = `${dashboardId}-state-options`;
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search states..."
+                       oninput="filterGenericStateOptions('${optionsId}', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${optionsId}">
+        `;
+
+        // Add state options in semantic order
+        states.forEach(state => {
+            const isChecked = selectedStates.includes(state);
+            const count = stateInfo[state].count;
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${state.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${state}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericStateChange('${dashboardId}', '${state}', this.checked, event)">
+                    <span class="option-label">${state}</span>
+                    <span class="option-count">${count}</span>
+                </label>
+            `;
+        });
+
+        // Add "(No State)" option at the end if there are items without state
+        if (noStateCount > 0) {
+            const isChecked = selectedStates.includes('(No State)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(no state)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No State)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericStateChange('${dashboardId}', '(No State)', this.checked, event)">
+                    <span class="option-label">(No State)</span>
+                    <span class="option-count">${noStateCount}</span>
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+
+        // Add Select All / Clear buttons
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericState('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericState('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    /**
+     * Filter state options by search text
+     */
+    function filterGenericStateOptions(optionsId, searchText) {
+        const options = document.querySelectorAll(`#${optionsId} .filter-dropdown-option`);
+        const search = searchText.toLowerCase();
+        options.forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(search) ? '' : 'none';
+        });
+    }
+
+    /**
+     * Handle state filter checkbox change
+     */
+    function handleGenericStateChange(dashboardId, state, checked, event) {
+        event.stopPropagation();
+
+        let openDropdownId, selectedStates;
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-state-header-dropdown';
+            if (checked) {
+                if (!releaseHeaderFilters.state.includes(state)) releaseHeaderFilters.state.push(state);
+            } else {
+                releaseHeaderFilters.state = releaseHeaderFilters.state.filter(s => s !== state);
+            }
+            selectedStates = releaseHeaderFilters.state;
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-state-dropdown';
+            if (checked) {
+                if (!roadmapFilters.states.includes(state)) roadmapFilters.states.push(state);
+            } else {
+                roadmapFilters.states = roadmapFilters.states.filter(s => s !== state);
+            }
+            selectedStates = roadmapFilters.states;
+            saveStateToStorage();
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-state-dropdown';
+            if (checked) {
+                if (!customersFilters.states.includes(state)) customersFilters.states.push(state);
+            } else {
+                customersFilters.states = customersFilters.states.filter(s => s !== state);
+            }
+            selectedStates = customersFilters.states;
+            saveStateToStorage();
+            renderCustomersView();
+            populateCustomersFilterDropdowns();
+            updateCustomersClearButton();
+        } else {
+            return;
+        }
+
+        // Preserve scroll position and keep dropdown open
+        const optionsContainer = document.getElementById(`${dashboardId}-state-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        // Restore scroll and ensure dropdown stays open
+        setTimeout(() => {
+            const newOptionsContainer = document.getElementById(`${dashboardId}-state-options`);
+            if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+
+            const dropdown = document.getElementById(openDropdownId);
+            if (dropdown) dropdown.classList.add('open');
+        }, 0);
+    }
+
+    /**
+     * Select all states
+     */
+    function selectAllGenericState(dashboardId, event) {
+        event.stopPropagation();
+
+        const optionsId = `${dashboardId}-state-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        const allStates = Array.from(checkboxes).map(cb => cb.value);
+
+        checkboxes.forEach(cb => cb.checked = true);
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.state = allStates;
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.states = allStates;
+            saveStateToStorage();
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            customersFilters.states = allStates;
+            saveStateToStorage();
+            renderCustomersView();
+            populateCustomersFilterDropdowns();
+            updateCustomersClearButton();
+        }
+
+        updateGenericStateDisplay(dashboardId);
+    }
+
+    /**
+     * Clear state filter
+     */
+    function clearGenericState(dashboardId, event) {
+        event.stopPropagation();
+
+        const optionsId = `${dashboardId}-state-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.state = [];
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.states = [];
+            saveStateToStorage();
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            customersFilters.states = [];
+            saveStateToStorage();
+            renderCustomersView();
+            populateCustomersFilterDropdowns();
+            updateCustomersClearButton();
+        }
+
+        updateGenericStateDisplay(dashboardId);
+    }
+
+    /**
+     * Update state filter display text
+     */
+    function updateGenericStateDisplay(dashboardId) {
+        let displayId, selectedStates;
+
+        if (dashboardId === 'releases') {
+            displayId = 'release-state-display';
+            selectedStates = releaseHeaderFilters.state;
+        } else if (dashboardId === 'roadmap') {
+            displayId = 'roadmap-state-display';
+            selectedStates = roadmapFilters.states;
+        } else if (dashboardId === 'customers') {
+            displayId = 'customers-state-display';
+            selectedStates = customersFilters.states;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        if (selectedStates.length === 0) {
+            display.textContent = 'All States';
+        } else if (selectedStates.length === 1) {
+            display.textContent = selectedStates[0];
+        } else {
+            display.textContent = `${selectedStates.length} selected`;
+        }
+    }
+
+    /**
+     * Sync state filter checkboxes with current state (after loading from localStorage)
+     */
+    function syncGenericStateFilter(dashboardId) {
+        let selectedStates;
+
+        if (dashboardId === 'releases') {
+            selectedStates = releaseHeaderFilters.state;
+        } else if (dashboardId === 'roadmap') {
+            selectedStates = roadmapFilters.states;
+        } else if (dashboardId === 'customers') {
+            selectedStates = customersFilters.states;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-state-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedStates.includes(cb.value);
+        });
+
+        updateGenericStateDisplay(dashboardId);
+    }
+
+    // ==================== END GENERIC STATE FILTER COMPONENT ====================
 
     // Utility functions
     function getStateClass(state) {

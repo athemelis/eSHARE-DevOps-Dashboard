@@ -76,7 +76,7 @@ git push
 # Verify push was successful (should show "Everything up-to-date" or commit info)
 ```
 
-## Current Version: v85
+## Current Version: v86
 
 ## UI Patterns for All Dashboards
 
@@ -574,17 +574,126 @@ if (dashboardFilters.priorities.length > 0) {
 - **Search box** filters options as you type
 - **Scroll position preserved** when selecting items
 
+### Generic State Filter Component (part2.html)
+The State filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
+
+**Location:** `Templates/dashboard_v3_part2.html` (lines 1758-2049)
+
+**Core Functions:**
+| Function | Purpose |
+|----------|---------|
+| `computeStateInfo(items)` | Analyzes items → state list, counts, noStateCount |
+| `buildStateFilterDropdown(config)` | Builds dropdown HTML with search, options (semantic order), actions |
+| `filterGenericStateOptions(optionsId, searchText)` | Filters options by search text |
+| `handleGenericStateChange(dashboardId, ...)` | Routes checkbox changes to correct dashboard state |
+| `selectAllGenericState(dashboardId, ...)` | Select All handler |
+| `clearGenericState(dashboardId, ...)` | Clear handler |
+| `updateGenericStateDisplay(dashboardId)` | Updates display text |
+| `syncGenericStateFilter(dashboardId)` | Syncs checkboxes after localStorage load |
+
+**Usage - Adding State Filter to a New Dashboard:**
+```javascript
+// 1. In HTML (part1.html), add the dropdown structure:
+<span class="filter-row-label">State:</span>
+<div class="filter-dropdown" id="DASHBOARD-state-dropdown">
+    <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('DASHBOARD-state-dropdown')">
+        <span id="DASHBOARD-state-display">All States</span>
+        <span class="arrow">▼</span>
+    </div>
+    <div class="filter-dropdown-menu" id="DASHBOARD-state-menu">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+
+// 2. In CSS (part1.html), add to wide dropdown list:
+#DASHBOARD-state-menu { right: auto; min-width: 200px; }
+
+// 3. In dashboard state, add states property:
+let dashboardFilters = {
+    states: [],
+    // ... other filters
+};
+
+// 4. In render function, populate the dropdown:
+const stateMenu = document.getElementById('DASHBOARD-state-menu');
+if (stateMenu) {
+    stateMenu.innerHTML = buildStateFilterDropdown({
+        dashboardId: 'DASHBOARD',
+        items: workItems,
+        selectedStates: dashboardFilters.states
+    });
+}
+
+// 5. In handleGenericStateChange() (part2.html), add dashboard routing:
+} else if (dashboardId === 'DASHBOARD') {
+    // Update state, call render function
+}
+
+// 6. In filter logic, apply state filter:
+if (dashboardFilters.states.length > 0) {
+    items = items.filter(item => dashboardFilters.states.includes(item.state));
+}
+```
+
+**Features:**
+- **States sorted semantically** using STATE_ORDER constant
+- **STATE_ORDER:** `['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed']`
+- **"(No State)" option** shown last with count (if items exist without state)
+- **Item count** displayed next to each state
+- **Search box** filters options as you type
+- **Scroll position preserved** when selecting items
+
 ### Filter Row Order Convention
 For consistency, generic filters should follow this order across all dashboards:
 1. **Search** (always first)
 2. **Release** (second - most common cross-dashboard filter)
 3. **Customer** (third)
 4. **Priority** (fourth)
-5. Dashboard-specific filters (State, Team, Iteration, Tag, etc.)
-6. **Clear All button** (before Info)
-7. **Info popup** (always last, `margin-left: auto`)
+5. **State** (fifth)
+6. Dashboard-specific filters (Team, Iteration, Tag, etc.)
+7. **Clear All button** (before Info)
+8. **Info popup** (always last, `margin-left: auto`)
 
 This order ensures users have a consistent experience when switching between dashboards.
+
+## v86 Summary (December 2024)
+**Generic State Filter Component:**
+- Created shared State filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- States sorted semantically using STATE_ORDER constant
+- Shows "(No State)" option last with count (if items exist without state)
+- Includes search box at top for filtering options
+- Wide dropdown (200px) for better readability
+- Full cross-filter support
+
+**State Functions Added:**
+- `computeStateInfo()` - Analyze items for state data
+- `buildStateFilterDropdown()` - Build dropdown HTML with search, options, actions
+- `filterGenericStateOptions()` - Search filter for options
+- `handleGenericStateChange()` - Checkbox change handler
+- `selectAllGenericState()` - Select All handler
+- `clearGenericState()` - Clear handler
+- `updateGenericStateDisplay()` - Update display text
+- `syncGenericStateFilter()` - Sync checkboxes after localStorage load
+
+**Releases Dashboard:**
+- Refactored State filter to use generic component
+- State filter now shows item counts next to each state
+- Cross-filter aware: dropdown options update based on other active filters
+
+**Roadmap Dashboard:**
+- Refactored to use generic State component
+- Removed `dataset.populated` caching for cross-filter support
+- Updated sync and clear functions to use generic component
+
+**Customers Dashboard:**
+- Refactored to use generic State component
+- Cross-filter aware: dropdown options update based on other active filters
+- Updated `getCustomersIssuesExcludingFilter()` to accept 'state' parameter
+
+**Filter Order Updated:**
+- State filter now sequenced after Priority in all three dashboards
+- Standard order: Search → Release → Customer → Priority → State → dashboard-specific filters
 
 ## v85 Summary (December 2024)
 **Generic Priority Filter Component:**

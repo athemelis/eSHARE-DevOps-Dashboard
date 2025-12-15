@@ -3846,40 +3846,15 @@
             bugtypeMenu.innerHTML = bugtypeHtml;
         }
         
-        // Populate State filter dropdown based on cross-filtered items
+        // Populate State filter dropdown using generic component (cross-filter aware)
         const stateFilteredItems = getItemsExcludingFilter(releaseItems, 'state');
         const stateMenu = document.getElementById('release-state-header-menu');
         if (stateMenu) {
-            const availableStates = new Set();
-            stateFilteredItems.forEach(item => {
-                if (item.state) availableStates.add(item.state);
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'releases',
+                items: stateFilteredItems,
+                selectedStates: releaseHeaderFilters.state
             });
-            
-            const stateOrder = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
-            
-            let stateHtml = '';
-            stateOrder.forEach(st => {
-                if (availableStates.has(st)) {
-                    const isChecked = releaseHeaderFilters.state.includes(st);
-                    stateHtml += `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" data-filter="state" value="${st}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('state', event)">
-                            <span class="option-label">${st}</span>
-                        </label>
-                    `;
-                }
-            });
-            if (stateHtml) {
-                stateHtml += `
-                    <div class="filter-dropdown-actions">
-                        <button class="filter-btn-primary" onclick="selectAllHeaderFilter('state', event)">Select All</button>
-                        <button class="filter-btn-secondary" onclick="clearHeaderFilter('state', event)">Clear</button>
-                    </div>
-                `;
-            } else {
-                stateHtml = '<div class="filter-dropdown-empty">No states available</div>';
-            }
-            stateMenu.innerHTML = stateHtml;
         }
         
         // Populate Team filter dropdown based on cross-filtered items
