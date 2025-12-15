@@ -769,15 +769,8 @@
     function getFilteredIssues() {
         let issues = getAllIssues();
 
-        // Apply search filter
-        if (customersFilters.search) {
-            const searchLower = customersFilters.search.toLowerCase();
-            issues = issues.filter(i => {
-                const titleMatch = (i.title || '').toLowerCase().includes(searchLower);
-                const idMatch = String(i.id).includes(customersFilters.search);
-                return titleMatch || idMatch;
-            });
-        }
+        // Apply search filter using generic component
+        issues = applyGenericSearchFilter(issues, customersFilters.search);
 
         // Apply customer filter
         if (customersFilters.customers.length > 0) {
@@ -836,7 +829,7 @@
 
     // Check if any filters are active
     function hasActiveCustomersFilters() {
-        return customersFilters.search !== '' ||
+        return hasGenericSearchFilter('customers') ||
                customersFilters.customers.length > 0 ||
                customersFilters.categories.length > 0 ||
                customersFilters.states.length > 0 ||
@@ -845,26 +838,19 @@
                customersFilters.aging.length > 0;
     }
 
-    // Apply filters and re-render
-    function applyCustomersFilters() {
-        customersFilters.search = document.getElementById('customers-search-input')?.value || '';
-        saveStateToStorage();
-        renderCustomersView();
-        updateCustomersClearButton();
-    }
-
     // Clear all filters
     function clearAllCustomersFilters() {
-        customersFilters = {
-            search: '',
-            customers: [],
-            categories: [],
-            states: [],
-            priorities: [],
-            releases: [],
-            aging: []
-        };
-        document.getElementById('customers-search-input').value = '';
+        // Clear search using generic component
+        clearGenericSearch('customers');
+
+        // Clear all filter arrays
+        customersFilters.customers = [];
+        customersFilters.categories = [];
+        customersFilters.states = [];
+        customersFilters.priorities = [];
+        customersFilters.releases = [];
+        customersFilters.aging = [];
+
         saveStateToStorage();
         renderCustomersView();
         populateCustomersFilterDropdowns();
@@ -1097,9 +1083,14 @@
         const allReleases = Object.keys(releaseInfo).sort();
 
         // Populate dropdowns
+        // Customer dropdown using generic component
         const customerMenu = document.getElementById('customers-customer-menu');
         if (customerMenu) {
-            customerMenu.innerHTML = buildCustomersDropdownHtml('customers', allCustomers, customersFilters.customers);
+            customerMenu.innerHTML = buildCustomerFilterDropdown({
+                dashboardId: 'customers',
+                items: issues,
+                selectedCustomers: customersFilters.customers
+            });
         }
 
         const categoryMenu = document.getElementById('customers-category-menu');
@@ -1136,7 +1127,9 @@
         }
 
         // Update display text for all filters
-        ['customers', 'categories', 'states', 'priorities', 'releases', 'aging'].forEach(ft => {
+        // Customer display uses generic component, others use dashboard-specific function
+        updateGenericCustomerDisplay('customers');
+        ['categories', 'states', 'priorities', 'releases', 'aging'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
         });
     }
@@ -1874,23 +1867,8 @@
     function getFilteredRoadmapFeatures() {
         let features = getRoadmapFeatures();
 
-        // Apply search filter (searches both Title and ID)
-        // Supports pipe-separated ID list (e.g., "123|456|789") for multi-category feature filter
-        if (roadmapFilters.search) {
-            const searchTerm = roadmapFilters.search;
-            if (searchTerm.includes('|')) {
-                // Pipe-separated ID list - match exact IDs
-                const ids = searchTerm.split('|').map(id => id.trim());
-                features = features.filter(f => ids.includes(String(f.id)));
-            } else {
-                // Regular search - searches both Title and ID
-                const searchLower = searchTerm.toLowerCase();
-                features = features.filter(f =>
-                    (f.title || '').toLowerCase().includes(searchLower) ||
-                    String(f.id).includes(searchTerm)
-                );
-            }
-        }
+        // Apply search filter using generic component (supports pipe-separated IDs)
+        features = applyGenericSearchFilter(features, roadmapFilters.search, { supportPipeSeparated: true });
 
         // Apply state filter
         if (roadmapFilters.states.length > 0) {
@@ -2419,26 +2397,14 @@
             stateMenu.dataset.populated = 'true';
         }
 
-        // Populate Customer dropdown
+        // Populate Customer dropdown using generic component
         const customerMenu = document.getElementById('roadmap-customer-menu');
         if (customerMenu && !customerMenu.dataset.populated) {
-            customerMenu.innerHTML = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search customers..." oninput="filterRoadmapDropdownOptions('customer', this.value)">
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-customer-options">
-                    ${customers.map(c => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.customers.includes(c) ? 'checked' : ''} onchange="handleRoadmapFilterChange('customer', '${c.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${c}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('customer')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('customer')">Clear</button>
-                </div>
-            `;
+            customerMenu.innerHTML = buildCustomerFilterDropdown({
+                dashboardId: 'roadmap',
+                items: features,
+                selectedCustomers: roadmapFilters.customers
+            });
             customerMenu.dataset.populated = 'true';
         }
 
@@ -2628,11 +2594,8 @@
             );
         });
 
-        // Sync search input
-        const searchInput = document.getElementById('roadmap-search-input');
-        if (searchInput && roadmapFilters.search) {
-            searchInput.value = roadmapFilters.search;
-        }
+        // Sync search input using generic component
+        syncGenericSearchFilter('roadmap');
     }
 
     function filterRoadmapDropdownOptions(filterType, searchText) {
@@ -2833,10 +2796,8 @@
     }
 
     function clearAllRoadmapFilters() {
-        // Clear search
-        const searchInput = document.getElementById('roadmap-search-input');
-        if (searchInput) searchInput.value = '';
-        roadmapFilters.search = '';
+        // Clear search using generic component
+        clearGenericSearch('roadmap');
 
         // Clear all filter arrays
         roadmapFilters.states = [];

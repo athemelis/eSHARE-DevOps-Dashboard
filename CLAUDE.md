@@ -76,7 +76,7 @@ git push
 # Verify push was successful (should show "Everything up-to-date" or commit info)
 ```
 
-## Current Version: v83
+## Current Version: v84
 
 ## UI Patterns for All Dashboards
 
@@ -284,6 +284,122 @@ When adding a new filter type that will appear on multiple dashboards:
 
 5. **Update each dashboard** to use the generic component instead of custom logic
 
+### Generic Search Filter Component (part2.html)
+The Search filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
+
+**Location:** `Templates/dashboard_v3_part2.html` (lines 1036-1152)
+
+**Core Functions:**
+| Function | Purpose |
+|----------|---------|
+| `applyGenericSearchFilter(items, searchTerm, options)` | Filters items by title/ID match |
+| `handleGenericSearchChange(dashboardId)` | Routes input changes to correct dashboard state |
+| `clearGenericSearch(dashboardId)` | Clears search input and state |
+| `getGenericSearchValue(dashboardId)` | Gets current search value from state |
+| `syncGenericSearchFilter(dashboardId)` | Syncs input with state after localStorage load |
+| `hasGenericSearchFilter(dashboardId)` | Checks if search is active |
+
+**Usage - Adding Search Filter to a New Dashboard:**
+```javascript
+// 1. In HTML (part1.html), add the search input:
+<span class="filter-row-label">Search:</span>
+<input type="text" id="DASHBOARD-search-input" class="filter-search-input"
+       placeholder="Search titles and IDs..." oninput="handleGenericSearchChange('DASHBOARD')">
+
+// 2. In dashboard state, add search property:
+let dashboardFilters = {
+    search: '',
+    // ... other filters
+};
+
+// 3. In filter logic, apply generic search filter:
+let items = getAllItems();
+items = applyGenericSearchFilter(items, dashboardFilters.search);
+
+// 4. In handleGenericSearchChange() (part2.html), add dashboard routing:
+} else if (dashboardId === 'DASHBOARD') {
+    dashboardFilters.search = searchValue;
+    saveStateToStorage();
+    renderDashboardView();
+}
+
+// 5. In clearAllFilters(), use generic clear:
+clearGenericSearch('DASHBOARD');
+
+// 6. In syncFilterState(), use generic sync:
+syncGenericSearchFilter('DASHBOARD');
+
+// 7. In hasActiveFilters(), use generic check:
+if (hasGenericSearchFilter('DASHBOARD')) return true;
+```
+
+**Special Features:**
+- **Pipe-separated IDs:** Roadmap supports `123|456|789` syntax for multi-ID filtering
+  ```javascript
+  items = applyGenericSearchFilter(items, searchTerm, { supportPipeSeparated: true });
+  ```
+- **Case-insensitive title search:** Title matching is always lowercase
+- **Exact ID matching:** ID matching is case-sensitive (numbers)
+
+### Generic Customer Filter Component (part2.html)
+The Customer filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
+
+**Location:** `Templates/dashboard_v3_part2.html` (lines 1135-1441)
+
+**Core Functions:**
+| Function | Purpose |
+|----------|---------|
+| `computeCustomerInfo(items)` | Analyzes items → customer list, counts, noCustomerCount |
+| `buildCustomerFilterDropdown(config)` | Builds dropdown HTML with search, (No Customer), options, actions |
+| `filterGenericCustomerOptions(optionsId, searchText)` | Filters options by search text |
+| `handleGenericCustomerChange(dashboardId, ...)` | Routes checkbox changes to correct dashboard state |
+| `selectAllGenericCustomer(dashboardId, ...)` | Select All handler |
+| `clearGenericCustomer(dashboardId, ...)` | Clear handler |
+| `updateGenericCustomerDisplay(dashboardId)` | Updates display text |
+| `syncGenericCustomerFilter(dashboardId)` | Syncs checkboxes after localStorage load |
+
+**Usage - Adding Customer Filter to a New Dashboard:**
+```javascript
+// 1. In HTML (part1.html), add the dropdown structure:
+<span class="filter-row-label">Customer:</span>
+<div class="filter-dropdown" id="DASHBOARD-customer-dropdown">
+    <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('DASHBOARD-customer-dropdown')">
+        <span id="DASHBOARD-customer-display">All Customers</span>
+        <span class="arrow">▼</span>
+    </div>
+    <div class="filter-dropdown-menu" id="DASHBOARD-customer-menu">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+
+// 2. In CSS (part1.html), add to wide dropdown list:
+#DASHBOARD-customer-menu { right: auto; min-width: 280px; }
+
+// 3. In render function, populate the dropdown:
+const customerMenu = document.getElementById('DASHBOARD-customer-menu');
+if (customerMenu) {
+    customerMenu.innerHTML = buildCustomerFilterDropdown({
+        dashboardId: 'DASHBOARD',
+        items: workItems,
+        selectedCustomers: dashboardFilters.customers
+    });
+}
+
+// 4. In handleGenericCustomerChange() (part2.html), add dashboard routing:
+} else if (dashboardId === 'DASHBOARD') {
+    // Update state, call render function
+}
+
+// 5. Update display, sync, and clear functions similarly
+```
+
+**Features:**
+- **"(No Customer)" option** shown first with count of items without customers
+- **Item count** displayed next to each customer name
+- **Search box** filters options as you type
+- **Alphabetical sorting** (case-insensitive)
+- **Scroll position preserved** when selecting items
+
 ### Filter Row Order Convention
 For consistency, filters should follow this order (when applicable):
 1. **Search** (always first)
@@ -291,6 +407,44 @@ For consistency, filters should follow this order (when applicable):
 3. Dashboard-specific filters (State, Team, Customer, etc.)
 4. **Clear All button** (before Info)
 5. **Info popup** (always last, `margin-left: auto`)
+
+## v84 Summary (December 2024)
+**Generic Search Filter Component:**
+- Created shared Search filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- Searches both Title (case-insensitive) and ID (exact match)
+- Roadmap supports pipe-separated ID lists (`123|456|789`)
+
+**Generic Customer Filter Component:**
+- Created shared Customer filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- Shows "(No Customer)" option first with item count
+- Shows item count next to each customer name
+- Wide dropdown (280px) with search box
+- Alphabetically sorted customers
+
+**Search Functions Added:**
+- `applyGenericSearchFilter()` - Core filtering logic
+- `handleGenericSearchChange()` - Input handler routing
+- `clearGenericSearch()` - Clear search state
+- `getGenericSearchValue()` - Get current search value
+- `syncGenericSearchFilter()` - Sync input after localStorage load
+- `hasGenericSearchFilter()` - Check if search is active
+
+**Customer Functions Added:**
+- `computeCustomerInfo()` - Analyze items for customer data
+- `buildCustomerFilterDropdown()` - Build dropdown HTML
+- `filterGenericCustomerOptions()` - Search filter for options
+- `handleGenericCustomerChange()` - Checkbox change handler
+- `selectAllGenericCustomer()` - Select All handler
+- `clearGenericCustomer()` - Clear handler
+- `updateGenericCustomerDisplay()` - Update display text
+- `syncGenericCustomerFilter()` - Sync after localStorage load
+
+**Refactored:**
+- Releases: Uses generic search and customer components
+- Roadmap: Uses generic search and customer components
+- Customers: Uses generic search and customer components
 
 ## v83 Summary (December 2024)
 **Generic Release Filter Component:**

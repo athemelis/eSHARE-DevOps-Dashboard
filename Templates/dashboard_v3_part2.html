@@ -539,18 +539,9 @@
         reopenDropdown();
     }
     
-    // Apply releases search filter
-    function applyReleasesSearch() {
-        const searchInput = document.getElementById('releases-search-input');
-        releasesSearchFilter = searchInput ? searchInput.value : '';
-        updateClearFiltersButton();
-        saveStateToStorage();
-        renderReleasesView();
-    }
-
     // Check if any release filters are active
     function hasActiveReleaseFilters() {
-        if (releasesSearchFilter) return true;
+        if (hasGenericSearchFilter('releases')) return true;
         if (selectedReleases.length > 0) return true;
         if (releaseHeaderFilters.type.length > 0) return true;
         if (releaseHeaderFilters.bugtype.length > 0) return true;
@@ -562,10 +553,8 @@
     
     // Clear all release filters
     function clearAllReleaseFilters() {
-        // Clear search
-        const searchInput = document.getElementById('releases-search-input');
-        if (searchInput) searchInput.value = '';
-        releasesSearchFilter = '';
+        // Clear search using generic component
+        clearGenericSearch('releases');
 
         // Clear release selection
         selectedReleases = [];
@@ -574,14 +563,17 @@
         });
         updateReleaseHeaderDisplay();
 
-        // Clear all header filters
-        ['type', 'bugtype', 'state', 'team', 'customer'].forEach(filterType => {
+        // Clear header filters (except customer which uses generic component)
+        ['type', 'bugtype', 'state', 'team'].forEach(filterType => {
             document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
                 cb.checked = false;
             });
             releaseHeaderFilters[filterType] = [];
             updateReleaseHeaderFilterDisplay(filterType);
         });
+
+        // Clear customer using generic component
+        clearGenericCustomer('releases');
 
         // Hide clear button
         const clearBtn = document.getElementById('release-clear-filters-btn');
@@ -593,11 +585,8 @@
 
     // Sync Releases view dropdowns with loaded state
     function syncReleasesFilterDropdowns() {
-        // Restore search input
-        const searchInput = document.getElementById('releases-search-input');
-        if (searchInput && releasesSearchFilter) {
-            searchInput.value = releasesSearchFilter;
-        }
+        // Restore search input using generic component
+        syncGenericSearchFilter('releases');
 
         // Sync release selection checkboxes
         document.querySelectorAll('#release-dropdown-options input[type="checkbox"]').forEach(cb => {
@@ -605,13 +594,16 @@
         });
         updateReleaseHeaderDisplay();
 
-        // Sync header filter checkboxes
-        ['type', 'bugtype', 'state', 'team', 'customer'].forEach(filterType => {
+        // Sync header filter checkboxes (except customer which uses generic component)
+        ['type', 'bugtype', 'state', 'team'].forEach(filterType => {
             document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).forEach(cb => {
                 cb.checked = releaseHeaderFilters[filterType].includes(cb.value);
             });
             updateReleaseHeaderFilterDisplay(filterType);
         });
+
+        // Sync customer using generic component
+        syncGenericCustomerFilter('releases');
 
         updateClearFiltersButton();
     }
@@ -630,15 +622,10 @@
     
     // Get filtered release items based on header filters
     function getHeaderFilteredReleaseItems(items) {
-        return items.filter(item => {
-            // Search filter (searches title and ID)
-            if (releasesSearchFilter) {
-                const searchLower = releasesSearchFilter.toLowerCase();
-                const titleMatch = (item.title || '').toLowerCase().includes(searchLower);
-                const idMatch = String(item.id).includes(releasesSearchFilter);
-                if (!titleMatch && !idMatch) return false;
-            }
+        // Apply generic search filter first
+        let filtered = applyGenericSearchFilter(items, releasesSearchFilter);
 
+        return filtered.filter(item => {
             // Type filter
             if (releaseHeaderFilters.type.length > 0) {
                 let typeMatch = false;
@@ -1032,6 +1019,432 @@
     }
 
     // ==================== END GENERIC RELEASE FILTER COMPONENT ====================
+
+    // ==================== GENERIC SEARCH FILTER COMPONENT ====================
+    // Shared Search filter used by Releases, Roadmap, and Customers dashboards
+    // Searches both Title and ID fields
+
+    /**
+     * Apply search filter to items
+     * @param {Array} items - Work items to filter
+     * @param {string} searchTerm - Search term to match
+     * @param {Object} options - Optional configuration
+     * @param {boolean} options.supportPipeSeparated - Support pipe-separated ID lists (default: false)
+     * @returns {Array} Filtered items
+     */
+    function applyGenericSearchFilter(items, searchTerm, options = {}) {
+        if (!searchTerm) return items;
+
+        const { supportPipeSeparated = false } = options;
+
+        // Check for pipe-separated ID list (Roadmap feature)
+        if (supportPipeSeparated && searchTerm.includes('|')) {
+            const ids = searchTerm.split('|').map(id => id.trim());
+            return items.filter(item => ids.includes(String(item.id)));
+        }
+
+        // Regular search - searches both Title and ID
+        const searchLower = searchTerm.toLowerCase();
+        return items.filter(item => {
+            const titleMatch = (item.title || '').toLowerCase().includes(searchLower);
+            const idMatch = String(item.id).includes(searchTerm);
+            return titleMatch || idMatch;
+        });
+    }
+
+    /**
+     * Handle search input change for a dashboard
+     * @param {string} dashboardId - 'releases', 'roadmap', or 'customers'
+     */
+    function handleGenericSearchChange(dashboardId) {
+        const inputId = `${dashboardId}-search-input`;
+        const searchInput = document.getElementById(inputId);
+        const searchValue = searchInput ? searchInput.value : '';
+
+        // Update the appropriate state variable
+        if (dashboardId === 'releases') {
+            releasesSearchFilter = searchValue;
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.search = searchValue;
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            customersFilters.search = searchValue;
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+    }
+
+    /**
+     * Clear search filter for a dashboard
+     * @param {string} dashboardId - 'releases', 'roadmap', or 'customers'
+     */
+    function clearGenericSearch(dashboardId) {
+        const inputId = `${dashboardId}-search-input`;
+        const searchInput = document.getElementById(inputId);
+        if (searchInput) searchInput.value = '';
+
+        // Update the appropriate state variable
+        if (dashboardId === 'releases') {
+            releasesSearchFilter = '';
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.search = '';
+        } else if (dashboardId === 'customers') {
+            customersFilters.search = '';
+        }
+    }
+
+    /**
+     * Get current search value for a dashboard
+     * @param {string} dashboardId - 'releases', 'roadmap', or 'customers'
+     * @returns {string} Current search value
+     */
+    function getGenericSearchValue(dashboardId) {
+        if (dashboardId === 'releases') {
+            return releasesSearchFilter || '';
+        } else if (dashboardId === 'roadmap') {
+            return roadmapFilters.search || '';
+        } else if (dashboardId === 'customers') {
+            return customersFilters.search || '';
+        }
+        return '';
+    }
+
+    /**
+     * Sync search input with current state (after loading from localStorage)
+     * @param {string} dashboardId - 'releases', 'roadmap', or 'customers'
+     */
+    function syncGenericSearchFilter(dashboardId) {
+        const inputId = `${dashboardId}-search-input`;
+        const searchInput = document.getElementById(inputId);
+        if (!searchInput) return;
+
+        const searchValue = getGenericSearchValue(dashboardId);
+        searchInput.value = searchValue;
+    }
+
+    /**
+     * Check if search filter is active for a dashboard
+     * @param {string} dashboardId - 'releases', 'roadmap', or 'customers'
+     * @returns {boolean} True if search filter has a value
+     */
+    function hasGenericSearchFilter(dashboardId) {
+        return getGenericSearchValue(dashboardId) !== '';
+    }
+
+    // ==================== END GENERIC SEARCH FILTER COMPONENT ====================
+
+    // ==================== GENERIC CUSTOMER FILTER COMPONENT ====================
+    // Shared Customer filter dropdown used by Releases, Roadmap, and Customers dashboards
+
+    /**
+     * Compute customer info from work items
+     * @param {Array} items - Work items to analyze
+     * @returns {Object} { customers: [...], customerInfo: {...}, noCustomerCount: number }
+     */
+    function computeCustomerInfo(items) {
+        const customerInfo = {};
+        let noCustomerCount = 0;
+
+        items.forEach(item => {
+            if (!item.customers) {
+                noCustomerCount++;
+                return;
+            }
+            // Customers field is semicolon-separated
+            const itemCustomers = item.customers.split(';').map(c => c.trim()).filter(c => c);
+            if (itemCustomers.length === 0) {
+                noCustomerCount++;
+                return;
+            }
+            itemCustomers.forEach(c => {
+                if (!customerInfo[c]) {
+                    customerInfo[c] = { count: 0, items: [] };
+                }
+                customerInfo[c].count++;
+                customerInfo[c].items.push(item);
+            });
+        });
+
+        // Sort customers alphabetically
+        const customers = Object.keys(customerInfo).sort((a, b) =>
+            a.toLowerCase().localeCompare(b.toLowerCase())
+        );
+
+        return { customers, customerInfo, noCustomerCount };
+    }
+
+    /**
+     * Build Customer filter dropdown HTML (generic component)
+     * @param {Object} config - Configuration object
+     * @param {string} config.dashboardId - 'releases', 'roadmap', or 'customers'
+     * @param {Array} config.items - Work items to build options from
+     * @param {Array} config.selectedCustomers - Currently selected customers
+     * @returns {string} HTML string for dropdown content
+     */
+    function buildCustomerFilterDropdown(config) {
+        const { dashboardId, items, selectedCustomers } = config;
+        const { customers, customerInfo, noCustomerCount } = computeCustomerInfo(items);
+
+        const optionsId = `${dashboardId}-customer-options`;
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search customers..."
+                       oninput="filterGenericCustomerOptions('${optionsId}', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${optionsId}">
+        `;
+
+        // "(No Customer)" option first
+        if (noCustomerCount > 0) {
+            const isChecked = selectedCustomers.includes('(No Customer)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(no customer)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Customer)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericCustomerChange('${dashboardId}', '(No Customer)', this.checked, event)">
+                    <span class="option-label">(No Customer)</span>
+                    <span class="option-count">${noCustomerCount}</span>
+                </label>
+            `;
+        }
+
+        // Customer options sorted alphabetically
+        customers.forEach(c => {
+            const info = customerInfo[c];
+            const isChecked = selectedCustomers.includes(c);
+            const escapedCustomer = c.replace(/"/g, '&quot;');
+            const escapedCustomerJs = c.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${c.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${escapedCustomer}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericCustomerChange('${dashboardId}', '${escapedCustomerJs}', this.checked, event)">
+                    <span class="option-label">${c}</span>
+                    <span class="option-count">${info.count}</span>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericCustomer('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericCustomer('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    /**
+     * Filter customer options by search text
+     */
+    function filterGenericCustomerOptions(optionsId, searchText) {
+        const container = document.getElementById(optionsId);
+        if (!container) return;
+
+        const searchLower = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(searchLower) ? '' : 'none';
+        });
+    }
+
+    /**
+     * Handle customer checkbox change
+     */
+    function handleGenericCustomerChange(dashboardId, customer, checked, event) {
+        if (event) event.stopPropagation();
+
+        // Save scroll position
+        const optionsId = `${dashboardId}-customer-options`;
+        const optionsContainer = document.getElementById(optionsId);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        let selectedCustomers;
+        let openDropdownId;
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-customer-header-dropdown';
+            if (checked) {
+                if (!releaseHeaderFilters.customer.includes(customer)) {
+                    releaseHeaderFilters.customer.push(customer);
+                }
+            } else {
+                releaseHeaderFilters.customer = releaseHeaderFilters.customer.filter(c => c !== customer);
+            }
+            selectedCustomers = releaseHeaderFilters.customer;
+            updateGenericCustomerDisplay(dashboardId);
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-customer-dropdown';
+            if (checked) {
+                if (!roadmapFilters.customers.includes(customer)) {
+                    roadmapFilters.customers.push(customer);
+                }
+            } else {
+                roadmapFilters.customers = roadmapFilters.customers.filter(c => c !== customer);
+            }
+            selectedCustomers = roadmapFilters.customers;
+            updateGenericCustomerDisplay(dashboardId);
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-customer-dropdown';
+            if (checked) {
+                if (!customersFilters.customers.includes(customer)) {
+                    customersFilters.customers.push(customer);
+                }
+            } else {
+                customersFilters.customers = customersFilters.customers.filter(c => c !== customer);
+            }
+            selectedCustomers = customersFilters.customers;
+            updateGenericCustomerDisplay(dashboardId);
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+
+        // Re-open dropdown and restore scroll position
+        setTimeout(() => {
+            const dropdown = document.getElementById(openDropdownId);
+            if (dropdown) {
+                dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(optionsId);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }
+        }, 10);
+    }
+
+    /**
+     * Select all customers for a dashboard
+     */
+    function selectAllGenericCustomer(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-customer-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        const allCustomers = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            allCustomers.push(cb.value);
+        });
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.customer = allCustomers;
+            updateGenericCustomerDisplay(dashboardId);
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.customers = allCustomers;
+            updateGenericCustomerDisplay(dashboardId);
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            customersFilters.customers = allCustomers;
+            updateGenericCustomerDisplay(dashboardId);
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+    }
+
+    /**
+     * Clear customer selection for a dashboard
+     */
+    function clearGenericCustomer(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-customer-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.customer = [];
+            updateGenericCustomerDisplay(dashboardId);
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.customers = [];
+            updateGenericCustomerDisplay(dashboardId);
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            customersFilters.customers = [];
+            updateGenericCustomerDisplay(dashboardId);
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+    }
+
+    /**
+     * Update customer filter display text
+     */
+    function updateGenericCustomerDisplay(dashboardId) {
+        let displayId, selectedCustomers;
+
+        if (dashboardId === 'releases') {
+            displayId = 'release-customer-display';
+            selectedCustomers = releaseHeaderFilters.customer;
+        } else if (dashboardId === 'roadmap') {
+            displayId = 'roadmap-customer-display';
+            selectedCustomers = roadmapFilters.customers;
+        } else if (dashboardId === 'customers') {
+            displayId = 'customers-customer-display';
+            selectedCustomers = customersFilters.customers;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        if (selectedCustomers.length === 0) {
+            display.textContent = 'All Customers';
+        } else if (selectedCustomers.length === 1) {
+            display.textContent = selectedCustomers[0];
+        } else {
+            display.textContent = `${selectedCustomers.length} selected`;
+        }
+    }
+
+    /**
+     * Sync customer filter checkboxes with current state (after loading from localStorage)
+     */
+    function syncGenericCustomerFilter(dashboardId) {
+        let selectedCustomers;
+
+        if (dashboardId === 'releases') {
+            selectedCustomers = releaseHeaderFilters.customer;
+        } else if (dashboardId === 'roadmap') {
+            selectedCustomers = roadmapFilters.customers;
+        } else if (dashboardId === 'customers') {
+            selectedCustomers = customersFilters.customers;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-customer-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedCustomers.includes(cb.value);
+        });
+
+        updateGenericCustomerDisplay(dashboardId);
+    }
+
+    // ==================== END GENERIC CUSTOMER FILTER COMPONENT ====================
 
     // Utility functions
     function getStateClass(state) {

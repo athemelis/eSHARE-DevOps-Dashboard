@@ -507,13 +507,8 @@
 
     // Sync Customers view state from localStorage
     function syncCustomersFilterState() {
-        // Restore search input
-        if (loadedStateCache && loadedStateCache.customersFilters) {
-            const searchInput = document.getElementById('customers-search-input');
-            if (searchInput && loadedStateCache.customersFilters.search) {
-                searchInput.value = loadedStateCache.customersFilters.search;
-            }
-        }
+        // Restore search input using generic component
+        syncGenericSearchFilter('customers');
 
         // Filter dropdowns are populated and synced in renderCustomersView via populateCustomersFilterDropdowns
     }
@@ -3917,53 +3912,15 @@
             teamMenu.innerHTML = teamHtml;
         }
         
-        // Populate Customer filter dropdown based on cross-filtered items
+        // Populate Customer filter dropdown using generic component
         const customerFilteredItems = getItemsExcludingFilter(releaseItems, 'customer');
         const customerMenu = document.getElementById('release-customer-header-menu');
         if (customerMenu) {
-            // Get all unique customers from filtered items
-            const availableCustomers = new Set();
-            customerFilteredItems.forEach(item => {
-                if (item.customers) {
-                    item.customers.split(';').forEach(c => {
-                        const trimmed = c.trim();
-                        if (trimmed) availableCustomers.add(trimmed);
-                    });
-                }
+            customerMenu.innerHTML = buildCustomerFilterDropdown({
+                dashboardId: 'releases',
+                items: customerFilteredItems,
+                selectedCustomers: releaseHeaderFilters.customer
             });
-
-            // Sort customers alphabetically
-            const sortedCustomers = [...availableCustomers].sort();
-
-            let customerHtml = '';
-            if (sortedCustomers.length > 0) {
-                // Add search box for customer filter
-                customerHtml += `
-                    <div class="filter-dropdown-search">
-                        <input type="text" placeholder="Search customers..." oninput="filterDropdownOptions('customer', this.value)" onclick="event.stopPropagation();">
-                    </div>
-                    <div class="filter-dropdown-options" id="release-customer-options">
-                `;
-                sortedCustomers.forEach(customer => {
-                    const isChecked = releaseHeaderFilters.customer.includes(customer);
-                    customerHtml += `
-                        <label class="filter-dropdown-option" data-search-value="${customer.toLowerCase()}" onclick="event.stopPropagation();">
-                            <input type="checkbox" data-filter="customer" value="${customer}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('customer', event)">
-                            <span class="option-label">${customer}</span>
-                        </label>
-                    `;
-                });
-                customerHtml += `</div>`;
-                customerHtml += `
-                    <div class="filter-dropdown-actions">
-                        <button class="filter-btn-primary" onclick="selectAllHeaderFilter('customer', event)">Select All</button>
-                        <button class="filter-btn-secondary" onclick="clearHeaderFilter('customer', event)">Clear</button>
-                    </div>
-                `;
-            } else {
-                customerHtml = '<div class="filter-dropdown-empty">No customers available</div>';
-            }
-            customerMenu.innerHTML = customerHtml;
         }
         
         // Update all header filter displays
@@ -3971,7 +3928,7 @@
         updateReleaseHeaderFilterDisplay('bugtype');
         updateReleaseHeaderFilterDisplay('state');
         updateReleaseHeaderFilterDisplay('team');
-        updateReleaseHeaderFilterDisplay('customer');
+        updateGenericCustomerDisplay('releases');  // Use generic component for customer
         
         // ==================== END CROSS-FILTER DROPDOWN POPULATION ====================
         

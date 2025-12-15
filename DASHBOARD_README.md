@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v82
+## Current Version: v84
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v84 | 12/14/2025 | **Generic Search Filter Component:** Created shared Search filter in part2.html for Releases, Roadmap, and Customers dashboards. Searches Title (case-insensitive) and ID (exact match). Roadmap supports pipe-separated IDs (`123\|456\|789`). **Generic Customer Filter Component:** Created shared Customer filter in part2.html for same dashboards. Shows "(No Customer)" first with count, item counts next to each customer, 280px wide dropdown with search box, alphabetically sorted. **Functions added:** Search: `applyGenericSearchFilter()`, `handleGenericSearchChange()`, `clearGenericSearch()`, `getGenericSearchValue()`, `syncGenericSearchFilter()`, `hasGenericSearchFilter()`. Customer: `computeCustomerInfo()`, `buildCustomerFilterDropdown()`, `filterGenericCustomerOptions()`, `handleGenericCustomerChange()`, `selectAllGenericCustomer()`, `clearGenericCustomer()`, `updateGenericCustomerDisplay()`, `syncGenericCustomerFilter()`. |
 | v83 | 12/14/2025 | **Generic Release Filter Component:** Created shared Release filter component used by Releases, Roadmap, and Customers dashboards. Shows release version + target date in dropdown (280px wide). Includes "⚠️ Needs Release" warning category for items with target date but no release version. **(No Release)** category for items with neither. **Filter order standardized:** Release filter now appears immediately after Search filter on Roadmap and Customers dashboards for consistency. **Infrastructure:** Added Generic Filter Components documentation to CLAUDE.md with step-by-step guide for adding filters to new dashboards and creating new generic components. |
 | v82 | 12/14/2025 | **Customers Dashboard - Work Item Relationships:** Integrated WorkItemLinks.csv (from Azure DevOps Analytics OData API) to display comprehensive relationship data. Clicking any row opens a modal showing all relationships grouped by Parent, Children, and Related items. Added visual relationship pills in table showing "has parent" (orange), "X children" (cyan), "X related" (purple), or "no links" (gray). **Column changes:** Removed Created Date and Closed Date columns, added Ticket Category column with color-coded badges. **Bug fixes:** Fixed Issue 617 not clickable (double quotes in title), fixed 14 issues showing TBD aging (ISO dates with fractional seconds). **Infrastructure:** Added WorkItemLinks.csv processing to generate_dashboard.py with `-l/--links` argument. |
 | v81 | 12/13/2025 | **Customers Dashboard Enhancements:** Added Created and Closed date columns (with Athens timezone fix for accurate dates). Added resizable columns with persistent widths via localStorage. Default sort by Aging (ascending) with Reset Sort button. Sticky column headers when scrolling. **Infrastructure:** Separated DEV/PROD localStorage keys to prevent state leakage between environments. |
