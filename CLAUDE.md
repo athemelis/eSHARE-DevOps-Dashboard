@@ -76,7 +76,7 @@ git push
 # Verify push was successful (should show "Everything up-to-date" or commit info)
 ```
 
-## Current Version: v86
+## Current Version: v85
 
 ## UI Patterns for All Dashboards
 
@@ -656,45 +656,6 @@ For consistency, generic filters should follow this order across all dashboards:
 
 This order ensures users have a consistent experience when switching between dashboards.
 
-## v86 Summary (December 2024)
-**Generic State Filter Component:**
-- Created shared State filter component in part2.html
-- Used by Releases, Roadmap, and Customers dashboards
-- States sorted semantically using STATE_ORDER constant
-- Shows "(No State)" option last with count (if items exist without state)
-- Includes search box at top for filtering options
-- Wide dropdown (200px) for better readability
-- Full cross-filter support
-
-**State Functions Added:**
-- `computeStateInfo()` - Analyze items for state data
-- `buildStateFilterDropdown()` - Build dropdown HTML with search, options, actions
-- `filterGenericStateOptions()` - Search filter for options
-- `handleGenericStateChange()` - Checkbox change handler
-- `selectAllGenericState()` - Select All handler
-- `clearGenericState()` - Clear handler
-- `updateGenericStateDisplay()` - Update display text
-- `syncGenericStateFilter()` - Sync checkboxes after localStorage load
-
-**Releases Dashboard:**
-- Refactored State filter to use generic component
-- State filter now shows item counts next to each state
-- Cross-filter aware: dropdown options update based on other active filters
-
-**Roadmap Dashboard:**
-- Refactored to use generic State component
-- Removed `dataset.populated` caching for cross-filter support
-- Updated sync and clear functions to use generic component
-
-**Customers Dashboard:**
-- Refactored to use generic State component
-- Cross-filter aware: dropdown options update based on other active filters
-- Updated `getCustomersIssuesExcludingFilter()` to accept 'state' parameter
-
-**Filter Order Updated:**
-- State filter now sequenced after Priority in all three dashboards
-- Standard order: Search → Release → Customer → Priority → State → dashboard-specific filters
-
 ## v85 Summary (December 2024)
 **Generic Priority Filter Component:**
 - Created shared Priority filter component in part2.html
@@ -714,8 +675,27 @@ This order ensures users have a consistent experience when switching between das
 - `updateGenericPriorityDisplay()` - Update display text
 - `syncGenericPriorityFilter()` - Sync checkboxes after localStorage load
 
+**Generic State Filter Component:**
+- Created shared State filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- States sorted semantically using STATE_ORDER constant
+- Shows "(No State)" option last with count (if items exist without state)
+- Includes search box at top for filtering options
+- Wide dropdown (200px) for better readability
+- Full cross-filter support
+
+**State Functions Added:**
+- `computeStateInfo()` - Analyze items for state data
+- `buildStateFilterDropdown()` - Build dropdown HTML with search, options, actions
+- `filterGenericStateOptions()` - Search filter for options
+- `handleGenericStateChange()` - Checkbox change handler
+- `selectAllGenericState()` - Select All handler
+- `clearGenericState()` - Clear handler
+- `updateGenericStateDisplay()` - Update display text
+- `syncGenericStateFilter()` - Sync checkboxes after localStorage load
+
 **Cross-Filter Behavior for All Generic Filters:**
-- All generic filters (Search, Release, Customer, Priority) now have cross-filter behavior
+- All generic filters (Search, Release, Customer, Priority, State) now have cross-filter behavior
 - Selecting a value in one filter updates options shown in other filter dropdowns
 - Ensures users only see relevant options based on current selections
 - Documented cross-filter pattern in CLAUDE.md for future components
@@ -723,29 +703,28 @@ This order ensures users have a consistent experience when switching between das
 **Cross-Filter Helper Functions Added:**
 - `getRoadmapFeaturesExcludingFilter(excludeFilter)` - Roadmap cross-filter helper (part3.html)
 - `getCustomersIssuesExcludingFilter(excludeFilter)` - Customers cross-filter helper (part3.html)
-- `getItemsExcludingFilter(items, excludeFilter)` - Releases cross-filter helper (part4.html) - updated to include priority
+- `getItemsExcludingFilter(items, excludeFilter)` - Releases cross-filter helper (part4.html)
 
 **Filter Order Standardized:**
-- All three dashboards now use consistent filter order: Search → Release → Customer → Priority
-- Roadmap: Moved Priority after Customer (was after Iteration)
-- Customers: Moved Priority after Customer (was after State)
+- All three dashboards now use consistent filter order: Search → Release → Customer → Priority → State
+- Standard order: Search → Release → Customer → Priority → State → dashboard-specific filters
 
 **Releases Dashboard:**
 - Added Priority filter after Customer filter (before Type)
-- Filter applies to all release items (Features, Issues, Bugs)
+- Refactored State filter to use generic component with item counts
 - Cross-filter aware: dropdown options update based on other active filters
 
 **Roadmap Dashboard:**
-- Refactored to use generic Priority component
+- Refactored to use generic Priority and State components
 - Updated filter logic to use P1/P2/P3/P4 format (instead of raw numbers)
-- Updated sync and clear functions to use generic component
+- Updated sync and clear functions to use generic components
 - All generic filter dropdowns now rebuild dynamically (removed `dataset.populated` caching)
 
 **Customers Dashboard:**
-- Refactored to use generic Priority component
-- Filter logic already used P1/P2/P3/P4 format (no change needed)
+- Refactored to use generic Priority and State components
 - Updated dropdown population and display functions
 - All generic filter dropdowns now rebuild dynamically (removed `dataset.populated` caching)
+- Updated `getCustomersIssuesExcludingFilter()` to accept 'state' parameter
 
 ## v84 Summary (December 2024)
 **Generic Search Filter Component:**
