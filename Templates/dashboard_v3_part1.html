@@ -235,6 +235,23 @@
             white-space: nowrap;
         }
 
+        /* Wide dropdown menu - for Priority filter showing priority + count */
+        /* Applied to all priority filter menus across dashboards */
+        #release-priority-header-menu,
+        #roadmap-priority-menu,
+        #customers-priority-menu {
+            right: auto;
+            min-width: 200px;
+        }
+        #release-priority-header-menu .option-count,
+        #roadmap-priority-menu .option-count,
+        #customers-priority-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
         .filter-dropdown-option {
             display: flex;
             align-items: center;
@@ -3020,7 +3037,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v84</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v85</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -3079,6 +3096,17 @@
                 </div>
                 <div class="filter-dropdown-menu" id="release-customer-header-menu">
                     <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="release-priority-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-priority-header-dropdown')">
+                    <span id="release-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-priority-header-menu">
+                    <!-- Populated dynamically by generic Priority filter -->
                 </div>
             </div>
 
@@ -3189,6 +3217,17 @@
                 </div>
             </div>
 
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="roadmap-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-priority-dropdown')">
+                    <span id="roadmap-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
             <span class="filter-row-label">State:</span>
             <div class="filter-dropdown" id="roadmap-state-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-state-dropdown')">
@@ -3218,17 +3257,6 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="roadmap-iteration-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Priority:</span>
-            <div class="filter-dropdown" id="roadmap-priority-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-priority-dropdown')">
-                    <span id="roadmap-priority-display">All Priorities</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="roadmap-priority-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -3294,6 +3322,17 @@
                 </div>
             </div>
 
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="customers-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-priority-dropdown')">
+                    <span id="customers-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
             <span class="filter-row-label">Category:</span>
             <div class="filter-dropdown" id="customers-category-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-category-dropdown')">
@@ -3312,17 +3351,6 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="customers-state-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Priority:</span>
-            <div class="filter-dropdown" id="customers-priority-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-priority-dropdown')">
-                    <span id="customers-priority-display">All Priorities</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="customers-priority-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>

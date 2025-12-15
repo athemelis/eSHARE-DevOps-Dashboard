@@ -3753,7 +3753,13 @@
                     const hasMatchingCustomer = itemCustomers.some(c => releaseHeaderFilters.customer.includes(c));
                     if (!hasMatchingCustomer) return false;
                 }
-                
+
+                // Apply priority filter (unless excluded)
+                if (excludeFilter !== 'priority' && releaseHeaderFilters.priority.length > 0) {
+                    const itemPriority = item.priority ? 'P' + item.priority : '(No Priority)';
+                    if (!releaseHeaderFilters.priority.includes(itemPriority)) return false;
+                }
+
                 return true;
             });
         }
@@ -3922,14 +3928,26 @@
                 selectedCustomers: releaseHeaderFilters.customer
             });
         }
-        
+
+        // Populate Priority filter dropdown using generic component
+        const priorityFilteredItems = getItemsExcludingFilter(releaseItems, 'priority');
+        const priorityMenu = document.getElementById('release-priority-header-menu');
+        if (priorityMenu) {
+            priorityMenu.innerHTML = buildPriorityFilterDropdown({
+                dashboardId: 'releases',
+                items: priorityFilteredItems,
+                selectedPriorities: releaseHeaderFilters.priority
+            });
+        }
+
         // Update all header filter displays
         updateReleaseHeaderFilterDisplay('type');
         updateReleaseHeaderFilterDisplay('bugtype');
         updateReleaseHeaderFilterDisplay('state');
         updateReleaseHeaderFilterDisplay('team');
         updateGenericCustomerDisplay('releases');  // Use generic component for customer
-        
+        updateGenericPriorityDisplay('releases');  // Use generic component for priority
+
         // ==================== END CROSS-FILTER DROPDOWN POPULATION ====================
         
         // Apply header filters

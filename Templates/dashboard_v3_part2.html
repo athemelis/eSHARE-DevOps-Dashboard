@@ -429,7 +429,8 @@
         bugtype: [],
         state: [],
         team: [],
-        customer: []
+        customer: [],
+        priority: []
     };
 
     // Releases search filter
@@ -548,6 +549,7 @@
         if (releaseHeaderFilters.state.length > 0) return true;
         if (releaseHeaderFilters.team.length > 0) return true;
         if (releaseHeaderFilters.customer.length > 0) return true;
+        if (releaseHeaderFilters.priority.length > 0) return true;
         return false;
     }
     
@@ -574,6 +576,9 @@
 
         // Clear customer using generic component
         clearGenericCustomer('releases');
+
+        // Clear priority using generic component
+        clearGenericPriority('releases');
 
         // Hide clear button
         const clearBtn = document.getElementById('release-clear-filters-btn');
@@ -605,9 +610,12 @@
         // Sync customer using generic component
         syncGenericCustomerFilter('releases');
 
+        // Sync priority using generic component
+        syncGenericPriorityFilter('releases');
+
         updateClearFiltersButton();
     }
-    
+
     // Update clear button visibility
     function updateClearFiltersButton() {
         const clearBtn = document.getElementById('release-clear-filters-btn');
@@ -659,7 +667,13 @@
                 const hasMatchingCustomer = itemCustomers.some(c => releaseHeaderFilters.customer.includes(c));
                 if (!hasMatchingCustomer) return false;
             }
-            
+
+            // Priority filter
+            if (releaseHeaderFilters.priority.length > 0) {
+                const itemPriority = item.priority ? 'P' + item.priority : '(No Priority)';
+                if (!releaseHeaderFilters.priority.includes(itemPriority)) return false;
+            }
+
             return true;
         });
     }
@@ -1445,6 +1459,301 @@
     }
 
     // ==================== END GENERIC CUSTOMER FILTER COMPONENT ====================
+
+    // ==================== GENERIC PRIORITY FILTER COMPONENT ====================
+    // Shared Priority filter dropdown used by Releases, Roadmap, and Customers dashboards
+
+    /**
+     * Compute priority info from work items
+     * @param {Array} items - Work items to analyze
+     * @returns {Object} { priorities: [...], priorityInfo: {...}, noPriorityCount: number }
+     */
+    function computePriorityInfo(items) {
+        const priorityInfo = {};
+        let noPriorityCount = 0;
+
+        items.forEach(item => {
+            if (!item.priority) {
+                noPriorityCount++;
+                return;
+            }
+            const priority = 'P' + item.priority;
+            if (!priorityInfo[priority]) {
+                priorityInfo[priority] = { count: 0, items: [], numericValue: item.priority };
+            }
+            priorityInfo[priority].count++;
+            priorityInfo[priority].items.push(item);
+        });
+
+        // Sort priorities numerically (P1, P2, P3, P4)
+        const priorities = Object.keys(priorityInfo).sort((a, b) => {
+            return priorityInfo[a].numericValue - priorityInfo[b].numericValue;
+        });
+
+        return { priorities, priorityInfo, noPriorityCount };
+    }
+
+    /**
+     * Build Priority filter dropdown HTML (generic component)
+     * @param {Object} config - Configuration object
+     * @param {string} config.dashboardId - 'releases', 'roadmap', or 'customers'
+     * @param {Array} config.items - Work items to build options from
+     * @param {Array} config.selectedPriorities - Currently selected priorities
+     * @returns {string} HTML string for dropdown content
+     */
+    function buildPriorityFilterDropdown(config) {
+        const { dashboardId, items, selectedPriorities } = config;
+        const { priorities, priorityInfo, noPriorityCount } = computePriorityInfo(items);
+
+        const optionsId = `${dashboardId}-priority-options`;
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search priorities..."
+                       oninput="filterGenericPriorityOptions('${optionsId}', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${optionsId}">
+        `;
+
+        // Priority options sorted numerically (P1 first)
+        priorities.forEach(p => {
+            const info = priorityInfo[p];
+            const isChecked = selectedPriorities.includes(p);
+
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${p.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${p}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericPriorityChange('${dashboardId}', '${p}', this.checked, event)">
+                    <span class="option-label">${p}</span>
+                    <span class="option-count">${info.count}</span>
+                </label>
+            `;
+        });
+
+        // "(No Priority)" option last
+        if (noPriorityCount > 0) {
+            const isChecked = selectedPriorities.includes('(No Priority)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(no priority)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Priority)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericPriorityChange('${dashboardId}', '(No Priority)', this.checked, event)">
+                    <span class="option-label">(No Priority)</span>
+                    <span class="option-count">${noPriorityCount}</span>
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericPriority('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericPriority('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    /**
+     * Filter priority options by search text
+     */
+    function filterGenericPriorityOptions(optionsId, searchText) {
+        const container = document.getElementById(optionsId);
+        if (!container) return;
+
+        const searchLower = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(searchLower) ? '' : 'none';
+        });
+    }
+
+    /**
+     * Handle priority checkbox change
+     */
+    function handleGenericPriorityChange(dashboardId, priority, checked, event) {
+        if (event) event.stopPropagation();
+
+        // Save scroll position
+        const optionsId = `${dashboardId}-priority-options`;
+        const optionsContainer = document.getElementById(optionsId);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        let openDropdownId;
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-priority-header-dropdown';
+            if (checked) {
+                if (!releaseHeaderFilters.priority.includes(priority)) {
+                    releaseHeaderFilters.priority.push(priority);
+                }
+            } else {
+                releaseHeaderFilters.priority = releaseHeaderFilters.priority.filter(p => p !== priority);
+            }
+            updateGenericPriorityDisplay(dashboardId);
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-priority-dropdown';
+            if (checked) {
+                if (!roadmapFilters.priorities.includes(priority)) {
+                    roadmapFilters.priorities.push(priority);
+                }
+            } else {
+                roadmapFilters.priorities = roadmapFilters.priorities.filter(p => p !== priority);
+            }
+            updateGenericPriorityDisplay(dashboardId);
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-priority-dropdown';
+            if (checked) {
+                if (!customersFilters.priorities.includes(priority)) {
+                    customersFilters.priorities.push(priority);
+                }
+            } else {
+                customersFilters.priorities = customersFilters.priorities.filter(p => p !== priority);
+            }
+            updateGenericPriorityDisplay(dashboardId);
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+
+        // Re-open dropdown and restore scroll position
+        setTimeout(() => {
+            const dropdown = document.getElementById(openDropdownId);
+            if (dropdown) {
+                dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(optionsId);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }
+        }, 10);
+    }
+
+    /**
+     * Select all priorities for a dashboard
+     */
+    function selectAllGenericPriority(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-priority-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        const allPriorities = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            allPriorities.push(cb.value);
+        });
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.priority = allPriorities;
+            updateGenericPriorityDisplay(dashboardId);
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.priorities = allPriorities;
+            updateGenericPriorityDisplay(dashboardId);
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            customersFilters.priorities = allPriorities;
+            updateGenericPriorityDisplay(dashboardId);
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+    }
+
+    /**
+     * Clear priority selection for a dashboard
+     */
+    function clearGenericPriority(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-priority-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.priority = [];
+            updateGenericPriorityDisplay(dashboardId);
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.priorities = [];
+            updateGenericPriorityDisplay(dashboardId);
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            customersFilters.priorities = [];
+            updateGenericPriorityDisplay(dashboardId);
+            saveStateToStorage();
+            renderCustomersView();
+            updateCustomersClearButton();
+        }
+    }
+
+    /**
+     * Update priority filter display text
+     */
+    function updateGenericPriorityDisplay(dashboardId) {
+        let displayId, selectedPriorities;
+
+        if (dashboardId === 'releases') {
+            displayId = 'release-priority-display';
+            selectedPriorities = releaseHeaderFilters.priority;
+        } else if (dashboardId === 'roadmap') {
+            displayId = 'roadmap-priority-display';
+            selectedPriorities = roadmapFilters.priorities;
+        } else if (dashboardId === 'customers') {
+            displayId = 'customers-priority-display';
+            selectedPriorities = customersFilters.priorities;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        if (selectedPriorities.length === 0) {
+            display.textContent = 'All Priorities';
+        } else if (selectedPriorities.length === 1) {
+            display.textContent = selectedPriorities[0];
+        } else {
+            display.textContent = `${selectedPriorities.length} selected`;
+        }
+    }
+
+    /**
+     * Sync priority filter checkboxes with current state (after loading from localStorage)
+     */
+    function syncGenericPriorityFilter(dashboardId) {
+        let selectedPriorities;
+
+        if (dashboardId === 'releases') {
+            selectedPriorities = releaseHeaderFilters.priority;
+        } else if (dashboardId === 'roadmap') {
+            selectedPriorities = roadmapFilters.priorities;
+        } else if (dashboardId === 'customers') {
+            selectedPriorities = customersFilters.priorities;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-priority-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedPriorities.includes(cb.value);
+        });
+
+        updateGenericPriorityDisplay(dashboardId);
+    }
+
+    // ==================== END GENERIC PRIORITY FILTER COMPONENT ====================
 
     // Utility functions
     function getStateClass(state) {

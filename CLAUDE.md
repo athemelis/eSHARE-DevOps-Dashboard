@@ -76,7 +76,7 @@ git push
 # Verify push was successful (should show "Everything up-to-date" or commit info)
 ```
 
-## Current Version: v84
+## Current Version: v85
 
 ## UI Patterns for All Dashboards
 
@@ -284,6 +284,109 @@ When adding a new filter type that will appear on multiple dashboards:
 
 5. **Update each dashboard** to use the generic component instead of custom logic
 
+6. **Implement cross-filter behavior** (see Cross-Filter Pattern below)
+
+### Cross-Filter Pattern for Generic Filter Components
+When multiple generic filters are used together, selecting a value in one filter should update the options shown in other filter dropdowns. This ensures users only see relevant options.
+
+**Why cross-filter matters:**
+- If user selects "Release 1.0" in Release filter, Customer dropdown should only show customers with items in Release 1.0
+- Prevents confusion from seeing options that would return zero results
+- Makes filter exploration more intuitive
+
+**Implementation Steps:**
+
+1. **Create dashboard-specific excluding filter helper** in the dashboard's template file:
+   ```javascript
+   // Example for "MyDashboard" - put in the dashboard's part file
+   function getMyDashboardItemsExcludingFilter(excludeFilter) {
+       let items = getBaseItems(); // Your base item getter
+
+       // Always apply search filter (never excluded)
+       items = applyGenericSearchFilter(items, myDashboardFilters.search);
+
+       // Apply each filter EXCEPT the excluded one
+       if (excludeFilter !== 'release' && myDashboardFilters.releases.length > 0) {
+           items = items.filter(item => {
+               const category = getReleaseCategory(item);
+               return myDashboardFilters.releases.includes(category);
+           });
+       }
+
+       if (excludeFilter !== 'customer' && myDashboardFilters.customers.length > 0) {
+           items = items.filter(item => {
+               if (myDashboardFilters.customers.includes('(No Customer)') && !item.customer) return true;
+               return myDashboardFilters.customers.includes(item.customer);
+           });
+       }
+
+       if (excludeFilter !== 'priority' && myDashboardFilters.priorities.length > 0) {
+           items = items.filter(item => {
+               const priority = item.priority ? 'P' + item.priority : '(No Priority)';
+               return myDashboardFilters.priorities.includes(priority);
+           });
+       }
+
+       // Add other filters as needed...
+
+       return items;
+   }
+   ```
+
+2. **Use excluding helper when populating dropdowns** - DO NOT cache with `dataset.populated`:
+   ```javascript
+   // In render function - rebuild dropdowns dynamically each time
+   const releaseMenu = document.getElementById('myDashboard-release-menu');
+   if (releaseMenu) {
+       // Get items filtered by everything EXCEPT release
+       const releaseFilteredItems = getMyDashboardItemsExcludingFilter('release');
+       releaseMenu.innerHTML = buildReleaseFilterDropdown({
+           dashboardId: 'myDashboard',
+           items: releaseFilteredItems,
+           selectedReleases: myDashboardFilters.releases
+       });
+   }
+
+   const customerMenu = document.getElementById('myDashboard-customer-menu');
+   if (customerMenu) {
+       // Get items filtered by everything EXCEPT customer
+       const customerFilteredItems = getMyDashboardItemsExcludingFilter('customer');
+       customerMenu.innerHTML = buildCustomerFilterDropdown({
+           dashboardId: 'myDashboard',
+           items: customerFilteredItems,
+           selectedCustomers: myDashboardFilters.customers
+       });
+   }
+
+   const priorityMenu = document.getElementById('myDashboard-priority-menu');
+   if (priorityMenu) {
+       // Get items filtered by everything EXCEPT priority
+       const priorityFilteredItems = getMyDashboardItemsExcludingFilter('priority');
+       priorityMenu.innerHTML = buildPriorityFilterDropdown({
+           dashboardId: 'myDashboard',
+           items: priorityFilteredItems,
+           selectedPriorities: myDashboardFilters.priorities
+       });
+   }
+   ```
+
+3. **IMPORTANT: Do NOT use `dataset.populated` caching** - dropdowns must rebuild each render:
+   ```javascript
+   // WRONG - prevents cross-filter updates
+   if (!releaseMenu.dataset.populated) {
+       releaseMenu.innerHTML = buildReleaseFilterDropdown({...});
+       releaseMenu.dataset.populated = 'true';
+   }
+
+   // CORRECT - rebuilds dropdown to reflect current filter state
+   releaseMenu.innerHTML = buildReleaseFilterDropdown({...});
+   ```
+
+**Existing cross-filter implementations:**
+- **Releases dashboard:** `getItemsExcludingFilter(items, excludeFilter)` in part4.html
+- **Roadmap dashboard:** `getRoadmapFeaturesExcludingFilter(excludeFilter)` in part3.html
+- **Customers dashboard:** `getCustomersIssuesExcludingFilter(excludeFilter)` in part3.html
+
 ### Generic Search Filter Component (part2.html)
 The Search filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
 
@@ -400,13 +503,140 @@ if (customerMenu) {
 - **Alphabetical sorting** (case-insensitive)
 - **Scroll position preserved** when selecting items
 
+### Generic Priority Filter Component (part2.html)
+The Priority filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
+
+**Location:** `Templates/dashboard_v3_part2.html` (lines 1449-1742)
+
+**Core Functions:**
+| Function | Purpose |
+|----------|---------|
+| `computePriorityInfo(items)` | Analyzes items → priority list, counts, noPriorityCount |
+| `buildPriorityFilterDropdown(config)` | Builds dropdown HTML with search, options (P1-P4), (No Priority), actions |
+| `filterGenericPriorityOptions(optionsId, searchText)` | Filters options by search text |
+| `handleGenericPriorityChange(dashboardId, ...)` | Routes checkbox changes to correct dashboard state |
+| `selectAllGenericPriority(dashboardId, ...)` | Select All handler |
+| `clearGenericPriority(dashboardId, ...)` | Clear handler |
+| `updateGenericPriorityDisplay(dashboardId)` | Updates display text |
+| `syncGenericPriorityFilter(dashboardId)` | Syncs checkboxes after localStorage load |
+
+**Usage - Adding Priority Filter to a New Dashboard:**
+```javascript
+// 1. In HTML (part1.html), add the dropdown structure:
+<span class="filter-row-label">Priority:</span>
+<div class="filter-dropdown" id="DASHBOARD-priority-dropdown">
+    <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('DASHBOARD-priority-dropdown')">
+        <span id="DASHBOARD-priority-display">All Priorities</span>
+        <span class="arrow">▼</span>
+    </div>
+    <div class="filter-dropdown-menu" id="DASHBOARD-priority-menu">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+
+// 2. In CSS (part1.html), add to wide dropdown list:
+#DASHBOARD-priority-menu { right: auto; min-width: 200px; }
+
+// 3. In dashboard state, add priorities property:
+let dashboardFilters = {
+    priorities: [],
+    // ... other filters
+};
+
+// 4. In render function, populate the dropdown:
+const priorityMenu = document.getElementById('DASHBOARD-priority-menu');
+if (priorityMenu) {
+    priorityMenu.innerHTML = buildPriorityFilterDropdown({
+        dashboardId: 'DASHBOARD',
+        items: workItems,
+        selectedPriorities: dashboardFilters.priorities
+    });
+}
+
+// 5. In handleGenericPriorityChange() (part2.html), add dashboard routing:
+} else if (dashboardId === 'DASHBOARD') {
+    // Update state, call render function
+}
+
+// 6. In filter logic, apply priority filter:
+if (dashboardFilters.priorities.length > 0) {
+    items = items.filter(item => {
+        const priority = item.priority ? 'P' + item.priority : '(No Priority)';
+        return dashboardFilters.priorities.includes(priority);
+    });
+}
+```
+
+**Features:**
+- **Priorities sorted numerically** (P1, P2, P3, P4)
+- **"(No Priority)" option** shown last with count
+- **Item count** displayed next to each priority
+- **Search box** filters options as you type
+- **Scroll position preserved** when selecting items
+
 ### Filter Row Order Convention
-For consistency, filters should follow this order (when applicable):
+For consistency, generic filters should follow this order across all dashboards:
 1. **Search** (always first)
-2. **Release** (second - most common filter)
-3. Dashboard-specific filters (State, Team, Customer, etc.)
-4. **Clear All button** (before Info)
-5. **Info popup** (always last, `margin-left: auto`)
+2. **Release** (second - most common cross-dashboard filter)
+3. **Customer** (third)
+4. **Priority** (fourth)
+5. Dashboard-specific filters (State, Team, Iteration, Tag, etc.)
+6. **Clear All button** (before Info)
+7. **Info popup** (always last, `margin-left: auto`)
+
+This order ensures users have a consistent experience when switching between dashboards.
+
+## v85 Summary (December 2024)
+**Generic Priority Filter Component:**
+- Created shared Priority filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- Shows P1, P2, P3, P4 with item counts (sorted numerically)
+- Shows "(No Priority)" option last with count of items without priority
+- Includes search box at top for filtering options
+- Wide dropdown (200px) for better readability
+
+**Priority Functions Added:**
+- `computePriorityInfo()` - Analyze items for priority data
+- `buildPriorityFilterDropdown()` - Build dropdown HTML with search, options, actions
+- `filterGenericPriorityOptions()` - Search filter for options
+- `handleGenericPriorityChange()` - Checkbox change handler
+- `selectAllGenericPriority()` - Select All handler
+- `clearGenericPriority()` - Clear handler
+- `updateGenericPriorityDisplay()` - Update display text
+- `syncGenericPriorityFilter()` - Sync checkboxes after localStorage load
+
+**Cross-Filter Behavior for All Generic Filters:**
+- All generic filters (Search, Release, Customer, Priority) now have cross-filter behavior
+- Selecting a value in one filter updates options shown in other filter dropdowns
+- Ensures users only see relevant options based on current selections
+- Documented cross-filter pattern in CLAUDE.md for future components
+
+**Cross-Filter Helper Functions Added:**
+- `getRoadmapFeaturesExcludingFilter(excludeFilter)` - Roadmap cross-filter helper (part3.html)
+- `getCustomersIssuesExcludingFilter(excludeFilter)` - Customers cross-filter helper (part3.html)
+- `getItemsExcludingFilter(items, excludeFilter)` - Releases cross-filter helper (part4.html) - updated to include priority
+
+**Filter Order Standardized:**
+- All three dashboards now use consistent filter order: Search → Release → Customer → Priority
+- Roadmap: Moved Priority after Customer (was after Iteration)
+- Customers: Moved Priority after Customer (was after State)
+
+**Releases Dashboard:**
+- Added Priority filter after Customer filter (before Type)
+- Filter applies to all release items (Features, Issues, Bugs)
+- Cross-filter aware: dropdown options update based on other active filters
+
+**Roadmap Dashboard:**
+- Refactored to use generic Priority component
+- Updated filter logic to use P1/P2/P3/P4 format (instead of raw numbers)
+- Updated sync and clear functions to use generic component
+- All generic filter dropdowns now rebuild dynamically (removed `dataset.populated` caching)
+
+**Customers Dashboard:**
+- Refactored to use generic Priority component
+- Filter logic already used P1/P2/P3/P4 format (no change needed)
+- Updated dropdown population and display functions
+- All generic filter dropdowns now rebuild dynamically (removed `dataset.populated` caching)
 
 ## v84 Summary (December 2024)
 **Generic Search Filter Component:**
