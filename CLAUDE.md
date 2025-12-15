@@ -55,7 +55,7 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
-## Current Version: v80
+## Current Version: v83
 
 ## UI Patterns for All Dashboards
 
@@ -164,6 +164,125 @@ if (roadmapFilters.tags.length > 0) {
     }
 }
 ```
+
+## Generic Filter Components (v83+)
+
+### Philosophy: Shared Components for Cross-Dashboard Consistency
+When a filter type appears on multiple dashboards, use a **generic component** instead of dashboard-specific implementations. This ensures:
+- Visual consistency (same dropdown width, styling, options)
+- Behavioral consistency (same Select All/Clear logic, scroll preservation)
+- Single point of maintenance (fix once, works everywhere)
+
+### Generic Release Filter Component (part2.html)
+The Release filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
+
+**Location:** `Templates/dashboard_v3_part2.html` (lines 680-1015)
+
+**Core Functions:**
+| Function | Purpose |
+|----------|---------|
+| `computeReleaseInfo(items)` | Analyzes work items → releases, dates, counts |
+| `buildReleaseFilterDropdown(config)` | Builds dropdown HTML with search, options, actions |
+| `handleGenericReleaseChange(dashboardId, ...)` | Routes checkbox changes to correct dashboard state |
+| `selectAllGenericRelease(dashboardId, ...)` | Select All handler |
+| `clearGenericRelease(dashboardId, ...)` | Clear handler |
+| `updateGenericReleaseDisplay(dashboardId)` | Updates display text |
+| `syncGenericReleaseFilter(dashboardId)` | Syncs checkboxes after localStorage load |
+
+**Usage - Adding Release Filter to a New Dashboard:**
+```javascript
+// 1. In HTML (part1.html), add the dropdown structure:
+<span class="filter-row-label">Release:</span>
+<div class="filter-dropdown" id="DASHBOARD-release-dropdown">
+    <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('DASHBOARD-release-dropdown')">
+        <span id="DASHBOARD-release-display">All Releases</span>
+        <span class="arrow">▼</span>
+    </div>
+    <div class="filter-dropdown-menu" id="DASHBOARD-release-menu">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+
+// 2. In CSS (part1.html), add to wide dropdown list:
+#DASHBOARD-release-menu { right: auto; min-width: 280px; }
+
+// 3. In render function, populate the dropdown:
+const releaseMenu = document.getElementById('DASHBOARD-release-menu');
+if (releaseMenu) {
+    const items = workItems.filter(w => w.type === 'YourType');
+    releaseMenu.innerHTML = buildReleaseFilterDropdown({
+        dashboardId: 'DASHBOARD',  // Must match ID prefix
+        items: items,
+        selectedReleases: dashboardFilters.releases
+    });
+}
+
+// 4. In handleGenericReleaseChange(), add dashboard routing:
+} else if (dashboardId === 'DASHBOARD') {
+    openDropdownId = 'DASHBOARD-release-dropdown';
+    // Update state, call render function
+}
+
+// 5. In filter logic, handle all three categories:
+const getItemReleaseCategory = (item) => {
+    if (item.releaseVersion?.trim()) return item.releaseVersion.trim();
+    return item.targetDate ? '(Needs Release)' : '(No Release)';
+};
+```
+
+**Release Categories:**
+- **Regular releases** - Items with `releaseVersion` set (sorted by target date)
+- **⚠️ Needs Release** - Items with `targetDate` but no `releaseVersion` (warning styling)
+- **(No Release)** - Items with neither `releaseVersion` nor `targetDate`
+
+### Creating a New Generic Filter Component
+When adding a new filter type that will appear on multiple dashboards:
+
+1. **Create compute function** in part2.html:
+   ```javascript
+   function computeFilterInfo(items) {
+       // Return { options: [...], optionInfo: {...}, counts }
+   }
+   ```
+
+2. **Create build function** in part2.html:
+   ```javascript
+   function buildFilterDropdown(config) {
+       const { dashboardId, items, selectedValues } = config;
+       // Return HTML string with data-search-value, checkbox value attributes
+   }
+   ```
+
+3. **Create handler functions** in part2.html:
+   - `handleGenericFilterChange(dashboardId, value, checked, event)`
+   - `selectAllGenericFilter(dashboardId, event)`
+   - `clearGenericFilter(dashboardId, event)`
+   - `updateGenericFilterDisplay(dashboardId)`
+
+4. **Add CSS** in part1.html for dropdown width if needed
+
+5. **Update each dashboard** to use the generic component instead of custom logic
+
+### Filter Row Order Convention
+For consistency, filters should follow this order (when applicable):
+1. **Search** (always first)
+2. **Release** (second - most common filter)
+3. Dashboard-specific filters (State, Team, Customer, etc.)
+4. **Clear All button** (before Info)
+5. **Info popup** (always last, `margin-left: auto`)
+
+## v83 Summary (December 2024)
+**Generic Release Filter Component:**
+- Created shared Release filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- Shows release version + target date in dropdown (280px wide)
+- Includes "⚠️ Needs Release" warning category for items with date but no release
+- Moved Release filter to position 2 (after Search) on Roadmap and Customers dashboards
+
+**Functions Added:**
+- `computeReleaseInfo()`, `buildReleaseFilterDropdown()`
+- `handleGenericReleaseChange()`, `selectAllGenericRelease()`, `clearGenericRelease()`
+- `updateGenericReleaseDisplay()`, `syncGenericReleaseFilter()`
 
 ## v79 Summary (December 2024)
 **State Persistence for ALL Dashboard Views:**

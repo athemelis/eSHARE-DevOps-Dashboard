@@ -812,8 +812,14 @@
         // Apply release filter
         if (customersFilters.releases.length > 0) {
             issues = issues.filter(i => {
-                const release = i.releaseVersion || '(No Release)';
-                return customersFilters.releases.includes(release);
+                // Determine release category: actual release, "(Needs Release)", or "(No Release)"
+                let releaseCategory;
+                if (i.releaseVersion && i.releaseVersion.trim()) {
+                    releaseCategory = i.releaseVersion.trim();
+                } else {
+                    releaseCategory = i.targetDate ? '(Needs Release)' : '(No Release)';
+                }
+                return customersFilters.releases.includes(releaseCategory);
             });
         }
 
@@ -1111,10 +1117,16 @@
             priorityMenu.innerHTML = buildCustomersDropdownHtml('priorities', allPriorities, customersFilters.priorities);
         }
 
-        // Build release dropdown with dates (special handling)
+        // Build release dropdown using generic component
         const releaseMenu = document.getElementById('customers-release-menu');
         if (releaseMenu) {
-            releaseMenu.innerHTML = buildCustomersReleaseDropdownHtml(releaseInfo, allReleases, noReleaseCount, customersFilters.releases);
+            // Use Issues for computing release info (Customers dashboard shows Issues only)
+            const allIssues = workItems.filter(w => w.type === 'Issue');
+            releaseMenu.innerHTML = buildReleaseFilterDropdown({
+                dashboardId: 'customers',
+                items: allIssues,
+                selectedReleases: customersFilters.releases
+            });
         }
 
         // Aging filter dropdown - use AGING_BUCKETS constant for consistent order
@@ -1931,10 +1943,19 @@
 
         // Apply release version filter
         if (roadmapFilters.releases.length > 0) {
+            // Helper to get release category for a feature
+            const getFeatureReleaseCategory = (f) => {
+                if (f.releaseVersion && f.releaseVersion.trim()) {
+                    return f.releaseVersion.trim();
+                }
+                // No release version - check if has target date
+                return f.targetDate ? '(Needs Release)' : '(No Release)';
+            };
+
             if (roadmapFilters.releasesExclusionMode) {
                 // Exclusion mode: Started from "Select All", now excluding unchecked releases
-                // Get all available releases to determine what's unchecked
-                const allAvailableReleases = new Set(['(No Release)']);
+                // Get all available release categories
+                const allAvailableReleases = new Set(['(No Release)', '(Needs Release)']);
                 getRoadmapFeatures().forEach(f => {
                     if (f.releaseVersion && f.releaseVersion.trim()) {
                         allAvailableReleases.add(f.releaseVersion.trim());
@@ -1943,14 +1964,14 @@
                 const uncheckedReleases = [...allAvailableReleases].filter(r => !roadmapFilters.releases.includes(r));
 
                 features = features.filter(f => {
-                    const featureRelease = (f.releaseVersion && f.releaseVersion.trim()) || '(No Release)';
+                    const featureRelease = getFeatureReleaseCategory(f);
                     // Exclude features that have any unchecked release
                     return !uncheckedReleases.includes(featureRelease);
                 });
             } else {
                 // Inclusion mode: Show features that have any of the selected releases
                 features = features.filter(f => {
-                    const featureRelease = (f.releaseVersion && f.releaseVersion.trim()) || '(No Release)';
+                    const featureRelease = getFeatureReleaseCategory(f);
                     return roadmapFilters.releases.includes(featureRelease);
                 });
             }
@@ -2510,26 +2531,16 @@
             priorityMenu.dataset.populated = 'true';
         }
 
-        // Populate Release dropdown
+        // Populate Release dropdown using generic component
         const releaseMenu = document.getElementById('roadmap-release-menu');
         if (releaseMenu && !releaseMenu.dataset.populated) {
-            releaseMenu.innerHTML = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search releases..." oninput="filterRoadmapDropdownOptions('release', this.value)">
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-release-options">
-                    ${releases.map(r => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.releases.includes(r) ? 'checked' : ''} onchange="handleRoadmapFilterChange('release', '${r.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${r}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('release')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('release')">Clear</button>
-                </div>
-            `;
+            // Use Features for computing release info
+            const allFeatures = workItems.filter(w => w.type === 'Feature');
+            releaseMenu.innerHTML = buildReleaseFilterDropdown({
+                dashboardId: 'roadmap',
+                items: allFeatures,
+                selectedReleases: roadmapFilters.releases
+            });
             releaseMenu.dataset.populated = 'true';
         }
 
@@ -2597,9 +2608,10 @@
 
             optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
                 const cb = opt.querySelector('input[type="checkbox"]');
-                const label = opt.querySelector('.option-label')?.textContent;
-                if (cb && label) {
-                    cb.checked = selectedValues.includes(label);
+                // Generic release component uses value attribute, others use label text
+                const matchValue = cb?.value || opt.querySelector('.option-label')?.textContent;
+                if (cb && matchValue) {
+                    cb.checked = selectedValues.includes(matchValue);
                 }
             });
 

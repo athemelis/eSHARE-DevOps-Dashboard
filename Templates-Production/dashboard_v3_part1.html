@@ -197,7 +197,27 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
         }
         .filter-dropdown-menu.open { display: block; }
-        
+
+        /* Wide dropdown menu - for Release filter showing version + date */
+        /* Applied to all release filter menus across dashboards */
+        #release-filter-menu,
+        #roadmap-release-menu,
+        #customers-release-menu {
+            right: auto;
+            min-width: 280px;
+        }
+        #release-filter-menu .option-label,
+        #roadmap-release-menu .option-label,
+        #customers-release-menu .option-label {
+            min-width: 140px;
+            white-space: nowrap;
+        }
+        #release-filter-menu .option-meta,
+        #roadmap-release-menu .option-meta,
+        #customers-release-menu .option-meta {
+            white-space: nowrap;
+        }
+
         .filter-dropdown-option {
             display: flex;
             align-items: center;
@@ -2983,7 +3003,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v82</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v83</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -3130,6 +3150,17 @@
             <span class="filter-row-label">Search:</span>
             <input type="text" id="roadmap-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyRoadmapFilters()">
 
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="roadmap-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-release-dropdown')">
+                    <span id="roadmap-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-release-menu">
+                    <!-- Populated dynamically by generic Release filter -->
+                </div>
+            </div>
+
             <span class="filter-row-label">State:</span>
             <div class="filter-dropdown" id="roadmap-state-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-state-dropdown')">
@@ -3137,28 +3168,6 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="roadmap-state-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Customer:</span>
-            <div class="filter-dropdown" id="roadmap-customer-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-customer-dropdown')">
-                    <span id="roadmap-customer-display">All Customers</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="roadmap-customer-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Assigned To:</span>
-            <div class="filter-dropdown" id="roadmap-assignee-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-assignee-dropdown')">
-                    <span id="roadmap-assignee-display">All Assignees</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="roadmap-assignee-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -3196,24 +3205,35 @@
                 </div>
             </div>
 
-            <span class="filter-row-label">Release:</span>
-            <div class="filter-dropdown" id="roadmap-release-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-release-dropdown')">
-                    <span id="roadmap-release-display">(No Release)</span>
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="roadmap-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
+                    <span id="roadmap-tag-display">All Tags</span>
                     <span class="arrow">▼</span>
                 </div>
-                <div class="filter-dropdown-menu" id="roadmap-release-menu">
+                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
 
-            <span class="filter-row-label">Tag:</span>
-            <div class="filter-dropdown" id="roadmap-tag-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
-                    <span id="roadmap-tag-display">Candidate</span>
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="roadmap-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-customer-dropdown')">
+                    <span id="roadmap-customer-display">All Customers</span>
                     <span class="arrow">▼</span>
                 </div>
-                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
+                <div class="filter-dropdown-menu" id="roadmap-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Assigned To:</span>
+            <div class="filter-dropdown" id="roadmap-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-assignee-dropdown')">
+                    <span id="roadmap-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-assignee-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -3223,11 +3243,9 @@
             <div class="filter-row-info" style="margin-left: auto;">
                 <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ Info</span>
                 <div class="info-panel" id="roadmap-info-panel">
-                    <p><strong>Default filters:</strong></p>
-                    <p>• Release: "(No Release)" - Features with no Release Version assigned</p>
-                    <p>• Tag: "Candidate" - Features tagged as Candidate</p>
+                    <p><strong>Roadmap Features:</strong> All Features in the backlog</p>
                     <p><strong>Default order:</strong> Backlog Priority (lower = higher priority)</p>
-                    <p>Click any column header to sort. Use "Reset to Backlog Priority" to restore default order.</p>
+                    <p>Click any column header to sort. Use filters to narrow down the list.</p>
                 </div>
             </div>
         </div>
@@ -3236,6 +3254,17 @@
         <div class="filter-row" id="filter-row-customers">
             <span class="filter-row-label">Search:</span>
             <input type="text" id="customers-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="applyCustomersFilters()">
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="customers-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-release-dropdown')">
+                    <span id="customers-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-release-menu">
+                    <!-- Populated dynamically by generic Release filter -->
+                </div>
+            </div>
 
             <span class="filter-row-label">Customer:</span>
             <div class="filter-dropdown" id="customers-customer-dropdown">
@@ -3277,17 +3306,6 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="customers-priority-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Release:</span>
-            <div class="filter-dropdown" id="customers-release-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-release-dropdown')">
-                    <span id="customers-release-display">All Releases</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="customers-release-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>

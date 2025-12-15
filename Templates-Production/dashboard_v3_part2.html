@@ -676,7 +676,363 @@
             return true;
         });
     }
-    
+
+    // ==================== GENERIC RELEASE FILTER COMPONENT ====================
+    // Shared Release filter dropdown used by Releases, Roadmap, and Customers dashboards
+
+    /**
+     * Compute release info from work items
+     * @param {Array} items - Work items to analyze
+     * @returns {Object} { releases: [...], releaseInfo: {...}, noReleaseCount: number, needsReleaseCount: number }
+     */
+    function computeReleaseInfo(items) {
+        const releaseInfo = {};
+        let noReleaseCount = 0;      // Items with no release AND no target date
+        let needsReleaseCount = 0;   // Items with target date but no release (needs attention)
+
+        items.forEach(item => {
+            const rv = item.releaseVersion;
+            if (!rv) {
+                // No release version - categorize based on whether it has a target date
+                if (item.targetDate) {
+                    needsReleaseCount++;  // Has date but needs release assignment
+                } else {
+                    noReleaseCount++;     // No release, no date
+                }
+                return;
+            }
+            if (!releaseInfo[rv]) {
+                releaseInfo[rv] = { dates: new Set(), count: 0, items: [] };
+            }
+            if (item.targetDate) {
+                releaseInfo[rv].dates.add(item.targetDate.split('T')[0]); // Just the date part
+            }
+            releaseInfo[rv].count++;
+            releaseInfo[rv].items.push(item);
+        });
+
+        // Sort releases by date (earliest first), then alphabetically
+        const releases = Object.keys(releaseInfo).sort((a, b) => {
+            const datesA = [...releaseInfo[a].dates].sort();
+            const datesB = [...releaseInfo[b].dates].sort();
+            const dateA = datesA[0] || 'ZZZZ';
+            const dateB = datesB[0] || 'ZZZZ';
+            if (dateA !== dateB) return dateA.localeCompare(dateB);
+            return a.localeCompare(b);
+        });
+
+        return { releases, releaseInfo, noReleaseCount, needsReleaseCount };
+    }
+
+    /**
+     * Build Release filter dropdown HTML (generic component)
+     * @param {Object} config - Configuration object
+     * @param {string} config.dashboardId - 'releases', 'roadmap', or 'customers'
+     * @param {Array} config.items - Work items to build options from
+     * @param {Array} config.selectedReleases - Currently selected release versions
+     * @param {string} config.searchFilter - Current search filter (optional, for highlighting)
+     * @returns {string} HTML string for dropdown content
+     */
+    function buildReleaseFilterDropdown(config) {
+        const { dashboardId, items, selectedReleases, searchFilter = '' } = config;
+        const { releases, releaseInfo, noReleaseCount, needsReleaseCount } = computeReleaseInfo(items);
+
+        const menuId = `${dashboardId}-release-menu`;
+        const optionsId = `${dashboardId}-release-options`;
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search releases..."
+                       oninput="filterGenericReleaseOptions('${optionsId}', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${optionsId}">
+        `;
+
+        // Regular releases with dates (at the top)
+        releases.forEach(r => {
+            const info = releaseInfo[r];
+            const isChecked = selectedReleases.includes(r);
+            let dateDisplay;
+            if (info.dates.size === 1) {
+                dateDisplay = [...info.dates][0];
+            } else if (info.dates.size > 1) {
+                dateDisplay = 'Multiple dates';
+            } else {
+                dateDisplay = 'No date';
+            }
+
+            const escapedRelease = r.replace(/"/g, '&quot;');
+            const escapedReleaseJs = r.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${r.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${escapedRelease}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '${escapedReleaseJs}', this.checked, event)">
+                    <span class="option-label">${r}</span>
+                    <span class="option-meta">${dateDisplay}</span>
+                </label>
+            `;
+        });
+
+        // ⚠️ Needs Release - items with target date but no release version (warning)
+        if (needsReleaseCount > 0) {
+            const isChecked = selectedReleases.includes('(Needs Release)');
+            html += `
+                <label class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(Needs Release)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '(Needs Release)', this.checked, event)">
+                    <span class="option-label">⚠️ Needs Release</span>
+                    <span class="option-meta">${needsReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // (No Release) option - items with no release AND no target date
+        if (noReleaseCount > 0) {
+            const isChecked = selectedReleases.includes('(No Release)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="no release not set" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '(No Release)', this.checked, event)">
+                    <span class="option-label">(No Release)</span>
+                    <span class="option-meta">${noReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericRelease('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericRelease('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    /**
+     * Filter release dropdown options by search text
+     */
+    function filterGenericReleaseOptions(optionsId, searchText) {
+        const searchLower = searchText.toLowerCase().trim();
+        const optionsContainer = document.getElementById(optionsId);
+        if (!optionsContainer) return;
+
+        const options = optionsContainer.querySelectorAll('.filter-dropdown-option');
+        options.forEach(option => {
+            const searchValue = option.getAttribute('data-search-value') || '';
+            option.style.display = (searchLower === '' || searchValue.includes(searchLower)) ? '' : 'none';
+        });
+    }
+
+    /**
+     * Handle release checkbox change - routes to appropriate dashboard handler
+     */
+    function handleGenericReleaseChange(dashboardId, releaseVersion, checked, event) {
+        event.stopPropagation();
+
+        // Save scroll position before re-render
+        const optionsId = `${dashboardId}-release-options`;
+        const optionsContainer = document.getElementById(optionsId);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        // Route to dashboard-specific logic
+        if (dashboardId === 'releases') {
+            // Releases dashboard uses selectedReleases array
+            openDropdownId = 'release-filter-dropdown';
+            if (checked) {
+                if (!selectedReleases.includes(releaseVersion)) selectedReleases.push(releaseVersion);
+            } else {
+                selectedReleases = selectedReleases.filter(r => r !== releaseVersion);
+            }
+            updateReleaseHeaderDisplay();
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            // Roadmap dashboard uses roadmapFilters.releases
+            openDropdownId = 'roadmap-release-dropdown';
+            if (checked) {
+                if (!roadmapFilters.releases.includes(releaseVersion)) roadmapFilters.releases.push(releaseVersion);
+            } else {
+                roadmapFilters.releases = roadmapFilters.releases.filter(r => r !== releaseVersion);
+            }
+            roadmapFilters.releasesExclusionMode = false; // Switch to inclusion mode on manual selection
+            updateGenericReleaseDisplay('roadmap');
+            // Note: Clear button visibility is updated in renderRoadmapView()
+            saveStateToStorage();
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            // Customers dashboard uses customersFilters.releases
+            openDropdownId = 'customers-release-dropdown';
+            if (checked) {
+                if (!customersFilters.releases.includes(releaseVersion)) customersFilters.releases.push(releaseVersion);
+            } else {
+                customersFilters.releases = customersFilters.releases.filter(r => r !== releaseVersion);
+            }
+            updateGenericReleaseDisplay('customers');
+            updateCustomersClearButton();
+            saveStateToStorage();
+            renderCustomersView();
+        }
+
+        reopenDropdown();
+
+        // Restore scroll position after re-render
+        const newOptionsContainer = document.getElementById(optionsId);
+        if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+    }
+
+    /**
+     * Select all releases for a dashboard
+     */
+    function selectAllGenericRelease(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-release-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        const allValues = Array.from(checkboxes).map(cb => cb.value);
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-filter-dropdown';
+            selectedReleases = allValues;
+            checkboxes.forEach(cb => cb.checked = true);
+            updateReleaseHeaderDisplay();
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-release-dropdown';
+            roadmapFilters.releases = allValues;
+            roadmapFilters.releasesExclusionMode = true; // Switch to exclusion mode on Select All
+            checkboxes.forEach(cb => cb.checked = true);
+            updateGenericReleaseDisplay('roadmap');
+            // Note: Clear button visibility is updated in renderRoadmapView()
+            saveStateToStorage();
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-release-dropdown';
+            customersFilters.releases = allValues;
+            checkboxes.forEach(cb => cb.checked = true);
+            updateGenericReleaseDisplay('customers');
+            updateCustomersClearButton();
+            saveStateToStorage();
+            renderCustomersView();
+        }
+
+        reopenDropdown();
+    }
+
+    /**
+     * Clear release selection for a dashboard
+     */
+    function clearGenericRelease(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-release-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-filter-dropdown';
+            selectedReleases = [];
+            updateReleaseHeaderDisplay();
+            updateClearFiltersButton();
+            saveStateToStorage();
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-release-dropdown';
+            roadmapFilters.releases = [];
+            roadmapFilters.releasesExclusionMode = false;
+            updateGenericReleaseDisplay('roadmap');
+            // Note: Clear button visibility is updated in renderRoadmapView()
+            saveStateToStorage();
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-release-dropdown';
+            customersFilters.releases = [];
+            updateGenericReleaseDisplay('customers');
+            updateCustomersClearButton();
+            saveStateToStorage();
+            renderCustomersView();
+        }
+
+        reopenDropdown();
+    }
+
+    /**
+     * Update release filter display text for a dashboard
+     */
+    function updateGenericReleaseDisplay(dashboardId) {
+        let displayId, selected;
+        if (dashboardId === 'roadmap') {
+            displayId = 'roadmap-release-display';
+            selected = roadmapFilters.releases;
+        } else if (dashboardId === 'customers') {
+            displayId = 'customers-release-display';
+            selected = customersFilters.releases;
+        } else {
+            return; // Releases dashboard uses updateReleaseHeaderDisplay()
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        if (selected.length === 0) {
+            display.textContent = 'All Releases';
+        } else if (selected.length === 1) {
+            display.textContent = selected[0];
+        } else if (selected.length <= 2) {
+            display.textContent = selected.join(', ');
+        } else {
+            display.textContent = `${selected.length} releases`;
+        }
+    }
+
+    /**
+     * Populate a release filter menu with the generic dropdown
+     */
+    function populateGenericReleaseFilter(dashboardId, items, selectedReleases) {
+        const menuId = dashboardId === 'releases' ? 'release-filter-menu' : `${dashboardId}-release-menu`;
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+
+        menu.innerHTML = buildReleaseFilterDropdown({
+            dashboardId,
+            items,
+            selectedReleases
+        });
+    }
+
+    /**
+     * Sync release filter checkboxes with current state (after loading from localStorage)
+     */
+    function syncGenericReleaseFilter(dashboardId) {
+        let selected;
+        if (dashboardId === 'releases') {
+            selected = selectedReleases;
+        } else if (dashboardId === 'roadmap') {
+            selected = roadmapFilters.releases;
+        } else if (dashboardId === 'customers') {
+            selected = customersFilters.releases;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-release-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selected.includes(cb.value);
+        });
+
+        if (dashboardId !== 'releases') {
+            updateGenericReleaseDisplay(dashboardId);
+        }
+    }
+
+    // ==================== END GENERIC RELEASE FILTER COMPONENT ====================
+
     // Utility functions
     function getStateClass(state) {
         const s = (state || '').toLowerCase().replace(/\s+/g, '');
