@@ -55,6 +55,27 @@ When making changes:
 2. Update version in `Templates/dashboard_v3_part1.html`: `<span class="version">vXX</span>`
 3. Add entry to Version History in `DASHBOARD_README.md`
 
+## Git Commit and Push Requirements
+**IMPORTANT:** When committing changes, you MUST:
+1. Include ALL modified files in the project folder (use `git add .` or explicitly add each file)
+2. Include the generated `eSHARE-DevOps-Dashboard.html` file - this is the local DEV dashboard
+3. Always push changes to GitHub after committing
+4. Verify the push was successful before considering the task complete
+
+**Commit workflow:**
+```bash
+# Stage all changes including generated files
+git add .
+
+# Commit with version summary
+git commit -m "vXX: [summary of changes]"
+
+# Push to GitHub
+git push
+
+# Verify push was successful (should show "Everything up-to-date" or commit info)
+```
+
 ## Current Version: v83
 
 ## UI Patterns for All Dashboards
