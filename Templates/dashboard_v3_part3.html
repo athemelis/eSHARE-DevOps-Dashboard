@@ -2316,9 +2316,9 @@
                           roadmapFilters.priorities.length > 0 || roadmapFilters.releases.length > 0 ||
                           roadmapFilters.tags.length > 0;
         if (isFiltered) {
-            countEl.textContent = `${features.length} of ${allFeatures.length} features`;
+            countEl.innerHTML = `⭐ Feature Details (${features.length} of ${allFeatures.length})`;
         } else {
-            countEl.textContent = `${features.length} feature${features.length !== 1 ? 's' : ''}`;
+            countEl.innerHTML = `⭐ Feature Details (${features.length})`;
         }
 
         // Update clear button visibility
@@ -2524,12 +2524,6 @@
             roadmapSortState.direction = direction;
             saveStateToStorage();
         };
-
-        // Update section header with count
-        const countEl = document.getElementById('roadmap-count');
-        if (countEl) {
-            countEl.innerHTML = `⭐ Feature Details (${features.length})`;
-        }
 
         // Build the table using generic component
         buildGenericTable({
