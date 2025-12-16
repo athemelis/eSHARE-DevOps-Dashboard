@@ -4192,6 +4192,13 @@
     
     // Store current release table data for filtering
     let releaseTableData = { features: [], issues: [], customerBugs: [], internalBugs: [], activeFilter: null };
+
+    // Sort state for each Release table (4 tables)
+    let releaseFeaturesSort = { column: null, direction: 'asc' };
+    let releaseIssuesSort = { column: null, direction: 'asc' };
+    let releaseCustomerBugsSort = { column: null, direction: 'asc' };
+    let releaseInternalBugsSort = { column: null, direction: 'asc' };
+    const defaultReleaseSort = { column: 'backlogPriority', direction: 'asc' };
     
     function filterReleaseTablesByState(state) {
         if (releaseTableData.activeFilter === `state:${state}`) {
@@ -4242,8 +4249,6 @@
     }
     
     function renderReleaseItemsTables(filtered, features, issues, customerBugs, internalBugs, filterLabel = null) {
-        const tableContainer = document.getElementById('release-items-table');
-        
         // Store original data if not filtering
         if (!filterLabel) {
             releaseTableData.features = features;
@@ -4251,112 +4256,180 @@
             releaseTableData.customerBugs = customerBugs;
             releaseTableData.internalBugs = internalBugs;
         }
-        
+
         // Filter indicator
-        const filterIndicator = filterLabel ? `
-            <div class="table-filter-indicator">
-                <span>Filtered by: <strong>${filterLabel}</strong></span>
-                <button class="clear-filter-btn" onclick="clearReleaseTableFilter()">✕ Clear Filter</button>
-            </div>
-        ` : '';
-        
-        // Create 4 separate tables with icons
-        tableContainer.innerHTML = `
-            ${filterIndicator}
-            ${features.length > 0 ? `
-                <div class="release-table-section">
-                    <h4 class="release-table-title"><span class="table-icon">⭐</span> Features (${features.length})</h4>
-                    <table class="sortable-table" data-table-id="features">
-                        <thead id="featuresTableHead"></thead>
-                        <tbody id="featuresTableBody"></tbody>
-                    </table>
+        const filterIndicator = document.getElementById('release-table-filter-indicator');
+        if (filterIndicator) {
+            filterIndicator.innerHTML = filterLabel ? `
+                <div class="table-filter-indicator">
+                    <span>Filtered by: <strong>${filterLabel}</strong></span>
+                    <button class="clear-filter-btn" onclick="clearReleaseTableFilter()">✕ Clear Filter</button>
                 </div>
-            ` : ''}
-            ${issues.length > 0 ? `
-                <div class="release-table-section">
-                    <h4 class="release-table-title"><span class="table-icon">🎫</span> Issues (${issues.length})</h4>
-                    <table class="sortable-table" data-table-id="issues">
-                        <thead id="issuesTableHead"></thead>
-                        <tbody id="issuesTableBody"></tbody>
-                    </table>
-                </div>
-            ` : ''}
-            ${customerBugs.length > 0 ? `
-                <div class="release-table-section">
-                    <h4 class="release-table-title"><span class="table-icon">👤</span> Customer Bugs (${customerBugs.length})</h4>
-                    <table class="sortable-table" data-table-id="customerBugs">
-                        <thead id="customerBugsTableHead"></thead>
-                        <tbody id="customerBugsTableBody"></tbody>
-                    </table>
-                </div>
-            ` : ''}
-            ${internalBugs.length > 0 ? `
-                <div class="release-table-section">
-                    <h4 class="release-table-title"><span class="table-icon">🔧</span> Internal Bugs (${internalBugs.length})</h4>
-                    <table class="sortable-table" data-table-id="internalBugs">
-                        <thead id="internalBugsTableHead"></thead>
-                        <tbody id="internalBugsTableBody"></tbody>
-                    </table>
-                </div>
-            ` : ''}
-        `;
-        
-        // Render each table with backlogPriority as default sort
-        const defaultSort = { column: 'backlogPriority', direction: 'asc' };
-        
-        if (features.length > 0) {
-            renderSortableTable('features', features, [
-                { key: 'id', label: 'ID' },
-                { key: 'title', label: 'Title' },
-                { key: 'state', label: 'State' },
-                { key: 'customers', label: 'Customer' },
-                { key: 'assignedTo', label: 'Assigned To' },
-                { key: 'team', label: 'Team' },
-                { key: 'releaseVersion', label: 'Release' },
-                { key: 'targetDate', label: 'Target Date' }
-            ], defaultSort);
+            ` : '';
         }
 
-        if (issues.length > 0) {
-            renderSortableTable('issues', issues, [
-                { key: 'id', label: 'ID' },
-                { key: 'title', label: 'Title' },
-                { key: 'state', label: 'State' },
-                { key: 'ticketCategory', label: 'Category' },
-                { key: 'customers', label: 'Customer' },
-                { key: 'csOwner', label: 'CS Owner' },
-                { key: 'releaseVersion', label: 'Release' },
-                { key: 'targetDate', label: 'Target Date' }
-            ], defaultSort);
+        // Clear containers if no items
+        const featuresContainer = document.getElementById('release-features-table-container');
+        const issuesContainer = document.getElementById('release-issues-table-container');
+        const customerBugsContainer = document.getElementById('release-customerbugs-table-container');
+        const internalBugsContainer = document.getElementById('release-internalbugs-table-container');
+
+        // Features table
+        if (features.length > 0 && featuresContainer) {
+            buildGenericTable({
+                containerId: 'release-features-table-container',
+                tableId: 'release-features-table',
+                icon: '⭐',
+                title: 'Features',
+                columns: [
+                    { key: 'id', label: 'ID' },
+                    { key: 'title', label: 'Title' },
+                    { key: 'state', label: 'State' },
+                    { key: 'customers', label: 'Customer' },
+                    { key: 'assignedTo', label: 'Assigned To' },
+                    { key: 'team', label: 'Team' },
+                    { key: 'releaseVersion', label: 'Release', class: 'col-release' },
+                    { key: 'targetDate', label: 'Target Date' }
+                ],
+                items: features,
+                sortState: releaseFeaturesSort,
+                defaultSort: defaultReleaseSort,
+                onSort: (col, dir) => handleReleaseSortChange('features', col, dir),
+                onRowClick: (item) => handleReleaseRowClick(item),
+                rowClickHint: 'Click on a row to view relationships'
+            });
+        } else if (featuresContainer) {
+            featuresContainer.innerHTML = '';
         }
 
-        if (customerBugs.length > 0) {
-            renderSortableTable('customerBugs', customerBugs, [
-                { key: 'id', label: 'ID' },
-                { key: 'title', label: 'Title' },
-                { key: 'state', label: 'State' },
-                { key: 'customers', label: 'Customer' },
-                { key: 'assignedTo', label: 'Assigned To' },
-                { key: 'team', label: 'Team' },
-                { key: 'feature', label: 'Feature' },
-                { key: 'releaseVersion', label: 'Release' },
-                { key: 'targetDate', label: 'Target Date' }
-            ], defaultSort);
+        // Issues table
+        if (issues.length > 0 && issuesContainer) {
+            buildGenericTable({
+                containerId: 'release-issues-table-container',
+                tableId: 'release-issues-table',
+                icon: '🎫',
+                title: 'Issues',
+                columns: [
+                    { key: 'id', label: 'ID' },
+                    { key: 'title', label: 'Title' },
+                    { key: 'state', label: 'State' },
+                    { key: 'ticketCategory', label: 'Category' },
+                    { key: 'customers', label: 'Customer' },
+                    { key: 'csOwner', label: 'CS Owner' },
+                    { key: 'releaseVersion', label: 'Release', class: 'col-release' },
+                    { key: 'targetDate', label: 'Target Date' }
+                ],
+                items: issues,
+                sortState: releaseIssuesSort,
+                defaultSort: defaultReleaseSort,
+                onSort: (col, dir) => handleReleaseSortChange('issues', col, dir),
+                onRowClick: (item) => handleReleaseRowClick(item),
+                rowClickHint: 'Click on a row to view relationships'
+            });
+        } else if (issuesContainer) {
+            issuesContainer.innerHTML = '';
         }
 
-        if (internalBugs.length > 0) {
-            renderSortableTable('internalBugs', internalBugs, [
-                { key: 'id', label: 'ID' },
-                { key: 'title', label: 'Title' },
-                { key: 'state', label: 'State' },
-                { key: 'bugType', label: 'Bug Type' },
-                { key: 'assignedTo', label: 'Assigned To' },
-                { key: 'team', label: 'Team' },
-                { key: 'feature', label: 'Feature' },
-                { key: 'releaseVersion', label: 'Release' },
-                { key: 'targetDate', label: 'Target Date' }
-            ], defaultSort);
+        // Customer Bugs table
+        if (customerBugs.length > 0 && customerBugsContainer) {
+            buildGenericTable({
+                containerId: 'release-customerbugs-table-container',
+                tableId: 'release-customerbugs-table',
+                icon: '👤',
+                title: 'Customer Bugs',
+                columns: [
+                    { key: 'id', label: 'ID' },
+                    { key: 'title', label: 'Title' },
+                    { key: 'state', label: 'State' },
+                    { key: 'customers', label: 'Customer' },
+                    { key: 'assignedTo', label: 'Assigned To' },
+                    { key: 'team', label: 'Team' },
+                    { key: 'feature', label: 'Feature' },
+                    { key: 'releaseVersion', label: 'Release', class: 'col-release' },
+                    { key: 'targetDate', label: 'Target Date' }
+                ],
+                items: customerBugs,
+                sortState: releaseCustomerBugsSort,
+                defaultSort: defaultReleaseSort,
+                onSort: (col, dir) => handleReleaseSortChange('customerBugs', col, dir),
+                onRowClick: (item) => handleReleaseRowClick(item),
+                rowClickHint: 'Click on a row to view relationships'
+            });
+        } else if (customerBugsContainer) {
+            customerBugsContainer.innerHTML = '';
         }
+
+        // Internal Bugs table
+        if (internalBugs.length > 0 && internalBugsContainer) {
+            buildGenericTable({
+                containerId: 'release-internalbugs-table-container',
+                tableId: 'release-internalbugs-table',
+                icon: '🔧',
+                title: 'Internal Bugs',
+                columns: [
+                    { key: 'id', label: 'ID' },
+                    { key: 'title', label: 'Title' },
+                    { key: 'state', label: 'State' },
+                    { key: 'bugType', label: 'Bug Type' },
+                    { key: 'assignedTo', label: 'Assigned To' },
+                    { key: 'team', label: 'Team' },
+                    { key: 'feature', label: 'Feature' },
+                    { key: 'releaseVersion', label: 'Release', class: 'col-release' },
+                    { key: 'targetDate', label: 'Target Date' }
+                ],
+                items: internalBugs,
+                sortState: releaseInternalBugsSort,
+                defaultSort: defaultReleaseSort,
+                onSort: (col, dir) => handleReleaseSortChange('internalBugs', col, dir),
+                onRowClick: (item) => handleReleaseRowClick(item),
+                rowClickHint: 'Click on a row to view relationships'
+            });
+        } else if (internalBugsContainer) {
+            internalBugsContainer.innerHTML = '';
+        }
+    }
+
+    // Handle sort change for Release tables
+    function handleReleaseSortChange(tableType, column, direction) {
+        if (tableType === 'features') {
+            releaseFeaturesSort = { column, direction };
+        } else if (tableType === 'issues') {
+            releaseIssuesSort = { column, direction };
+        } else if (tableType === 'customerBugs') {
+            releaseCustomerBugsSort = { column, direction };
+        } else if (tableType === 'internalBugs') {
+            releaseInternalBugsSort = { column, direction };
+        }
+        saveStateToStorage();
+        // Note: buildGenericTable handles re-render via callback
+    }
+
+    // Helper to apply active filter
+    function filterReleaseItems(items) {
+        if (!releaseTableData.activeFilter) return items;
+        const [type, value] = releaseTableData.activeFilter.split(':');
+        if (type === 'state') {
+            return items.filter(i => i.state === value);
+        } else if (type === 'team') {
+            return items.filter(i => (i.team || '(Not Set)') === value);
+        }
+        return items;
+    }
+
+    // Helper to get filter label
+    function getFilterLabelFromActive() {
+        if (!releaseTableData.activeFilter) return null;
+        const [type, value] = releaseTableData.activeFilter.split(':');
+        if (type === 'state') return `State: ${value}`;
+        if (type === 'team') return `Team: ${value}`;
+        return null;
+    }
+
+    // Handle row click in Release tables - show relationships modal
+    function handleReleaseRowClick(item) {
+        showWorkItemDetailsModal(item, {
+            deliverySlices: item.type === 'Feature' ? getDeliverySlicesForFeatures([item.id]) : []
+        });
     }
     
     function clearReleaseTableFilter() {
@@ -7555,6 +7628,407 @@ function showIssueRelationships(issueId, issueTitle, ticketCategory) {
     // Show modal
     modal.style.display = 'flex';
 }
+</script>
+
+<!-- Generic Work Item Details Modal (unified for all dashboards) -->
+<div id="work-item-details-modal" class="work-item-modal-overlay" style="display: none;">
+    <div class="work-item-modal">
+        <div class="work-item-modal-header">
+            <div class="work-item-modal-title-section">
+                <h3 id="work-item-modal-title">Work Item Details</h3>
+                <div id="work-item-modal-subtitle"></div>
+            </div>
+            <button class="work-item-modal-close" onclick="closeWorkItemDetailsModal()">&times;</button>
+        </div>
+        <div class="work-item-modal-body">
+            <div id="work-item-modal-content"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Generic Work Item Details Modal Styles */
+.work-item-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+
+.work-item-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 95%;
+    max-width: 1100px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.work-item-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    border-radius: 12px 12px 0 0;
+}
+
+.work-item-modal-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.work-item-modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.work-item-type-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(100, 116, 139, 0.3);
+    color: var(--text-secondary);
+}
+
+.work-item-type-badge.type-feature {
+    background: rgba(59, 130, 246, 0.2);
+    color: var(--accent-blue);
+}
+
+.work-item-type-badge.type-delivery-slice {
+    background: rgba(168, 85, 247, 0.2);
+    color: var(--accent-purple);
+}
+
+.work-item-type-badge.type-bug {
+    background: rgba(248, 113, 113, 0.2);
+    color: var(--accent-red);
+}
+
+.work-item-type-badge.type-issue {
+    background: rgba(251, 191, 36, 0.2);
+    color: var(--accent-yellow);
+}
+
+.work-item-type-badge.type-task {
+    background: rgba(52, 211, 153, 0.2);
+    color: var(--accent-green);
+}
+
+.work-item-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+
+.work-item-modal-close:hover {
+    color: var(--text-primary);
+}
+
+.work-item-modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 1;
+    padding: 1rem 1.5rem;
+    gap: 1.5rem;
+}
+
+#work-item-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Modal Section Styles */
+.work-item-modal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.work-item-modal-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.work-item-modal-section-header .section-icon {
+    font-size: 1rem;
+}
+
+.work-item-modal-section-header .section-count {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.work-item-modal-empty {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Delivery Slices Section */
+.delivery-slices-section .work-item-modal-section-header {
+    color: var(--accent-purple);
+}
+
+.delivery-slices-effort-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.effort-filter-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.effort-filter-value {
+    color: var(--accent-cyan);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.effort-total-label {
+    color: var(--text-muted);
+    margin-left: 0.5rem;
+}
+
+.effort-total-value {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.delivery-slices-table-container {
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.delivery-slices-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    table-layout: fixed;
+}
+
+.delivery-slices-table th {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.delivery-slices-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.delivery-slices-table tr:hover td {
+    background: var(--hover-bg);
+}
+
+.delivery-slices-table .other-team-row td {
+    opacity: 0.45;
+}
+
+.delivery-slices-table .other-team-row:hover td {
+    opacity: 0.6;
+}
+
+/* Modal column widths */
+.modal-col-id { width: 60px; }
+.modal-col-title { width: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal-col-state { width: 100px; }
+.modal-col-iteration { width: 110px; }
+.modal-col-team { width: 100px; }
+.modal-col-effort { width: 55px; }
+.modal-col-owner { width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Relationships Section */
+.relationships-section .work-item-modal-section-header {
+    color: var(--accent-cyan);
+}
+
+.relationships-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.relationship-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.relationship-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.relationship-group-header .rel-icon {
+    font-size: 0.85rem;
+}
+
+.relationship-group-header .rel-count {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.parent-group .relationship-group-header {
+    color: var(--accent-orange);
+}
+
+.children-group .relationship-group-header {
+    color: var(--accent-cyan);
+}
+
+.related-group .relationship-group-header {
+    color: var(--accent-purple);
+}
+
+.relationship-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.relationship-item {
+    display: grid;
+    grid-template-columns: 60px 85px 1fr 100px;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.relationship-item:hover {
+    background: var(--hover-bg);
+}
+
+.rel-item-id a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+}
+
+.rel-item-id a:hover {
+    text-decoration: underline;
+}
+
+.rel-item-type {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(100, 116, 139, 0.2);
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.rel-item-type.type-feature { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+.rel-item-type.type-delivery-slice { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+.rel-item-type.type-bug { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
+.rel-item-type.type-task { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
+.rel-item-type.type-issue { background: rgba(251, 191, 36, 0.2); color: var(--accent-yellow); }
+
+.rel-item-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.rel-item-state {
+    text-align: right;
+}
+
+.rel-item-state .state-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+}
+
+.relationship-comment {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 0.15rem;
+    padding-left: 60px;
+}
+</style>
+
+<script>
+// Close work item details modal on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeWorkItemDetailsModal();
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('work-item-details-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeWorkItemDetailsModal();
+    }
+});
 </script>
 
 </body>

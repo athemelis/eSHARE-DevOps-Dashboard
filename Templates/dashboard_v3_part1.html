@@ -2494,7 +2494,275 @@
             color: var(--text-secondary);
             font-size: 0.85rem;
         }
-        
+
+        /* ========== GENERIC TABLE COMPONENT STYLES ========== */
+
+        /* Table Section Container */
+        .generic-table-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        /* Table Title Bar */
+        .generic-table-title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .generic-table-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .generic-table-title .table-icon {
+            font-size: 1.1rem;
+        }
+
+        .generic-table-title .table-count {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .generic-table-ado-link {
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            margin-left: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .generic-table-ado-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        /* Table Header Bar (Showing X items, buttons, etc) */
+        .generic-table-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .generic-table-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .generic-table-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .generic-table-item-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .generic-table-item-count strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .generic-table-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .generic-table-effort-total {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        .generic-table-effort-total strong {
+            color: var(--accent-cyan);
+            font-weight: 700;
+        }
+
+        /* Table Action Buttons */
+        .generic-table-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .generic-table-btn:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+            border-color: var(--accent-blue);
+        }
+
+        .generic-table-btn.btn-copy:hover {
+            border-color: var(--accent-green);
+        }
+
+        .generic-table-btn.btn-export:hover {
+            border-color: var(--accent-purple);
+        }
+
+        .generic-table-btn .btn-icon {
+            font-size: 0.8rem;
+        }
+
+        /* Reset Sort Button in header bar */
+        .generic-table-header-bar .reset-sort-btn {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+        }
+
+        /* Table Container with Scroll */
+        .generic-table-scroll-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* Generic Table Base Styles */
+        .generic-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            table-layout: fixed;
+        }
+
+        .generic-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--bg-tertiary);
+        }
+
+        .generic-table th {
+            text-align: left;
+            padding: 0.6rem 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+            position: relative;
+            user-select: none;
+        }
+
+        .generic-table th.sortable-header {
+            cursor: pointer;
+        }
+
+        .generic-table th.sortable-header:hover {
+            color: var(--text-primary);
+            background: var(--hover-bg);
+        }
+
+        .generic-table th .sort-indicator {
+            margin-left: 0.3rem;
+            font-size: 0.65rem;
+            color: var(--accent-cyan);
+        }
+
+        .generic-table td {
+            padding: 0.6rem 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .generic-table tbody tr:hover {
+            background: var(--hover-bg);
+        }
+
+        .generic-table tbody tr.clickable-row {
+            cursor: pointer;
+        }
+
+        .generic-table tbody tr.clickable-row:hover {
+            background: rgba(34, 211, 238, 0.08);
+        }
+
+        /* Total Row */
+        .generic-table tbody tr.total-row {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+        }
+
+        .generic-table tbody tr.total-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .generic-table tbody tr.total-row td {
+            border-bottom: none;
+            color: var(--text-secondary);
+        }
+
+        /* Work Item Link Styles */
+        .generic-table .work-item-link {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+        }
+
+        .generic-table .work-item-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Copy Success Toast */
+        .copy-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-green);
+            color: #000;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 10001;
+            animation: toastFadeInOut 2s ease-in-out;
+        }
+
+        @keyframes toastFadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+        }
+
+        /* ========== END GENERIC TABLE COMPONENT STYLES ========== */
+
         /* Tasks View Styles */
         .tasks-grouped-table {
             display: flex;
@@ -3153,7 +3421,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v86</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v87</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -3967,8 +4235,14 @@
             </div>
             
             <div class="charts-grid" id="release-charts"></div>
-            <div class="table-container" id="release-items-table" style="display: none;">
-                <!-- Tables generated dynamically by renderReleaseItemsTables -->
+            <div id="release-items-table" style="display: none;">
+                <!-- Filter indicator rendered dynamically -->
+                <div id="release-table-filter-indicator"></div>
+                <!-- 4 table containers rendered by buildGenericTable -->
+                <div id="release-features-table-container"></div>
+                <div id="release-issues-table-container"></div>
+                <div id="release-customerbugs-table-container"></div>
+                <div id="release-internalbugs-table-container"></div>
             </div>
         </div>
 
@@ -4014,23 +4288,14 @@
                 </div>
             </div>
 
-            <!-- Section 3: Feature Details -->
+            <!-- Section 3: Feature Details (rendered by generic table component) -->
             <div class="roadmap-section" id="roadmap-section-details">
                 <div class="roadmap-section-header">
                     <span class="section-number">3</span>
-                    <span>Feature Details</span>
-                    <a href="https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false" target="_blank" class="ado-backlog-link">Link to ADO Feature Backlog</a>
-                    <span class="roadmap-count" id="roadmap-count" style="margin-left: auto;"></span>
+                    <span id="roadmap-count"></span>
                 </div>
-                <!-- Inline effort summary for the table -->
-                <div class="roadmap-table-info">
-                    <span class="roadmap-table-effort-summary" id="roadmap-table-effort-summary"></span>
-                </div>
-                <div class="table-container" id="roadmap-table-container">
-                    <table class="work-items-table" id="roadmap-table">
-                        <thead id="roadmap-table-head"></thead>
-                        <tbody id="roadmap-table-body"></tbody>
-                    </table>
+                <div id="roadmap-table-container">
+                    <!-- Table rendered by buildGenericTable() -->
                 </div>
             </div>
         </div>
