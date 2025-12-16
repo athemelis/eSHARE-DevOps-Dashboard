@@ -595,15 +595,15 @@
         aging: []
     };
 
-    // Customers View sort state (default: Aging ascending)
+    // Customers View sort state (null = use default sort from config)
     let customersSortState = {
-        column: 'aging',
+        column: null,
         direction: 'asc'
     };
 
     // Default sort state for reset
     const defaultCustomersSortState = {
-        column: 'aging',
+        column: null,  // null means use default (aging)
         direction: 'asc'
     };
 
@@ -1619,30 +1619,7 @@
             </div>
         `;
 
-        // Sort and render table
-        const sortedIssues = sortCustomersIssues(filteredIssues);
-        const sortIcon = (col) => {
-            if (customersSortState.column !== col) return '';
-            return customersSortState.direction === 'asc' ? ' ▲' : ' ▼';
-        };
-
-        // Helper to format target date
-        const formatTargetDate = (dateStr) => {
-            if (!dateStr) return '';
-            // dateStr is in format "YYYY-MM-DD HH:MM:SS" or similar
-            const datePart = dateStr.split(' ')[0];
-            return datePart;
-        };
-
-        // Helper to format datetime (for Created/Closed dates)
-        const formatDateTime = (dateStr) => {
-            if (!dateStr) return '';
-            // dateStr is in ISO format "YYYY-MM-DDTHH:MM:SS"
-            const datePart = dateStr.split('T')[0];
-            return datePart;
-        };
-
-        // Column definitions for resizable table
+        // Render table using generic table component
         const customerColumns = [
             { key: 'id', label: 'ID', class: 'col-id' },
             { key: 'title', label: 'Title', class: 'col-title' },
@@ -1653,61 +1630,92 @@
             { key: 'aging', label: 'Aging', class: 'col-aging' },
             { key: 'tags', label: 'Tags', class: 'col-tags' },
             { key: 'csOwner', label: 'CS Owner', class: 'col-csowner' },
-            { key: 'release', label: 'Release', class: 'col-release' },
+            { key: 'releaseVersion', label: 'Release', class: 'col-release' },
             { key: 'targetDate', label: 'Target Date', class: 'col-date' }
         ];
 
-        // Build header with resize handles (all columns including last)
-        const headerCells = customerColumns.map((col, idx) => {
-            const widthStyle = customersColumnWidths[col.key] ? `style="width: ${customersColumnWidths[col.key]}px"` : '';
-            const resizeHandle = '<div class="resize-handle" onmousedown="startCustomersColumnResize(event, this)"></div>';
-            return `<th class="sortable ${col.class}" data-col="${col.key}" onclick="sortCustomersTableIfNotResizing('${col.key}')" ${widthStyle}>${col.label}${sortIcon(col.key)}${resizeHandle}</th>`;
-        }).join('');
+        // Custom cell renderer for Customers-specific columns
+        const customersRenderCell = (item, col) => {
+            const key = col.key;
+            const colClass = col.class || `col-${key}`;
 
-        // Show reset button only if sort is not default
-        const resetButton = isCustomersSortNonDefault()
-            ? `<button class="reset-sort-btn" onclick="resetCustomersSort()">↺ Reset Sort</button>`
-            : '';
+            if (key === 'id') {
+                return `<td class="${colClass}"><a href="${item.url}" target="_blank" class="work-item-link" onclick="event.stopPropagation()">${item.id}</a></td>`;
+            }
+            if (key === 'title') {
+                return `<td class="${colClass}" title="${(item.title || '').replace(/"/g, '&quot;')}">
+                    <span class="title-text">${item.title || ''}</span>
+                    <span class="rel-pills">${buildRelationshipPills(item.id)}</span>
+                </td>`;
+            }
+            if (key === 'state') {
+                const stateClass = `state-${(item.state || '').toLowerCase().replace(/\s+/g, '-')}`;
+                return `<td class="${colClass}"><span class="state-badge ${stateClass}">${item.state || ''}</span></td>`;
+            }
+            if (key === 'customers') {
+                return `<td class="${colClass}" title="${(item.customers || '').replace(/"/g, '&quot;')}">${item.customers || ''}</td>`;
+            }
+            if (key === 'priority') {
+                return `<td class="${colClass} priority-cell">${item.priority ? 'P' + item.priority : ''}</td>`;
+            }
+            if (key === 'ticketCategory') {
+                const catClass = `category-${(item.ticketCategory || '').toLowerCase().replace(/\s+/g, '-')}`;
+                return `<td class="${colClass}"><span class="category-badge ${catClass}">${item.ticketCategory || ''}</span></td>`;
+            }
+            if (key === 'aging') {
+                const agingBucket = calculateAgingBucket(item);
+                const agingClass = `aging-${agingBucket.replace(/\s+/g, '-')}`;
+                return `<td class="${colClass}"><span class="aging-badge ${agingClass}">${agingBucket}</span></td>`;
+            }
+            if (key === 'tags') {
+                return `<td class="${colClass}" title="${(item.tags || '').replace(/"/g, '&quot;')}">${item.tags || ''}</td>`;
+            }
+            if (key === 'csOwner') {
+                return `<td class="${colClass}">${item.csOwner || ''}</td>`;
+            }
+            if (key === 'releaseVersion') {
+                return `<td class="${colClass}">${item.releaseVersion || ''}</td>`;
+            }
+            if (key === 'targetDate') {
+                return `<td class="${colClass}">${formatDate(item.targetDate)}</td>`;
+            }
+            return `<td class="${colClass}">${item[key] || ''}</td>`;
+        };
 
-        tableContainer.innerHTML = `
-            <div class="table-header">
-                <span>Showing ${sortedIssues.length} issues</span>
-                <span class="table-hint">Click on a row to view all relationships</span>
-                ${resetButton}
-            </div>
-            <div class="table-scroll-container">
-                <table class="work-items-table resizable-table" id="customers-table">
-                    <thead>
-                        <tr>
-                            ${headerCells}
-                        </tr>
-                    </thead>
-                <tbody>
-                    ${sortedIssues.map(issue => {
-                        // Escape title for use in onclick attribute: escape quotes for both JS string and HTML attribute
-                        const escapedTitle = (issue.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                        return `
-                        <tr class="clickable-row" onclick="showIssueRelationships(${issue.id}, '${escapedTitle}', '${issue.ticketCategory || ''}')">
-                            <td class="col-id"><a href="${issue.url}" target="_blank" onclick="event.stopPropagation()">${issue.id}</a></td>
-                            <td class="col-title" title="${(issue.title || '').replace(/"/g, '&quot;')}">
-                                <span class="title-text">${issue.title || ''}</span>
-                                <span class="rel-pills">${buildRelationshipPills(issue.id)}</span>
-                            </td>
-                            <td class="col-state"><span class="state-badge state-${(issue.state || '').toLowerCase().replace(/\s+/g, '-')}">${issue.state || ''}</span></td>
-                            <td class="col-customers" title="${(issue.customers || '').replace(/"/g, '&quot;')}">${issue.customers || ''}</td>
-                            <td class="col-priority">${issue.priority ? 'P' + issue.priority : ''}</td>
-                            <td class="col-category"><span class="category-badge category-${(issue.ticketCategory || '').toLowerCase().replace(/\s+/g, '-')}">${issue.ticketCategory || ''}</span></td>
-                            <td class="col-aging"><span class="aging-badge aging-${calculateAgingBucket(issue).replace(/\s+/g, '-')}">${calculateAgingBucket(issue)}</span></td>
-                            <td class="col-tags" title="${(issue.tags || '').replace(/"/g, '&quot;')}">${issue.tags || ''}</td>
-                            <td class="col-csowner">${issue.csOwner || ''}</td>
-                            <td class="col-release">${issue.releaseVersion || ''}</td>
-                            <td class="col-date">${formatTargetDate(issue.targetDate)}</td>
-                        </tr>
-                    `}).join('')}
-                </tbody>
-                </table>
-            </div>
-        `;
+        // Row click handler
+        const handleCustomerRowClick = (item) => {
+            showWorkItemDetailsModal(item);
+        };
+
+        // Column resize handler
+        const handleCustomerColumnResize = (columnKey, width) => {
+            customersColumnWidths[columnKey] = width;
+            saveStateToStorage();
+        };
+
+        // Sort change handler
+        const handleCustomerSortChange = (column, direction) => {
+            customersSortState.column = column;
+            customersSortState.direction = direction;
+            saveStateToStorage();
+        };
+
+        buildGenericTable({
+            containerId: 'customer-issues-table',
+            tableId: 'customers-table',
+            icon: '🎫',
+            title: 'Issue Details',
+            columns: customerColumns,
+            items: filteredIssues,
+            sortState: customersSortState,
+            defaultSort: { column: 'aging', direction: 'asc' },
+            onSort: handleCustomerSortChange,
+            onRowClick: handleCustomerRowClick,
+            rowClickHint: 'Click on a row to view relationships',
+            columnWidths: customersColumnWidths,
+            onColumnResize: handleCustomerColumnResize,
+            renderCell: customersRenderCell
+        });
 
         // Populate filter dropdowns on first render
         populateCustomersFilterDropdowns();
@@ -2308,9 +2316,9 @@
                           roadmapFilters.priorities.length > 0 || roadmapFilters.releases.length > 0 ||
                           roadmapFilters.tags.length > 0;
         if (isFiltered) {
-            countEl.textContent = `${features.length} of ${allFeatures.length} features`;
+            countEl.innerHTML = `⭐ Feature Details (${features.length} of ${allFeatures.length})`;
         } else {
-            countEl.textContent = `${features.length} feature${features.length !== 1 ? 's' : ''}`;
+            countEl.innerHTML = `⭐ Feature Details (${features.length})`;
         }
 
         // Update clear button visibility
@@ -2392,16 +2400,16 @@
         `;
 
         // Define columns (ID, Title, State, Customers, Priority, Tags, Assigned To, Release, Effort)
-        const columns = [
-            { key: 'id', label: 'ID' },
-            { key: 'title', label: 'Title' },
-            { key: 'state', label: 'State' },
-            { key: 'customers', label: 'Customers' },
-            { key: 'priority', label: 'Priority' },
-            { key: 'tags', label: 'Tags' },
-            { key: 'assignedTo', label: 'Assigned To' },
-            { key: 'releaseVersion', label: 'Release' },
-            { key: 'effort', label: 'Effort' }
+        const roadmapColumns = [
+            { key: 'id', label: 'ID', class: 'col-id' },
+            { key: 'title', label: 'Title', class: 'col-title' },
+            { key: 'state', label: 'State', class: 'col-state' },
+            { key: 'customers', label: 'Customers', class: 'col-customers' },
+            { key: 'priority', label: 'Priority', class: 'col-priority' },
+            { key: 'tags', label: 'Tags', class: 'col-tags' },
+            { key: 'assignedTo', label: 'Assigned To', class: 'col-assignee' },
+            { key: 'releaseVersion', label: 'Release', class: 'col-release' },
+            { key: 'effort', label: 'Effort', class: 'col-effort' }
         ];
 
         // Pre-calculate effort for each feature (sum of child delivery slices)
@@ -2433,138 +2441,113 @@
         // Render Strategy Summary (Section 1)
         renderStrategySummary(features, featureEffortMap);
 
-        // Calculate total effort (for the total row)
-        const totalTableEffort = Object.values(featureEffortMap).reduce((sum, e) => sum + e, 0);
+        // Calculate effort label for header
+        const teamLabel = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : 'All Teams';
+        const iterationLabel = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : '';
+        const effortFilterLabel = iterationLabel ? `${teamLabel} · ${iterationLabel}` : teamLabel;
 
-        // Sort features
-        let sortedFeatures = [...features];
-        if (roadmapSortState.column) {
-            // User-selected sort
-            sortedFeatures = sortRoadmapItems(sortedFeatures, roadmapSortState.column, roadmapSortState.direction, featureEffortMap);
-        } else {
-            // Default: sort by backlog priority (lower value = higher priority)
-            sortedFeatures.sort((a, b) => {
-                const aPri = a.backlogPriority || Number.MAX_VALUE;
-                const bPri = b.backlogPriority || Number.MAX_VALUE;
-                return aPri - bPri;
-            });
-        }
+        // Custom cell renderer for Roadmap-specific columns (badges)
+        const roadmapRenderCell = (item, col) => {
+            const key = col.key;
+            const colClass = col.class || `col-${key}`;
 
-        // Build header
-        const showResetBtn = roadmapSortState.column !== null;
-        thead.innerHTML = `<tr>
-            ${columns.map(c => `
-                <th class="sortable-header resizable-header ${getRoadmapColumnClass(c.key)}" onclick="sortRoadmapTable('${c.key}')">
-                    ${c.label}
-                    <span class="sort-indicator">${getRoadmapSortIndicator(c.key)}</span>
-                    <div class="resize-handle" onmousedown="startResize(event, this)"></div>
-                </th>
-            `).join('')}
-            ${showResetBtn ? `<th style="width: 140px;"><button class="reset-sort-btn" onclick="resetRoadmapSort()">Reset to Backlog Priority</button></th>` : ''}
-        </tr>`;
+            if (key === 'id') {
+                return `<td class="${colClass}"><a href="${item.url}" target="_blank" class="work-item-link" onclick="event.stopPropagation()">${item.id}</a></td>`;
+            }
+            if (key === 'title') {
+                const slices = getDeliverySlicesForFeatures([item.id]);
+                let badges = '';
+                // Badge 0: Blocked tag
+                const itemTags = (item.tags || '').split(';').map(t => t.trim().toLowerCase());
+                if (itemTags.includes('blocked')) {
+                    badges += `<span class="blocked-badge" title="This feature is tagged as Blocked">Blocked</span>`;
+                }
+                // Badge 1: No Delivery Slices
+                if (slices.length === 0) {
+                    badges += `<span class="no-slices-badge" title="This feature has no Delivery Slices">No slices</span>`;
+                } else {
+                    // Badge 2: Zero effort
+                    const hasZeroEffort = slices.some(ds => !ds.effort || ds.effort === 0);
+                    if (hasZeroEffort) {
+                        const zeroEffortSlices = slices.filter(ds => !ds.effort || ds.effort === 0);
+                        badges += `<span class="zero-effort-badge" title="${zeroEffortSlices.length} slice(s) with zero effort">0 effort</span>`;
+                    }
+                    // Badge 3: Multiple iterations
+                    const iterationSet = new Set(slices.map(ds => getLastPathSegment(ds.iterationPath) || '(No Iteration)'));
+                    if (iterationSet.size > 1) {
+                        badges += `<span class="iteration-count-badge" title="${[...iterationSet].join(', ')}">${iterationSet.size} iterations</span>`;
+                    }
+                }
+                return `<td class="${colClass}" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>`;
+            }
+            if (key === 'state') {
+                return `<td class="${colClass}"><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>`;
+            }
+            if (key === 'customers') {
+                return `<td class="${colClass}">${item.customers || ''}</td>`;
+            }
+            if (key === 'priority') {
+                return `<td class="${colClass} priority-cell">${item.priority ? 'P' + item.priority : ''}</td>`;
+            }
+            if (key === 'tags') {
+                const displayTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t).join(', ');
+                return `<td class="${colClass} tags-cell" title="${displayTags}">${displayTags}</td>`;
+            }
+            if (key === 'assignedTo') {
+                return `<td class="${colClass}">${item.assignedTo || ''}</td>`;
+            }
+            if (key === 'releaseVersion') {
+                return `<td class="${colClass}">${item.releaseVersion || ''}</td>`;
+            }
+            if (key === 'effort') {
+                const effort = featureEffortMap[item.id] || 0;
+                return `<td class="${colClass} effort-value">${effort > 0 ? effort.toFixed(1) + 'd' : ''}</td>`;
+            }
+            return `<td class="${colClass}">${item[key] || ''}</td>`;
+        };
 
-        // Build body - rows are clickable to show delivery slices
-        tbody.innerHTML = sortedFeatures.map(item => {
+        // Row click handler - show delivery slices + relationships
+        const handleRoadmapRowClick = (item) => {
             const slices = getDeliverySlicesForFeatures([item.id]);
+            const activeTeamFilter = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : null;
+            const activeIterationFilter = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : null;
+            showWorkItemDetailsModal(item, {
+                deliverySlices: slices,
+                activeTeamFilter,
+                activeIterationFilter
+            });
+        };
 
-            // Build badges
-            let badges = '';
+        // Sort change handler
+        const handleRoadmapSortChange = (column, direction) => {
+            roadmapSortState.column = column;
+            roadmapSortState.direction = direction;
+            saveStateToStorage();
+        };
 
-            // Badge 0: Blocked tag (highest priority warning)
-            const tags = (item.tags || '').split(';').map(t => t.trim().toLowerCase());
-            if (tags.includes('blocked')) {
-                badges += `<span class="blocked-badge" title="This feature is tagged as Blocked">Blocked</span>`;
-            }
-
-            // Badge 1: No Delivery Slices
-            if (slices.length === 0) {
-                badges += `<span class="no-slices-badge" title="This feature has no Delivery Slices">No slices</span>`;
-            } else {
-                // Badge 2: Zero effort (only if there are slices)
-                const hasZeroEffort = slices.some(ds => !ds.effort || ds.effort === 0);
-                if (hasZeroEffort) {
-                    const zeroEffortSlices = slices.filter(ds => !ds.effort || ds.effort === 0);
-                    badges += `<span class="zero-effort-badge" title="${zeroEffortSlices.length} slice(s) with zero effort">0 effort</span>`;
-                }
-
-                // Badge 3: Multiple iterations
-                const iterationSet = new Set(slices.map(ds => getLastPathSegment(ds.iterationPath) || '(No Iteration)'));
-                const iterationCount = iterationSet.size;
-                if (iterationCount > 1) {
-                    badges += `<span class="iteration-count-badge" title="${[...iterationSet].join(', ')}">${iterationCount} iterations</span>`;
-                }
-            }
-
-            const featureEffort = featureEffortMap[item.id] || 0;
-            // Format tags for display (remove duplicates, sort, join with comma)
-            const displayTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t).join(', ');
-            const priorityDisplay = item.priority ? `P${item.priority}` : '';
-            return `
-            <tr class="clickable-row" data-feature-id="${item.id}" data-feature-title="${(item.title || '').replace(/"/g, '&quot;')}">
-                <td><a href="${item.url}" target="_blank" class="work-item-id">${item.id}</a></td>
-                <td class="work-item-title" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>
-                <td><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>
-                <td>${item.customers || ''}</td>
-                <td class="priority-cell">${priorityDisplay}</td>
-                <td class="tags-cell" title="${displayTags}">${displayTags}</td>
-                <td>${item.assignedTo || ''}</td>
-                <td>${item.releaseVersion || ''}</td>
-                <td class="effort-value">${featureEffort > 0 ? featureEffort.toFixed(1) + 'd' : ''}</td>
-                ${showResetBtn ? '<td></td>' : ''}
-            </tr>
-        `;
-        }).join('');
-
-        // Add total row (colspan = 8 for columns before Effort: ID, Title, State, Customers, Priority, Tags, Assigned To, Release)
-        tbody.innerHTML += `
-            <tr class="total-row">
-                <td colspan="8" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
-                <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalTableEffort.toFixed(1)}d</td>
-                ${showResetBtn ? '<td></td>' : ''}
-            </tr>
-        `;
-
-        // Update inline effort summary above table
-        const effortSummaryEl = document.getElementById('roadmap-table-effort-summary');
-        if (effortSummaryEl) {
-            const teamLabel = roadmapFilters.teams.length === 1 ? roadmapFilters.teams[0] : 'All Teams';
-            const iterationLabel = roadmapFilters.iterations.length === 1 ? roadmapFilters.iterations[0] : '';
-            const filterLabel = iterationLabel ? `${teamLabel} · ${iterationLabel}` : teamLabel;
-            effortSummaryEl.innerHTML = `Table Total: <strong>${totalTableEffort.toFixed(1)}d</strong> (${filterLabel})`;
-        }
-
-        // Ensure click handler is attached
-        setupRoadmapTableClickHandler();
-    }
-
-    // Set up click delegation on the roadmap table body (once)
-    function setupRoadmapTableClickHandler() {
-        const tbody = document.getElementById('roadmap-table-body');
-        if (!tbody || tbody.dataset.clickHandlerAttached) return;
-
-        tbody.addEventListener('click', function(e) {
-            // Don't trigger if clicking on a link
-            if (e.target.tagName === 'A' || e.target.closest('a')) return;
-
-            // Find the clicked row
-            const row = e.target.closest('.clickable-row');
-            if (!row) return;
-
-            const featureId = parseInt(row.dataset.featureId);
-            const featureTitle = row.dataset.featureTitle;
-            if (featureId) {
-                drilldownFeatureSlices(featureId, featureTitle);
-            }
+        // Build the table using generic component
+        buildGenericTable({
+            containerId: 'roadmap-table-container',
+            tableId: 'roadmap-table',
+            icon: '⭐',
+            title: 'Feature Details',
+            hideTitleBar: true,  // Title is in section header
+            adoLink: 'https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false',
+            adoLinkText: 'Link to ADO Feature Backlog',
+            columns: roadmapColumns,
+            items: features,
+            sortState: roadmapSortState,
+            defaultSort: { column: 'backlogPriority', direction: 'asc' },
+            onSort: handleRoadmapSortChange,
+            hasEffort: true,
+            effortMap: featureEffortMap,
+            effortLabel: effortFilterLabel,
+            onRowClick: handleRoadmapRowClick,
+            rowClickHint: 'Click on a row to view delivery slices and relationships',
+            renderCell: roadmapRenderCell,
+            showTotalRow: true,
+            totalColspan: 8
         });
-
-        tbody.dataset.clickHandlerAttached = 'true';
-    }
-
-    // Initialize click handler when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupRoadmapTableClickHandler);
-    } else {
-        setupRoadmapTableClickHandler();
     }
 
     function populateRoadmapFilterDropdowns() {

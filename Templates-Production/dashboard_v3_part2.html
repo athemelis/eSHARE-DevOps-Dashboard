@@ -33,6 +33,11 @@
                 releaseHeaderFilters: typeof releaseHeaderFilters !== 'undefined' ? releaseHeaderFilters : null,
                 releasesSearchFilter: typeof releasesSearchFilter !== 'undefined' ? releasesSearchFilter : '',
                 selectedReleases: typeof selectedReleases !== 'undefined' ? selectedReleases : [],
+                // Releases table column widths
+                releaseFeaturesColumnWidths: typeof releaseFeaturesColumnWidths !== 'undefined' ? releaseFeaturesColumnWidths : {},
+                releaseIssuesColumnWidths: typeof releaseIssuesColumnWidths !== 'undefined' ? releaseIssuesColumnWidths : {},
+                releaseCustomerBugsColumnWidths: typeof releaseCustomerBugsColumnWidths !== 'undefined' ? releaseCustomerBugsColumnWidths : {},
+                releaseInternalBugsColumnWidths: typeof releaseInternalBugsColumnWidths !== 'undefined' ? releaseInternalBugsColumnWidths : {},
                 // Executive view state
                 execChartFilters: typeof execChartFilters !== 'undefined' ? execChartFilters : null,
                 execTeamFilter: document.getElementById('exec-team-filter')?.value || 'all',
@@ -146,6 +151,19 @@
         }
         if (state.selectedReleases && typeof selectedReleases !== 'undefined') {
             selectedReleases = [...state.selectedReleases];
+        }
+        // Restore Releases table column widths
+        if (state.releaseFeaturesColumnWidths && typeof releaseFeaturesColumnWidths !== 'undefined') {
+            Object.assign(releaseFeaturesColumnWidths, state.releaseFeaturesColumnWidths);
+        }
+        if (state.releaseIssuesColumnWidths && typeof releaseIssuesColumnWidths !== 'undefined') {
+            Object.assign(releaseIssuesColumnWidths, state.releaseIssuesColumnWidths);
+        }
+        if (state.releaseCustomerBugsColumnWidths && typeof releaseCustomerBugsColumnWidths !== 'undefined') {
+            Object.assign(releaseCustomerBugsColumnWidths, state.releaseCustomerBugsColumnWidths);
+        }
+        if (state.releaseInternalBugsColumnWidths && typeof releaseInternalBugsColumnWidths !== 'undefined') {
+            Object.assign(releaseInternalBugsColumnWidths, state.releaseInternalBugsColumnWidths);
         }
 
         // Restore Executive view state
@@ -772,7 +790,35 @@
             <div class="filter-dropdown-options" id="${optionsId}">
         `;
 
-        // Regular releases with dates (at the top)
+        // (No Release) option - items with no release AND no target date
+        // Always show this option at the top (below search), even if count is 0
+        {
+            const isChecked = selectedReleases.includes('(No Release)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="no release not set" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '(No Release)', this.checked, event)">
+                    <span class="option-label">(No Release)</span>
+                    <span class="option-meta">${noReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // ⚠️ Needs Release - items with target date but no release version (warning)
+        // Always show this option, even if count is 0
+        {
+            const isChecked = selectedReleases.includes('(Needs Release)');
+            html += `
+                <label class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(Needs Release)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '(Needs Release)', this.checked, event)">
+                    <span class="option-label">⚠️ Needs Release</span>
+                    <span class="option-meta">${needsReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // Regular releases with dates (sorted by date)
         releases.forEach(r => {
             const info = releaseInfo[r];
             const isChecked = selectedReleases.includes(r);
@@ -796,32 +842,6 @@
                 </label>
             `;
         });
-
-        // ⚠️ Needs Release - items with target date but no release version (warning)
-        if (needsReleaseCount > 0) {
-            const isChecked = selectedReleases.includes('(Needs Release)');
-            html += `
-                <label class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
-                    <input type="checkbox" value="(Needs Release)" ${isChecked ? 'checked' : ''}
-                           onchange="handleGenericReleaseChange('${dashboardId}', '(Needs Release)', this.checked, event)">
-                    <span class="option-label">⚠️ Needs Release</span>
-                    <span class="option-meta">${needsReleaseCount} items</span>
-                </label>
-            `;
-        }
-
-        // (No Release) option - items with no release AND no target date
-        if (noReleaseCount > 0) {
-            const isChecked = selectedReleases.includes('(No Release)');
-            html += `
-                <label class="filter-dropdown-option" data-search-value="no release not set" onclick="event.stopPropagation();">
-                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''}
-                           onchange="handleGenericReleaseChange('${dashboardId}', '(No Release)', this.checked, event)">
-                    <span class="option-label">(No Release)</span>
-                    <span class="option-meta">${noReleaseCount} items</span>
-                </label>
-            `;
-        }
 
         html += `</div>`;
         html += `
@@ -3394,4 +3414,897 @@
             return 0;
         });
     }
+
+    // ==================== GENERIC TABLE COMPONENT ====================
+    // A reusable table component for consistent table behavior across dashboards.
+    // Features: Title bar, header bar (item count, hint, effort total, copy/export buttons),
+    // sortable columns, resizable columns, clickable rows, total row.
+
+    // State storage for generic tables
+    const genericTableState = {};
+
+    /**
+     * Build and render a generic table section
+     * @param {Object} config - Configuration object
+     * @param {string} config.containerId - DOM element ID to render into
+     * @param {string} config.tableId - Unique table identifier
+     * @param {string} config.icon - Icon emoji for the title
+     * @param {string} config.title - Table title text
+     * @param {string} [config.adoLink] - Optional ADO backlog link URL
+     * @param {string} [config.adoLinkText] - Optional ADO link text (default: "Open in ADO")
+     * @param {Array} config.columns - Column definitions [{key, label, class, width}]
+     * @param {Array} config.items - Data items to display
+     * @param {Object} config.sortState - Reference to sort state object {column, direction}
+     * @param {Object} config.defaultSort - Default sort {column, direction}
+     * @param {Function} config.onSort - Callback when sort changes (column, direction)
+     * @param {boolean} [config.hasEffort] - Show effort total
+     * @param {Object} [config.effortMap] - Map of item.id -> effort value
+     * @param {string} [config.effortLabel] - Label for effort context (e.g., "Team · Iteration")
+     * @param {Function} [config.onRowClick] - Callback when row is clicked (item)
+     * @param {string} [config.rowClickHint] - Hint text for clickable rows
+     * @param {Object} [config.columnWidths] - Saved column widths {columnKey: width}
+     * @param {Function} [config.onColumnResize] - Callback when column is resized (columnKey, width)
+     * @param {Function} [config.renderCell] - Custom cell renderer (item, column) => HTML string
+     * @param {Function} [config.renderRow] - Custom row renderer (item, columns, cellsHtml) => HTML string
+     * @param {boolean} [config.showTotalRow] - Show total row at bottom
+     * @param {number} [config.totalColspan] - Colspan for total row label
+     */
+    function buildGenericTable(config) {
+        const container = document.getElementById(config.containerId);
+        if (!container) {
+            console.error(`[GenericTable] Container not found: ${config.containerId}`);
+            return;
+        }
+
+
+        const {
+            tableId,
+            icon = '📋',
+            title,
+            hideTitleBar = false,  // If true, don't render title bar (for cases where title is in section header)
+            adoLink,
+            adoLinkText = 'Open in ADO',
+            columns,
+            items,
+            sortState,
+            defaultSort,
+            onSort,
+            hasEffort = false,
+            effortMap = {},
+            effortLabel = '',
+            onRowClick,
+            rowClickHint = 'Click on a row to view details',
+            columnWidths = {},
+            onColumnResize,
+            renderCell,
+            renderRow,
+            showTotalRow = false,
+            totalColspan = 1
+        } = config;
+
+        // Store state
+        genericTableState[tableId] = {
+            config,
+            lastResizeTime: 0
+        };
+
+        // Calculate effort total if needed
+        let totalEffort = 0;
+        if (hasEffort) {
+            items.forEach(item => {
+                totalEffort += effortMap[item.id] || item.effort || 0;
+            });
+        }
+
+        // Check if sort is non-default
+        const isNonDefaultSort = sortState.column !== null &&
+            (sortState.column !== defaultSort?.column || sortState.direction !== defaultSort?.direction);
+
+        // Sort items
+        let sortedItems = [...items];
+        if (sortState.column) {
+            sortedItems = genericTableSortItems(sortedItems, sortState.column, sortState.direction, effortMap);
+        } else if (defaultSort?.column) {
+            sortedItems = genericTableSortItems(sortedItems, defaultSort.column, defaultSort.direction, effortMap);
+        }
+
+        // Build title bar (icon, title, count)
+        const titleBarHtml = `
+            <div class="generic-table-title-bar">
+                <div class="generic-table-title">
+                    <span class="table-icon">${icon}</span>
+                    <span>${title}</span>
+                    <span class="table-count">(${items.length})</span>
+                </div>
+            </div>
+        `;
+
+        // Build header bar (showing items, hint, ADO link, effort, copy, export)
+        const adoLinkHtml = adoLink ?
+            `<a href="${adoLink}" target="_blank" class="generic-table-ado-link">${adoLinkText} →</a>` : '';
+
+        const hintHtml = onRowClick ?
+            `<span class="generic-table-hint">${rowClickHint}</span>` : '';
+
+        const effortTotalHtml = hasEffort ?
+            `<span class="generic-table-effort-total">Total: <strong>${totalEffort.toFixed(1)}d</strong>${effortLabel ? ` (${effortLabel})` : ''}</span>` : '';
+
+        const resetBtnHtml = isNonDefaultSort ?
+            `<button class="reset-sort-btn" onclick="genericTableResetSort('${tableId}')">↺ Reset Sort</button>` : '';
+
+        const headerBarHtml = `
+            <div class="generic-table-header-bar">
+                <div class="generic-table-header-left">
+                    <span class="generic-table-item-count">Showing <strong>${items.length}</strong> items</span>
+                    ${hintHtml}
+                    ${adoLinkHtml}
+                </div>
+                <div class="generic-table-header-right">
+                    ${effortTotalHtml}
+                    <button class="generic-table-btn btn-copy" onclick="genericTableCopy('${tableId}')" title="Copy to clipboard">
+                        <span class="btn-icon">📋</span> Copy
+                    </button>
+                    <button class="generic-table-btn btn-export" onclick="genericTableExport('${tableId}', '${title.replace(/'/g, "\\'")}')">
+                        <span class="btn-icon">📥</span> Export
+                    </button>
+                    ${resetBtnHtml}
+                </div>
+            </div>
+        `;
+
+        // Build table header
+        const headerCellsHtml = columns.map(col => {
+            const widthStyle = columnWidths[col.key] ? `style="width: ${columnWidths[col.key]}px"` : '';
+            const sortIndicator = getSortIndicatorGeneric(sortState, col.key, defaultSort);
+            const colClass = col.class || `col-${col.key}`;
+            return `
+                <th class="sortable-header resizable-header ${colClass}"
+                    data-col="${col.key}"
+                    onclick="genericTableSortIfNotResizing('${tableId}', '${col.key}')"
+                    ${widthStyle}>
+                    ${col.label}
+                    <span class="sort-indicator">${sortIndicator}</span>
+                    <div class="resize-handle" onmousedown="genericTableStartResize(event, this, '${tableId}', '${col.key}')"></div>
+                </th>
+            `;
+        }).join('');
+
+        // Build table body rows
+        const bodyRowsHtml = sortedItems.map(item => {
+            const cellsHtml = columns.map(col => {
+                if (renderCell) {
+                    return renderCell(item, col);
+                }
+                return genericTableDefaultRenderCell(item, col, effortMap);
+            }).join('');
+
+            if (renderRow) {
+                return renderRow(item, columns, cellsHtml);
+            }
+
+            const rowClass = onRowClick ? 'clickable-row' : '';
+            const escapedTitle = (item.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const rowClick = onRowClick ?
+                `onclick="genericTableRowClick('${tableId}', ${item.id}, '${escapedTitle}')"` : '';
+
+            return `<tr class="${rowClass}" data-item-id="${item.id}" ${rowClick}>${cellsHtml}</tr>`;
+        }).join('');
+
+        // Build total row if needed
+        let totalRowHtml = '';
+        if (showTotalRow && hasEffort) {
+            totalRowHtml = `
+                <tr class="total-row">
+                    <td colspan="${totalColspan}" style="text-align: right; font-weight: 600; color: var(--text-secondary);">Total Effort:</td>
+                    <td class="effort-value" style="font-weight: 700; color: var(--accent-cyan);">${totalEffort.toFixed(1)}d</td>
+                </tr>
+            `;
+        }
+
+        // Assemble full HTML
+        container.innerHTML = `
+            <div class="generic-table-section">
+                ${hideTitleBar ? '' : titleBarHtml}
+                ${headerBarHtml}
+                <div class="generic-table-scroll-container">
+                    <table class="generic-table resizable-table" id="${tableId}">
+                        <thead>
+                            <tr>${headerCellsHtml}</tr>
+                        </thead>
+                        <tbody>
+                            ${bodyRowsHtml}
+                            ${totalRowHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        // Set up click handler delegation if needed
+        if (onRowClick) {
+            setupGenericTableClickHandler(tableId, onRowClick);
+        }
+    }
+
+    // Get sort indicator for a column
+    function getSortIndicatorGeneric(sortState, columnKey, defaultSort) {
+        // If explicitly sorted by this column
+        if (sortState.column === columnKey) {
+            return sortState.direction === 'asc' ? '▲' : '▼';
+        }
+        // If using default sort and this is the default column
+        if (sortState.column === null && defaultSort?.column === columnKey) {
+            return defaultSort.direction === 'asc' ? '▲' : '▼';
+        }
+        return '';
+    }
+
+    // Default cell renderer
+    function genericTableDefaultRenderCell(item, col, effortMap = {}) {
+        const key = col.key;
+        const value = item[key];
+        const colClass = col.class || `col-${key}`;
+
+        if (key === 'id') {
+            return `<td class="${colClass}"><a href="${item.url}" target="_blank" class="work-item-link" onclick="event.stopPropagation()">${item.id}</a></td>`;
+        }
+        if (key === 'title') {
+            return `<td class="${colClass}" title="${(value || '').replace(/"/g, '&quot;')}">${value || ''}</td>`;
+        }
+        if (key === 'state') {
+            const stateClass = getStateClass(value);
+            return `<td class="${colClass}"><span class="state-badge ${stateClass}">${value || ''}</span></td>`;
+        }
+        if (key === 'effort') {
+            const effort = effortMap[item.id] || item.effort || 0;
+            return `<td class="${colClass} effort-value">${effort > 0 ? effort.toFixed(1) + 'd' : ''}</td>`;
+        }
+        if (key === 'targetDate') {
+            return `<td class="${colClass}">${formatDate(value)}</td>`;
+        }
+        if (key === 'createdDate' || key === 'closedDate') {
+            const d = value ? new Date(value).toLocaleDateString() : '';
+            return `<td class="${colClass}">${d}</td>`;
+        }
+        if (key === 'priority') {
+            const priorityDisplay = value ? `P${value}` : '';
+            return `<td class="${colClass} priority-cell">${priorityDisplay}</td>`;
+        }
+        if (key === 'backlogPriority') {
+            if (value) {
+                const rank = Math.round(value / 10000000);
+                return `<td class="${colClass} priority-value" title="${value}">${rank}</td>`;
+            }
+            return `<td class="${colClass} priority-value">-</td>`;
+        }
+
+        return `<td class="${colClass}">${value || ''}</td>`;
+    }
+
+    // Sort items generically
+    function genericTableSortItems(items, column, direction, effortMap = {}) {
+        return [...items].sort((a, b) => {
+            let aVal, bVal;
+
+            // Special handling for effort (calculated from map)
+            if (column === 'effort') {
+                aVal = effortMap[a.id] || a.effort || 0;
+                bVal = effortMap[b.id] || b.effort || 0;
+            }
+            // Special handling for aging (calculated from createdDate)
+            else if (column === 'aging') {
+                aVal = typeof calculateAgeDays === 'function' ? calculateAgeDays(a) : 0;
+                bVal = typeof calculateAgeDays === 'function' ? calculateAgeDays(b) : 0;
+            } else {
+                aVal = a[column];
+                bVal = b[column];
+            }
+
+            // Handle null/undefined
+            if (aVal == null) aVal = '';
+            if (bVal == null) bVal = '';
+
+            // Handle dates
+            if (column.includes('Date') || column === 'targetDate') {
+                aVal = aVal ? new Date(aVal).getTime() : 0;
+                bVal = bVal ? new Date(bVal).getTime() : 0;
+            }
+            // Handle numbers (already calculated for effort/aging)
+            else if (column === 'id' || column === 'effort' || column === 'priority' || column === 'backlogPriority' || column === 'aging') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
+            }
+            // Handle state (semantic order)
+            else if (column === 'state') {
+                const stateOrder = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review', 'Done', 'Closed', 'Removed'];
+                aVal = stateOrder.indexOf(aVal);
+                bVal = stateOrder.indexOf(bVal);
+                if (aVal === -1) aVal = 999;
+                if (bVal === -1) bVal = 999;
+            }
+            // Handle strings
+            else {
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+            }
+
+            if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    // Sort handler (prevents sort if resize just happened)
+    function genericTableSortIfNotResizing(tableId, columnKey) {
+        const state = genericTableState[tableId];
+        if (!state) return;
+
+        // Don't sort if resize happened within last 200ms
+        if (Date.now() - state.lastResizeTime < 200) {
+            return;
+        }
+
+        const { config } = state;
+        const sortState = config.sortState;
+
+        // Toggle direction if same column
+        if (sortState.column === columnKey) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.column = columnKey;
+            sortState.direction = 'asc';
+        }
+
+        // Call onSort callback
+        if (config.onSort) {
+            config.onSort(sortState.column, sortState.direction);
+        }
+
+        // Re-render table
+        buildGenericTable(config);
+    }
+
+    // Reset sort to default
+    function genericTableResetSort(tableId) {
+        const state = genericTableState[tableId];
+        if (!state) return;
+
+        const { config } = state;
+        config.sortState.column = null;
+        config.sortState.direction = 'asc';
+
+        if (config.onSort) {
+            config.onSort(null, 'asc');
+        }
+
+        buildGenericTable(config);
+    }
+
+    // Column resize state
+    let genericTableResizeState = null;
+
+    function genericTableStartResize(e, handle, tableId, columnKey) {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const th = handle.parentElement;
+        genericTableResizeState = {
+            tableId,
+            columnKey,
+            th,
+            startX: e.pageX,
+            startWidth: th.offsetWidth
+        };
+
+        handle.classList.add('resizing');
+        document.addEventListener('mousemove', genericTableDoResize);
+        document.addEventListener('mouseup', genericTableStopResize);
+    }
+
+    function genericTableDoResize(e) {
+        if (!genericTableResizeState) return;
+
+        const diff = e.pageX - genericTableResizeState.startX;
+        const newWidth = Math.max(50, genericTableResizeState.startWidth + diff);
+        genericTableResizeState.th.style.width = newWidth + 'px';
+        genericTableResizeState.th.style.minWidth = newWidth + 'px';
+    }
+
+    function genericTableStopResize(e) {
+        if (!genericTableResizeState) return;
+
+        const { tableId, columnKey, th } = genericTableResizeState;
+        const state = genericTableState[tableId];
+
+        // Mark resize time to prevent sort
+        if (state) {
+            state.lastResizeTime = Date.now();
+        }
+
+        // Remove handle styling
+        const handle = th.querySelector('.resize-handle');
+        if (handle) handle.classList.remove('resizing');
+
+        // Call resize callback
+        if (state?.config?.onColumnResize) {
+            const newWidth = th.offsetWidth;
+            state.config.onColumnResize(columnKey, newWidth);
+        }
+
+        genericTableResizeState = null;
+        document.removeEventListener('mousemove', genericTableDoResize);
+        document.removeEventListener('mouseup', genericTableStopResize);
+    }
+
+    // Row click handler
+    function genericTableRowClick(tableId, itemId, itemTitle) {
+        const state = genericTableState[tableId];
+        if (!state?.config?.onRowClick) return;
+
+        // Don't trigger if resize just happened
+        if (Date.now() - state.lastResizeTime < 200) return;
+
+        // Find the item
+        const item = state.config.items.find(i => i.id === itemId);
+        if (item) {
+            state.config.onRowClick(item);
+        }
+    }
+
+    // Setup click handler with event delegation
+    function setupGenericTableClickHandler(tableId, onRowClick) {
+        const table = document.getElementById(tableId);
+        if (!table || table.dataset.clickHandlerAttached) return;
+
+        table.addEventListener('click', function(e) {
+            // Don't trigger if clicking on a link
+            if (e.target.tagName === 'A' || e.target.closest('a')) return;
+
+            const row = e.target.closest('tr.clickable-row');
+            if (!row) return;
+
+            const itemId = parseInt(row.dataset.itemId);
+            const state = genericTableState[tableId];
+            if (!state) return;
+
+            // Don't trigger if resize just happened
+            if (Date.now() - state.lastResizeTime < 200) return;
+
+            const item = state.config.items.find(i => i.id === itemId);
+            if (item) {
+                onRowClick(item);
+            }
+        });
+
+        table.dataset.clickHandlerAttached = 'true';
+    }
+
+    // Copy table to clipboard (TSV format for Excel/Google Sheets)
+    function genericTableCopy(tableId) {
+        const state = genericTableState[tableId];
+        if (!state) return;
+
+        const { config } = state;
+        const { columns, items, sortState, defaultSort, effortMap = {} } = config;
+
+        // Sort items same as display
+        let sortedItems = [...items];
+        if (sortState.column) {
+            sortedItems = genericTableSortItems(sortedItems, sortState.column, sortState.direction, effortMap);
+        } else if (defaultSort?.column) {
+            sortedItems = genericTableSortItems(sortedItems, defaultSort.column, defaultSort.direction, effortMap);
+        }
+
+        // Build TSV
+        const rows = [];
+
+        // Header row
+        rows.push(columns.map(col => col.label).join('\t'));
+
+        // Data rows
+        sortedItems.forEach(item => {
+            const cells = columns.map(col => {
+                let value = item[col.key];
+                if (col.key === 'effort') {
+                    value = effortMap[item.id] || item.effort || 0;
+                    value = value > 0 ? value.toFixed(1) : '';
+                } else if (col.key === 'priority') {
+                    value = value ? `P${value}` : '';
+                } else if (col.key === 'targetDate') {
+                    value = value ? value.split(' ')[0] : '';
+                } else {
+                    value = value || '';
+                }
+                // Escape tabs and newlines
+                return String(value).replace(/\t/g, ' ').replace(/\n/g, ' ');
+            });
+            rows.push(cells.join('\t'));
+        });
+
+        const tsv = rows.join('\n');
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(tsv).then(() => {
+            showGenericTableToast('Copied to clipboard!');
+        }).catch(err => {
+            console.error('[GenericTable] Copy failed:', err);
+            showGenericTableToast('Copy failed', true);
+        });
+    }
+
+    // Export table to CSV
+    function genericTableExport(tableId, title) {
+        const state = genericTableState[tableId];
+        if (!state) return;
+
+        const { config } = state;
+        const { columns, items, sortState, defaultSort, effortMap = {} } = config;
+
+        // Sort items same as display
+        let sortedItems = [...items];
+        if (sortState.column) {
+            sortedItems = genericTableSortItems(sortedItems, sortState.column, sortState.direction, effortMap);
+        } else if (defaultSort?.column) {
+            sortedItems = genericTableSortItems(sortedItems, defaultSort.column, defaultSort.direction, effortMap);
+        }
+
+        // Build CSV
+        const rows = [];
+
+        // Header row
+        rows.push(columns.map(col => `"${col.label.replace(/"/g, '""')}"`).join(','));
+
+        // Data rows
+        sortedItems.forEach(item => {
+            const cells = columns.map(col => {
+                let value = item[col.key];
+                if (col.key === 'effort') {
+                    value = effortMap[item.id] || item.effort || 0;
+                    value = value > 0 ? value.toFixed(1) : '';
+                } else if (col.key === 'priority') {
+                    value = value ? `P${value}` : '';
+                } else if (col.key === 'targetDate') {
+                    value = value ? value.split(' ')[0] : '';
+                } else {
+                    value = value || '';
+                }
+                // Escape quotes and wrap in quotes
+                return `"${String(value).replace(/"/g, '""')}"`;
+            });
+            rows.push(cells.join(','));
+        });
+
+        const csv = rows.join('\n');
+
+        // Create blob and download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const filename = `${title.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        showGenericTableToast(`Exported ${sortedItems.length} items to CSV`);
+    }
+
+    // Show toast notification
+    function showGenericTableToast(message, isError = false) {
+        // Remove existing toast
+        const existing = document.querySelector('.copy-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'copy-toast';
+        if (isError) {
+            toast.style.background = 'var(--accent-red)';
+        }
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // Remove after animation
+        setTimeout(() => {
+            toast.remove();
+        }, 2000);
+    }
+
+    // ==================== GENERIC WORK ITEM DETAILS MODAL ====================
+    // A unified modal that shows delivery slices (for Features) and relationships
+    // for any work item type.
+
+    /**
+     * Show work item details modal with delivery slices (if Feature) and relationships
+     * @param {Object} item - Work item object
+     * @param {Object} [options] - Options
+     * @param {Array} [options.deliverySlices] - Pre-fetched delivery slices for Features
+     * @param {string} [options.activeTeamFilter] - Active team filter for highlighting
+     * @param {string} [options.activeIterationFilter] - Active iteration filter for highlighting
+     */
+    function showWorkItemDetailsModal(item, options = {}) {
+        const modal = document.getElementById('work-item-details-modal');
+        const titleEl = document.getElementById('work-item-modal-title');
+        const subtitleEl = document.getElementById('work-item-modal-subtitle');
+        const contentEl = document.getElementById('work-item-modal-content');
+
+        if (!modal || !titleEl || !contentEl) {
+            console.error('[GenericTable] Work item details modal elements not found');
+            return;
+        }
+
+        const { deliverySlices = [], activeTeamFilter, activeIterationFilter } = options;
+
+        // Set title
+        titleEl.textContent = `${item.type} ${item.id}: ${item.title}`;
+
+        // Set subtitle with type badge
+        const typeClass = (item.type || '').toLowerCase().replace(/\s+/g, '-');
+        subtitleEl.innerHTML = `<span class="work-item-type-badge type-${typeClass}">${item.type || ''}</span>`;
+
+        // Build content sections
+        let contentHtml = '';
+
+        // Section 1: Delivery Slices (for Features only, shown first)
+        if (item.type === 'Feature' && deliverySlices.length > 0) {
+            contentHtml += buildDeliverySlicesSection(deliverySlices, activeTeamFilter, activeIterationFilter);
+        } else if (item.type === 'Feature') {
+            contentHtml += `
+                <div class="work-item-modal-section">
+                    <div class="work-item-modal-section-header">
+                        <span class="section-icon">📦</span>
+                        <span>Delivery Slices</span>
+                    </div>
+                    <div class="work-item-modal-empty">No Delivery Slices found for this Feature.</div>
+                </div>
+            `;
+        }
+
+        // Section 2: Relationships
+        const relationships = getRelationshipsForWorkItem(item.id);
+        contentHtml += buildRelationshipsSection(relationships, item.type);
+
+        contentEl.innerHTML = contentHtml;
+
+        // Show modal
+        modal.style.display = 'flex';
+    }
+
+    // Build delivery slices section HTML
+    function buildDeliverySlicesSection(slices, activeTeamFilter, activeIterationFilter) {
+        // Sort slices: matching filters first
+        let sortedSlices = [...slices];
+        if (activeTeamFilter || activeIterationFilter) {
+            sortedSlices.sort((a, b) => {
+                const teamA = a.team || getLastPathSegment(a.areaPath) || '(No Team)';
+                const teamB = b.team || getLastPathSegment(b.areaPath) || '(No Team)';
+                const iterA = a.iteration || getLastPathSegment(a.iterationPath) || '(No Iteration)';
+                const iterB = b.iteration || getLastPathSegment(b.iterationPath) || '(No Iteration)';
+
+                const matchA = (activeTeamFilter && teamA === activeTeamFilter ? 2 : 0) +
+                               (activeIterationFilter && iterA === activeIterationFilter ? 1 : 0);
+                const matchB = (activeTeamFilter && teamB === activeTeamFilter ? 2 : 0) +
+                               (activeIterationFilter && iterB === activeIterationFilter ? 1 : 0);
+
+                return matchB - matchA;
+            });
+        }
+
+        // Calculate effort summary
+        let filteredEffort = 0;
+        let totalEffort = 0;
+        sortedSlices.forEach(ds => {
+            const effort = ds.effort || 0;
+            totalEffort += effort;
+            const dsTeam = ds.team || getLastPathSegment(ds.areaPath) || '(No Team)';
+            const dsIteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+            const teamMatch = !activeTeamFilter || dsTeam === activeTeamFilter;
+            const iterationMatch = !activeIterationFilter || dsIteration === activeIterationFilter;
+            if (teamMatch && iterationMatch) {
+                filteredEffort += effort;
+            }
+        });
+
+        // Effort summary HTML
+        let effortSummaryHtml = '';
+        const hasFilters = activeTeamFilter || activeIterationFilter;
+        if (hasFilters) {
+            const filterLabels = [];
+            if (activeTeamFilter) filterLabels.push(activeTeamFilter);
+            if (activeIterationFilter) filterLabels.push(activeIterationFilter);
+            effortSummaryHtml = `
+                <div class="delivery-slices-effort-summary">
+                    <span class="effort-filter-label">${filterLabels.join(' · ')} Effort:</span>
+                    <span class="effort-filter-value">${filteredEffort.toFixed(1)}d</span>
+                    <span class="effort-total-label">/ Total:</span>
+                    <span class="effort-total-value">${totalEffort.toFixed(1)}d</span>
+                </div>
+            `;
+        } else {
+            effortSummaryHtml = `
+                <div class="delivery-slices-effort-summary">
+                    <span class="effort-total-label">Total Effort:</span>
+                    <span class="effort-total-value">${totalEffort.toFixed(1)}d</span>
+                </div>
+            `;
+        }
+
+        // Build table rows
+        const rowsHtml = sortedSlices.map(ds => {
+            const iteration = ds.iteration || getLastPathSegment(ds.iterationPath) || '—';
+            const team = ds.team || getLastPathSegment(ds.areaPath) || '—';
+            const teamMatch = !activeTeamFilter || team === activeTeamFilter;
+            const iterationMatch = !activeIterationFilter || iteration === activeIterationFilter;
+            const isOtherRow = hasFilters && (!teamMatch || !iterationMatch);
+            const rowClass = isOtherRow ? 'other-team-row' : '';
+            const stateClass = getStateClass(ds.state);
+
+            return `
+                <tr class="${rowClass}">
+                    <td class="modal-col-id"><a href="${ds.url}" target="_blank" class="work-item-link">${ds.id}</a></td>
+                    <td class="modal-col-title" title="${(ds.title || '').replace(/"/g, '&quot;')}">${ds.title || ''}</td>
+                    <td class="modal-col-state"><span class="state-badge ${stateClass}">${ds.state || ''}</span></td>
+                    <td class="modal-col-iteration">${iteration}</td>
+                    <td class="modal-col-team">${team}</td>
+                    <td class="modal-col-effort">${ds.effort || '—'}</td>
+                    <td class="modal-col-owner">${ds.assignedTo || '—'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        return `
+            <div class="work-item-modal-section delivery-slices-section">
+                <div class="work-item-modal-section-header">
+                    <span class="section-icon">📦</span>
+                    <span>Delivery Slices</span>
+                    <span class="section-count">(${slices.length})</span>
+                </div>
+                ${effortSummaryHtml}
+                <div class="delivery-slices-table-container">
+                    <table class="delivery-slices-table">
+                        <thead>
+                            <tr>
+                                <th class="modal-col-id">ID</th>
+                                <th class="modal-col-title">Title</th>
+                                <th class="modal-col-state">State</th>
+                                <th class="modal-col-iteration">Iteration</th>
+                                <th class="modal-col-team">Team</th>
+                                <th class="modal-col-effort">Effort</th>
+                                <th class="modal-col-owner">Owner</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // Build relationships section HTML
+    function buildRelationshipsSection(relationships, itemType) {
+        const hasParent = relationships.parent !== null;
+        const hasChildren = relationships.children.length > 0;
+        const hasRelated = relationships.related.length > 0;
+
+        if (!hasParent && !hasChildren && !hasRelated) {
+            return `
+                <div class="work-item-modal-section relationships-section">
+                    <div class="work-item-modal-section-header">
+                        <span class="section-icon">🔗</span>
+                        <span>Relationships</span>
+                    </div>
+                    <div class="work-item-modal-empty">No relationships found for this ${itemType || 'item'}.</div>
+                </div>
+            `;
+        }
+
+        let html = `
+            <div class="work-item-modal-section relationships-section">
+                <div class="work-item-modal-section-header">
+                    <span class="section-icon">🔗</span>
+                    <span>Relationships</span>
+                </div>
+                <div class="relationships-content">
+        `;
+
+        // Parent
+        if (hasParent) {
+            const p = relationships.parent;
+            const typeClass = (p.type || '').toLowerCase().replace(/\s+/g, '-');
+            const stateClass = getStateClass(p.state);
+            html += `
+                <div class="relationship-group parent-group">
+                    <div class="relationship-group-header">
+                        <span class="rel-icon">⬆️</span>
+                        <span>Parent</span>
+                    </div>
+                    <div class="relationship-items">
+                        <div class="relationship-item">
+                            <span class="rel-item-id"><a href="${p.url}" target="_blank">${p.id}</a></span>
+                            <span class="rel-item-type type-${typeClass}">${p.type || ''}</span>
+                            <span class="rel-item-title" title="${(p.title || '').replace(/"/g, '&quot;')}">${p.title || ''}</span>
+                            <span class="rel-item-state"><span class="state-badge ${stateClass}">${p.state || ''}</span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Children
+        if (hasChildren) {
+            const childrenHtml = relationships.children.map(c => {
+                const typeClass = (c.type || '').toLowerCase().replace(/\s+/g, '-');
+                const stateClass = getStateClass(c.state);
+                return `
+                    <div class="relationship-item">
+                        <span class="rel-item-id"><a href="${c.url}" target="_blank">${c.id}</a></span>
+                        <span class="rel-item-type type-${typeClass}">${c.type || ''}</span>
+                        <span class="rel-item-title" title="${(c.title || '').replace(/"/g, '&quot;')}">${c.title || ''}</span>
+                        <span class="rel-item-state"><span class="state-badge ${stateClass}">${c.state || ''}</span></span>
+                    </div>
+                `;
+            }).join('');
+
+            html += `
+                <div class="relationship-group children-group">
+                    <div class="relationship-group-header">
+                        <span class="rel-icon">⬇️</span>
+                        <span>Children</span>
+                        <span class="rel-count">(${relationships.children.length})</span>
+                    </div>
+                    <div class="relationship-items">${childrenHtml}</div>
+                </div>
+            `;
+        }
+
+        // Related
+        if (hasRelated) {
+            const relatedHtml = relationships.related.map(r => {
+                const typeClass = (r.type || '').toLowerCase().replace(/\s+/g, '-');
+                const stateClass = getStateClass(r.state);
+                let itemHtml = `
+                    <div class="relationship-item">
+                        <span class="rel-item-id"><a href="${r.url}" target="_blank">${r.id}</a></span>
+                        <span class="rel-item-type type-${typeClass}">${r.type || ''}</span>
+                        <span class="rel-item-title" title="${(r.title || '').replace(/"/g, '&quot;')}">${r.title || ''}</span>
+                        <span class="rel-item-state"><span class="state-badge ${stateClass}">${r.state || ''}</span></span>
+                    </div>
+                `;
+                if (r.comment) {
+                    itemHtml += `<div class="relationship-comment">${r.comment}</div>`;
+                }
+                return itemHtml;
+            }).join('');
+
+            html += `
+                <div class="relationship-group related-group">
+                    <div class="relationship-group-header">
+                        <span class="rel-icon">🔗</span>
+                        <span>Related</span>
+                        <span class="rel-count">(${relationships.related.length})</span>
+                    </div>
+                    <div class="relationship-items">${relatedHtml}</div>
+                </div>
+            `;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    // Close work item details modal
+    function closeWorkItemDetailsModal() {
+        const modal = document.getElementById('work-item-details-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // ==================== END GENERIC TABLE COMPONENT ====================
 </script>

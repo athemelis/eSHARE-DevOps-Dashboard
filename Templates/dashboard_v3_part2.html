@@ -790,7 +790,35 @@
             <div class="filter-dropdown-options" id="${optionsId}">
         `;
 
-        // Regular releases with dates (at the top)
+        // (No Release) option - items with no release AND no target date
+        // Always show this option at the top (below search), even if count is 0
+        {
+            const isChecked = selectedReleases.includes('(No Release)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="no release not set" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '(No Release)', this.checked, event)">
+                    <span class="option-label">(No Release)</span>
+                    <span class="option-meta">${noReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // ⚠️ Needs Release - items with target date but no release version (warning)
+        // Always show this option, even if count is 0
+        {
+            const isChecked = selectedReleases.includes('(Needs Release)');
+            html += `
+                <label class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(Needs Release)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericReleaseChange('${dashboardId}', '(Needs Release)', this.checked, event)">
+                    <span class="option-label">⚠️ Needs Release</span>
+                    <span class="option-meta">${needsReleaseCount} items</span>
+                </label>
+            `;
+        }
+
+        // Regular releases with dates (sorted by date)
         releases.forEach(r => {
             const info = releaseInfo[r];
             const isChecked = selectedReleases.includes(r);
@@ -814,32 +842,6 @@
                 </label>
             `;
         });
-
-        // ⚠️ Needs Release - items with target date but no release version (warning)
-        if (needsReleaseCount > 0) {
-            const isChecked = selectedReleases.includes('(Needs Release)');
-            html += `
-                <label class="filter-dropdown-option warning" data-search-value="needs release" onclick="event.stopPropagation();">
-                    <input type="checkbox" value="(Needs Release)" ${isChecked ? 'checked' : ''}
-                           onchange="handleGenericReleaseChange('${dashboardId}', '(Needs Release)', this.checked, event)">
-                    <span class="option-label">⚠️ Needs Release</span>
-                    <span class="option-meta">${needsReleaseCount} items</span>
-                </label>
-            `;
-        }
-
-        // (No Release) option - items with no release AND no target date
-        if (noReleaseCount > 0) {
-            const isChecked = selectedReleases.includes('(No Release)');
-            html += `
-                <label class="filter-dropdown-option" data-search-value="no release not set" onclick="event.stopPropagation();">
-                    <input type="checkbox" value="(No Release)" ${isChecked ? 'checked' : ''}
-                           onchange="handleGenericReleaseChange('${dashboardId}', '(No Release)', this.checked, event)">
-                    <span class="option-label">(No Release)</span>
-                    <span class="option-meta">${noReleaseCount} items</span>
-                </label>
-            `;
-        }
 
         html += `</div>`;
         html += `
