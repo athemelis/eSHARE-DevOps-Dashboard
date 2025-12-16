@@ -4110,15 +4110,25 @@
                     releaseHeaderFilters.team.length > 0 ||
                     releaseHeaderFilters.customer.length > 0;
 
+                // Check if any releases are selected
+                const hasReleaseSelection = selectedReleases.length > 0;
+
                 releases.forEach(r => {
                     const count = filteredReleaseInfo[r] || 0;
                     const heightPercent = Math.max((count / maxValue) * 100, 5); // Min 5% height for visibility
                     const isSelected = selectedReleases.includes(r);
                     const info = releaseInfo[r];
-                    // Highlight bars with filtered items when any filter is active
                     const hasFilteredItems = count > 0;
-                    const isHighlighted = isSelected || (anyNonReleaseFilterActive && hasFilteredItems);
-                    const isDimmed = anyNonReleaseFilterActive && !hasFilteredItems && !isSelected;
+
+                    // Highlighting logic:
+                    // - If releases are selected: only highlight selected releases
+                    // - If no releases selected but other filters active: highlight releases with matching items
+                    const shouldHighlightForFilterMatch = !hasReleaseSelection && anyNonReleaseFilterActive && hasFilteredItems;
+
+                    // Dimming logic:
+                    // - If releases are selected: dim non-selected releases
+                    // - If no releases selected but other filters active: dim releases with no matching items
+                    const isDimmed = hasReleaseSelection ? !isSelected : (anyNonReleaseFilterActive && !hasFilteredItems);
 
                     let dateStr = '';
                     if (info.dates.size === 1) {
@@ -4130,7 +4140,7 @@
                     }
 
                     barsHtml += `
-                        <div class="mini-bar ${isSelected ? 'selected' : ''} ${(anyNonReleaseFilterActive && hasFilteredItems) ? 'filter-match' : ''} ${isDimmed ? 'dimmed' : ''}"
+                        <div class="mini-bar ${isSelected ? 'selected' : ''} ${shouldHighlightForFilterMatch ? 'filter-match' : ''} ${isDimmed ? 'dimmed' : ''}"
                              style="height: ${heightPercent}%;"
                              onclick="selectRelease('${r}', event)">
                             <div class="mini-bar-tooltip">
@@ -6976,6 +6986,23 @@
 
     // Initial render - use restored view or default to executive
     switchView(currentView);
+
+    // ==================== AUTO-REFRESH ====================
+    // Automatically refresh the page every 60 seconds to get latest data
+    // The refresh preserves state via localStorage
+    const AUTO_REFRESH_INTERVAL = 60 * 1000; // 60 seconds
+
+    function scheduleAutoRefresh() {
+        setTimeout(() => {
+            // Save state before refresh (already saved on each interaction, but ensure it's current)
+            saveStateToStorage();
+            // Silently reload the page - state will be restored from localStorage
+            window.location.reload();
+        }, AUTO_REFRESH_INTERVAL);
+    }
+
+    // Start the auto-refresh timer
+    scheduleAutoRefresh();
 </script>
 
 <!-- Feature Delivery Slices Modal -->

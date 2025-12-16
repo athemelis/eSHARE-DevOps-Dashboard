@@ -29,6 +29,7 @@
                 roadmapFilters: typeof roadmapFilters !== 'undefined' ? roadmapFilters : null,
                 roadmapSortState: typeof roadmapSortState !== 'undefined' ? roadmapSortState : null,
                 roadmapTeamSummaryCollapsed: typeof roadmapTeamSummaryCollapsed !== 'undefined' ? roadmapTeamSummaryCollapsed : true,
+                roadmapColumnWidths: typeof roadmapColumnWidths !== 'undefined' ? roadmapColumnWidths : {},
                 // Releases view state
                 releaseHeaderFilters: typeof releaseHeaderFilters !== 'undefined' ? releaseHeaderFilters : null,
                 releasesSearchFilter: typeof releasesSearchFilter !== 'undefined' ? releasesSearchFilter : '',
@@ -139,6 +140,11 @@
                     section.classList.toggle('collapsed', roadmapTeamSummaryCollapsed);
                 }
             }, 0);
+        }
+
+        // Restore Roadmap table column widths
+        if (state.roadmapColumnWidths && typeof roadmapColumnWidths !== 'undefined') {
+            Object.assign(roadmapColumnWidths, state.roadmapColumnWidths);
         }
 
         // Restore Releases view state

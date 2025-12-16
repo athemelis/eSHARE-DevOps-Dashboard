@@ -1750,6 +1750,9 @@
     // Track collapsed state for collapsible sections
     let roadmapTeamSummaryCollapsed = true; // Collapsed by default
 
+    // Column widths for Roadmap table (persisted)
+    let roadmapColumnWidths = {};
+
     // Helper to extract last segment from backslash-delimited path
     function getLastPathSegment(path) {
         if (!path) return '';
@@ -2525,6 +2528,12 @@
             saveStateToStorage();
         };
 
+        // Column resize handler
+        const handleRoadmapColumnResize = (columnKey, width) => {
+            roadmapColumnWidths[columnKey] = width;
+            saveStateToStorage();
+        };
+
         // Build the table using generic component
         buildGenericTable({
             containerId: 'roadmap-table-container',
@@ -2539,6 +2548,8 @@
             sortState: roadmapSortState,
             defaultSort: { column: 'backlogPriority', direction: 'asc' },
             onSort: handleRoadmapSortChange,
+            columnWidths: roadmapColumnWidths,
+            onColumnResize: handleRoadmapColumnResize,
             hasEffort: true,
             effortMap: featureEffortMap,
             effortLabel: effortFilterLabel,
