@@ -592,7 +592,6 @@
         states: [],
         priorities: [],
         releases: [],
-        teams: [],
         aging: []
     };
 
@@ -882,14 +881,6 @@
             });
         }
 
-        // Apply team filter (unless excluded)
-        if (excludeFilter !== 'team' && customersFilters.teams.length > 0) {
-            issues = issues.filter(i => {
-                const team = i.team || '(No Team)';
-                return customersFilters.teams.includes(team);
-            });
-        }
-
         // Apply aging filter (unless excluded)
         if (excludeFilter !== 'aging' && customersFilters.aging.length > 0) {
             issues = issues.filter(i => {
@@ -909,7 +900,6 @@
                customersFilters.states.length > 0 ||
                customersFilters.priorities.length > 0 ||
                customersFilters.releases.length > 0 ||
-               customersFilters.teams.length > 0 ||
                customersFilters.aging.length > 0;
     }
 
@@ -924,7 +914,6 @@
         customersFilters.states = [];
         customersFilters.priorities = [];
         customersFilters.releases = [];
-        customersFilters.teams = [];
         customersFilters.aging = [];
 
         saveStateToStorage();
@@ -1170,9 +1159,50 @@
             });
         }
 
+        // Build Category dropdown (cross-filter aware with counts)
         const categoryMenu = document.getElementById('customers-category-menu');
         if (categoryMenu) {
-            categoryMenu.innerHTML = buildCustomersDropdownHtml('categories', allCategories, customersFilters.categories);
+            const categoryFilteredIssues = getCustomersIssuesExcludingFilter('categories');
+
+            // Count issues by category
+            const categoryCounts = {};
+            categoryFilteredIssues.forEach(i => {
+                const category = i.ticketCategory || '(Not Set)';
+                categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+            });
+
+            // Use allCategories order but only show those with counts
+            const availableCategories = allCategories.filter(c => categoryCounts[c] > 0);
+
+            let categoryHtml = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search categories..."
+                           oninput="filterCustomersDropdownOptions(this, 'customers-category-menu')"
+                           onclick="event.stopPropagation();">
+                </div>
+                <div class="filter-dropdown-options" id="customers-category-menu-options">
+            `;
+
+            availableCategories.forEach(c => {
+                const isChecked = customersFilters.categories.includes(c);
+                const escapedValue = c.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                categoryHtml += `
+                    <label class="filter-dropdown-option" data-search-value="${c.toLowerCase()}" onclick="event.stopPropagation();">
+                        <input type="checkbox" value="${escapedValue}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('categories')">
+                        <span class="option-label">${c}</span>
+                        <span class="option-count">${categoryCounts[c]}</span>
+                    </label>
+                `;
+            });
+
+            categoryHtml += `</div>`;
+            categoryHtml += `
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllCustomersFilter('categories', event)">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearCustomersFilter('categories', event)">Clear</button>
+                </div>
+            `;
+            categoryMenu.innerHTML = categoryHtml;
         }
 
         // Build state dropdown using generic component (cross-filter aware)
@@ -1183,17 +1213,6 @@
                 dashboardId: 'customers',
                 items: stateFilteredIssues,
                 selectedStates: customersFilters.states
-            });
-        }
-
-        // Build team dropdown using generic component (cross-filter aware)
-        const teamMenu = document.getElementById('customers-team-menu');
-        if (teamMenu) {
-            const teamFilteredIssues = getCustomersIssuesExcludingFilter('team');
-            teamMenu.innerHTML = buildTeamFilterDropdown({
-                dashboardId: 'customers',
-                items: teamFilteredIssues,
-                selectedTeams: customersFilters.teams
             });
         }
 
@@ -1219,10 +1238,50 @@
             });
         }
 
-        // Aging filter dropdown - use AGING_BUCKETS constant for consistent order
+        // Build Aging dropdown (cross-filter aware with counts)
         const agingMenu = document.getElementById('customers-aging-menu');
         if (agingMenu) {
-            agingMenu.innerHTML = buildCustomersDropdownHtml('aging', AGING_BUCKETS, customersFilters.aging);
+            const agingFilteredIssues = getCustomersIssuesExcludingFilter('aging');
+
+            // Count issues by aging bucket
+            const agingCounts = {};
+            agingFilteredIssues.forEach(i => {
+                const bucket = calculateAgingBucket(i);
+                agingCounts[bucket] = (agingCounts[bucket] || 0) + 1;
+            });
+
+            // Use AGING_BUCKETS order but only show those with counts
+            const availableBuckets = AGING_BUCKETS.filter(b => agingCounts[b] > 0);
+
+            let agingHtml = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search aging..."
+                           oninput="filterCustomersDropdownOptions(this, 'customers-aging-menu')"
+                           onclick="event.stopPropagation();">
+                </div>
+                <div class="filter-dropdown-options" id="customers-aging-menu-options">
+            `;
+
+            availableBuckets.forEach(b => {
+                const isChecked = customersFilters.aging.includes(b);
+                const escapedValue = b.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                agingHtml += `
+                    <label class="filter-dropdown-option" data-search-value="${b.toLowerCase()}" onclick="event.stopPropagation();">
+                        <input type="checkbox" value="${escapedValue}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('aging')">
+                        <span class="option-label">${b}</span>
+                        <span class="option-count">${agingCounts[b]}</span>
+                    </label>
+                `;
+            });
+
+            agingHtml += `</div>`;
+            agingHtml += `
+                <div class="filter-dropdown-actions">
+                    <button class="filter-btn-primary" onclick="selectAllCustomersFilter('aging', event)">Select All</button>
+                    <button class="filter-btn-secondary" onclick="clearCustomersFilter('aging', event)">Clear</button>
+                </div>
+            `;
+            agingMenu.innerHTML = agingHtml;
         }
 
         // Update display text for all filters
@@ -1231,7 +1290,6 @@
         updateGenericPriorityDisplay('customers');
         updateGenericReleaseDisplay('customers');
         updateGenericStateDisplay('customers');
-        updateGenericTeamDisplay('customers');
         // Dashboard-specific filters
         ['categories', 'aging'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
@@ -2605,27 +2663,56 @@
             });
         }
 
-        // Populate Assignee dropdown
+        // Populate Assignee dropdown (cross-filter aware with counts)
         const assigneeMenu = document.getElementById('roadmap-assignee-menu');
-        if (assigneeMenu && !assigneeMenu.dataset.populated) {
-            assigneeMenu.innerHTML = `
+        if (assigneeMenu) {
+            // Get features filtered by all filters EXCEPT assignee for cross-filter behavior
+            const assigneeFilteredFeatures = getRoadmapFeaturesExcludingFilter('assignee');
+
+            // Count features by assignee
+            const assigneeCounts = {};
+            assigneeFilteredFeatures.forEach(f => {
+                const assignee = f.assignedTo || '(Unassigned)';
+                assigneeCounts[assignee] = (assigneeCounts[assignee] || 0) + 1;
+            });
+
+            // Get sorted assignees with counts > 0
+            const availableAssignees = Object.keys(assigneeCounts).sort((a, b) => {
+                if (a === '(Unassigned)') return 1;
+                if (b === '(Unassigned)') return -1;
+                return a.localeCompare(b);
+            });
+
+            let assigneeHtml = `
                 <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search assignees..." oninput="filterRoadmapDropdownOptions('assignee', this.value)">
+                    <input type="text" placeholder="Search assignees..."
+                           oninput="filterRoadmapDropdownOptions('assignee', this.value)"
+                           onclick="event.stopPropagation();">
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-assignee-options">
-                    ${assignees.map(a => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.assignees.includes(a) ? 'checked' : ''} onchange="handleRoadmapFilterChange('assignee', '${a.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${a}</span>
-                        </label>
-                    `).join('')}
-                </div>
+            `;
+
+            availableAssignees.forEach(a => {
+                const isChecked = roadmapFilters.assignees.includes(a);
+                const escapedValue = a.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                assigneeHtml += `
+                    <label class="filter-dropdown-option" data-search-value="${a.toLowerCase()}" onclick="event.stopPropagation();">
+                        <input type="checkbox" value="${a.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                               onchange="handleRoadmapFilterChange('assignee', '${escapedValue}', this.checked)">
+                        <span class="option-label">${a}</span>
+                        <span class="option-count">${assigneeCounts[a]}</span>
+                    </label>
+                `;
+            });
+
+            assigneeHtml += `</div>`;
+            assigneeHtml += `
                 <div class="filter-dropdown-actions">
                     <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('assignee')">Select All</button>
                     <button class="filter-btn-secondary" onclick="clearRoadmapFilter('assignee')">Clear</button>
                 </div>
             `;
-            assigneeMenu.dataset.populated = 'true';
+            assigneeMenu.innerHTML = assigneeHtml;
         }
 
         // Populate Team dropdown using generic component (cross-filter aware)
@@ -2645,27 +2732,62 @@
             });
         }
 
-        // Populate Iteration dropdown
+        // Populate Iteration dropdown (cross-filter aware with counts)
         const iterationMenu = document.getElementById('roadmap-iteration-menu');
-        if (iterationMenu && !iterationMenu.dataset.populated) {
-            iterationMenu.innerHTML = `
+        if (iterationMenu) {
+            // Get features filtered by all filters EXCEPT iteration for cross-filter behavior
+            const iterationFilteredFeatures = getRoadmapFeaturesExcludingFilter('iteration');
+            // Get delivery slices for these features to count iterations
+            const iterationSlices = getDeliverySlicesForFeatures(iterationFilteredFeatures.map(f => f.id));
+
+            // Count features by iteration (count unique feature IDs per iteration)
+            const iterationFeatureCounts = {};
+            iterationSlices.forEach(ds => {
+                const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                if (!iterationFeatureCounts[iteration]) {
+                    iterationFeatureCounts[iteration] = new Set();
+                }
+                iterationFeatureCounts[iteration].add(ds.parentId);
+            });
+
+            // Convert to count and sort
+            const availableIterations = Object.keys(iterationFeatureCounts).sort((a, b) => {
+                if (a === '(No Iteration)') return 1;
+                if (b === '(No Iteration)') return -1;
+                return a.localeCompare(b);
+            });
+
+            let iterationHtml = `
                 <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search iterations..." oninput="filterRoadmapDropdownOptions('iteration', this.value)">
+                    <input type="text" placeholder="Search iterations..."
+                           oninput="filterRoadmapDropdownOptions('iteration', this.value)"
+                           onclick="event.stopPropagation();">
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-iteration-options">
-                    ${iterations.map(i => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.iterations.includes(i) ? 'checked' : ''} onchange="handleRoadmapFilterChange('iteration', '${i.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${i}</span>
-                        </label>
-                    `).join('')}
-                </div>
+            `;
+
+            availableIterations.forEach(i => {
+                const isChecked = roadmapFilters.iterations.includes(i);
+                const count = iterationFeatureCounts[i].size;
+                const escapedValue = i.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                iterationHtml += `
+                    <label class="filter-dropdown-option" data-search-value="${i.toLowerCase()}" onclick="event.stopPropagation();">
+                        <input type="checkbox" value="${i.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                               onchange="handleRoadmapFilterChange('iteration', '${escapedValue}', this.checked)">
+                        <span class="option-label">${i}</span>
+                        <span class="option-count">${count}</span>
+                    </label>
+                `;
+            });
+
+            iterationHtml += `</div>`;
+            iterationHtml += `
                 <div class="filter-dropdown-actions">
                     <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('iteration')">Select All</button>
                     <button class="filter-btn-secondary" onclick="clearRoadmapFilter('iteration')">Clear</button>
                 </div>
             `;
-            iterationMenu.dataset.populated = 'true';
+            iterationMenu.innerHTML = iterationHtml;
         }
 
         // Populate Priority dropdown using generic component (cross-filter aware)
@@ -2691,12 +2813,33 @@
             });
         }
 
-        // Populate Tag dropdown
+        // Populate Tag dropdown (cross-filter aware with counts)
         const tagMenu = document.getElementById('roadmap-tag-menu');
-        if (tagMenu && !tagMenu.dataset.populated) {
-            tagMenu.innerHTML = `
+        if (tagMenu) {
+            // Get features filtered by all filters EXCEPT tag for cross-filter behavior
+            const tagFilteredFeatures = getRoadmapFeaturesExcludingFilter('tag');
+
+            // Count features by tag
+            const tagCounts = {};
+            tagFilteredFeatures.forEach(f => {
+                if (f.tags) {
+                    f.tags.split(';').forEach(t => {
+                        const tag = t.trim();
+                        if (tag) {
+                            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                        }
+                    });
+                }
+            });
+
+            // Get sorted tags with counts > 0
+            const availableTags = Object.keys(tagCounts).sort((a, b) => a.localeCompare(b));
+
+            let tagHtml = `
                 <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search tags..." oninput="filterRoadmapDropdownOptions('tag', this.value)">
+                    <input type="text" placeholder="Search tags..."
+                           oninput="filterRoadmapDropdownOptions('tag', this.value)"
+                           onclick="event.stopPropagation();">
                 </div>
                 <div class="tag-logic-toggle" onclick="event.stopPropagation();">
                     <span class="tag-logic-label">Match:</span>
@@ -2704,19 +2847,29 @@
                     <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'and' ? 'active' : ''}" onclick="setTagLogicMode('and')">All (AND)</button>
                 </div>
                 <div class="filter-dropdown-options" id="roadmap-tag-options">
-                    ${tags.map(t => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" value="${t.replace(/"/g, '&quot;')}" ${roadmapFilters.tags.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('tag', '${t.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${t}</span>
-                        </label>
-                    `).join('')}
-                </div>
+            `;
+
+            availableTags.forEach(t => {
+                const isChecked = roadmapFilters.tags.includes(t);
+                const escapedValue = t.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+                tagHtml += `
+                    <label class="filter-dropdown-option" data-search-value="${t.toLowerCase()}" onclick="event.stopPropagation();">
+                        <input type="checkbox" value="${t.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                               onchange="handleRoadmapFilterChange('tag', '${escapedValue}', this.checked)">
+                        <span class="option-label">${t}</span>
+                        <span class="option-count">${tagCounts[t]}</span>
+                    </label>
+                `;
+            });
+
+            tagHtml += `</div>`;
+            tagHtml += `
                 <div class="filter-dropdown-actions">
                     <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('tag')">Select All</button>
                     <button class="filter-btn-secondary" onclick="clearRoadmapFilter('tag')">Clear</button>
                 </div>
             `;
-            tagMenu.dataset.populated = 'true';
+            tagMenu.innerHTML = tagHtml;
         }
     }
 

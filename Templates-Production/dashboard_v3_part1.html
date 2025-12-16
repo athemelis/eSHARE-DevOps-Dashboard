@@ -272,14 +272,96 @@
         /* Wide dropdown menu - for Team filter showing team + count */
         /* Applied to all team filter menus across dashboards */
         #release-team-header-menu,
-        #roadmap-team-menu,
-        #customers-team-menu {
+        #roadmap-team-menu {
             right: auto;
             min-width: 200px;
         }
         #release-team-header-menu .option-count,
-        #roadmap-team-menu .option-count,
-        #customers-team-menu .option-count {
+        #roadmap-team-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Type filter showing type + count */
+        #release-type-header-menu {
+            right: auto;
+            min-width: 200px;
+        }
+        #release-type-header-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Bug Type filter showing type + count */
+        #release-bugtype-header-menu {
+            right: auto;
+            min-width: 260px;
+        }
+        #release-bugtype-header-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Iteration filter showing iteration + count */
+        #roadmap-iteration-menu {
+            right: auto;
+            min-width: 220px;
+        }
+        #roadmap-iteration-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Tag filter showing tag + count */
+        #roadmap-tag-menu {
+            right: auto;
+            min-width: 280px;
+        }
+        #roadmap-tag-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Assignee filter showing name + count */
+        #roadmap-assignee-menu {
+            right: auto;
+            min-width: 250px;
+        }
+        #roadmap-assignee-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Category filter showing category + count */
+        #customers-category-menu {
+            right: auto;
+            min-width: 220px;
+        }
+        #customers-category-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Wide dropdown menu - for Aging filter showing bucket + count */
+        #customers-aging-menu {
+            right: auto;
+            min-width: 180px;
+        }
+        #customers-aging-menu .option-count {
             margin-left: auto;
             font-size: 0.7rem;
             color: var(--text-muted);
@@ -3071,7 +3153,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v85</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v86</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-view="executive">Executive</button>
@@ -3375,17 +3457,6 @@
                 </div>
                 <div class="filter-dropdown-menu" id="customers-state-menu">
                     <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Team:</span>
-            <div class="filter-dropdown" id="customers-team-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-team-dropdown')">
-                    <span id="customers-team-display">All Teams</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="customers-team-menu">
-                    <!-- Populated dynamically by generic Team filter -->
                 </div>
             </div>
 

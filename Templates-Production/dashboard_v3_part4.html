@@ -3764,40 +3764,53 @@
             });
         }
         
-        // Populate Type filter dropdown based on cross-filtered items
+        // Populate Type filter dropdown based on cross-filtered items (with search and counts)
         const typeFilteredItems = getItemsExcludingFilter(releaseItems, 'type');
         const typeMenu = document.getElementById('release-type-header-menu');
         if (typeMenu) {
-            const availableTypes = new Set();
+            // Count items by type category
+            const typeCounts = { Feature: 0, Issue: 0, CustomerBug: 0, InternalBug: 0 };
             typeFilteredItems.forEach(item => {
-                if (item.type === 'Feature') availableTypes.add('Feature');
-                else if (item.type === 'Issue') availableTypes.add('Issue');
+                if (item.type === 'Feature') typeCounts.Feature++;
+                else if (item.type === 'Issue') typeCounts.Issue++;
                 else if (item.type === 'Bug') {
-                    if (item.bugType === 'Customer Related') availableTypes.add('CustomerBug');
-                    else availableTypes.add('InternalBug');
+                    if (item.bugType === 'Customer Related') typeCounts.CustomerBug++;
+                    else typeCounts.InternalBug++;
                 }
             });
-            
+
             const typeOptions = [
                 { value: 'Feature', label: 'Feature' },
                 { value: 'Issue', label: 'Issue' },
                 { value: 'CustomerBug', label: 'Customer Bug' },
                 { value: 'InternalBug', label: 'Internal Bug' }
             ];
-            
-            let typeHtml = '';
+
+            let typeHtml = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search types..."
+                           oninput="filterReleaseTypeOptions(this.value)"
+                           onclick="event.stopPropagation();">
+                </div>
+                <div class="filter-dropdown-options" id="release-type-options">
+            `;
+
             typeOptions.forEach(opt => {
-                if (availableTypes.has(opt.value)) {
+                if (typeCounts[opt.value] > 0) {
                     const isChecked = releaseHeaderFilters.type.includes(opt.value);
                     typeHtml += `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" data-search-value="${opt.label.toLowerCase()}" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="type" value="${opt.value}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('type', event)">
                             <span class="option-label">${opt.label}</span>
+                            <span class="option-count">${typeCounts[opt.value]}</span>
                         </label>
                     `;
                 }
             });
-            if (typeHtml) {
+
+            typeHtml += `</div>`;
+
+            if (Object.values(typeCounts).some(c => c > 0)) {
                 typeHtml += `
                     <div class="filter-dropdown-actions">
                         <button class="filter-btn-primary" onclick="selectAllHeaderFilter('type', event)">Select All</button>
@@ -3809,31 +3822,46 @@
             }
             typeMenu.innerHTML = typeHtml;
         }
-        
-        // Populate Bug Type filter dropdown based on cross-filtered items
+
+        // Populate Bug Type filter dropdown based on cross-filtered items (with search and counts)
         const bugtypeFilteredItems = getItemsExcludingFilter(releaseItems, 'bugtype');
         const bugtypeMenu = document.getElementById('release-bugtype-header-menu');
         if (bugtypeMenu) {
-            const availableBugTypes = new Set();
+            // Count bugs by type
+            const bugtypeCounts = {};
             bugtypeFilteredItems.filter(item => item.type === 'Bug').forEach(item => {
-                if (item.bugType) availableBugTypes.add(item.bugType);
+                if (item.bugType) {
+                    bugtypeCounts[item.bugType] = (bugtypeCounts[item.bugType] || 0) + 1;
+                }
             });
-            
+
             const bugTypeOptions = ['Customer Related', 'Product Quality', 'Technical & Infrastructure'];
-            
-            let bugtypeHtml = '';
+
+            let bugtypeHtml = `
+                <div class="filter-dropdown-search">
+                    <input type="text" placeholder="Search bug types..."
+                           oninput="filterReleaseBugTypeOptions(this.value)"
+                           onclick="event.stopPropagation();">
+                </div>
+                <div class="filter-dropdown-options" id="release-bugtype-options">
+            `;
+
             bugTypeOptions.forEach(bt => {
-                if (availableBugTypes.has(bt)) {
+                if (bugtypeCounts[bt] > 0) {
                     const isChecked = releaseHeaderFilters.bugtype.includes(bt);
                     bugtypeHtml += `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
+                        <label class="filter-dropdown-option" data-search-value="${bt.toLowerCase()}" onclick="event.stopPropagation();">
                             <input type="checkbox" data-filter="bugtype" value="${bt}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('bugtype', event)">
                             <span class="option-label">${bt}</span>
+                            <span class="option-count">${bugtypeCounts[bt]}</span>
                         </label>
                     `;
                 }
             });
-            if (bugtypeHtml) {
+
+            bugtypeHtml += `</div>`;
+
+            if (Object.keys(bugtypeCounts).length > 0) {
                 bugtypeHtml += `
                     <div class="filter-dropdown-actions">
                         <button class="filter-btn-primary" onclick="selectAllHeaderFilter('bugtype', event)">Select All</button>

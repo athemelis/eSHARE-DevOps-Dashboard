@@ -539,7 +539,29 @@
         renderReleasesView();
         reopenDropdown();
     }
-    
+
+    // Filter Type options by search text
+    function filterReleaseTypeOptions(searchText) {
+        const container = document.getElementById('release-type-options');
+        if (!container) return;
+        const searchLower = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(searchLower) ? '' : 'none';
+        });
+    }
+
+    // Filter Bug Type options by search text
+    function filterReleaseBugTypeOptions(searchText) {
+        const container = document.getElementById('release-bugtype-options');
+        if (!container) return;
+        const searchLower = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(searchLower) ? '' : 'none';
+        });
+    }
+
     // Check if any release filters are active
     function hasActiveReleaseFilters() {
         if (hasGenericSearchFilter('releases')) return true;
