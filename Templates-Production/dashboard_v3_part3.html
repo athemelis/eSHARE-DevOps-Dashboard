@@ -592,6 +592,7 @@
         states: [],
         priorities: [],
         releases: [],
+        teams: [],
         aging: []
     };
 
@@ -827,6 +828,79 @@
         return issues;
     }
 
+    /**
+     * Get Customers issues filtered by all filters EXCEPT the specified one
+     * Used for cross-filter dropdown population
+     * @param {string} excludeFilter - Filter to exclude: 'priority', 'release', 'customer', 'state', 'categories', 'aging'
+     */
+    function getCustomersIssuesExcludingFilter(excludeFilter) {
+        let issues = getAllIssues();
+
+        // Always apply search filter
+        issues = applyGenericSearchFilter(issues, customersFilters.search);
+
+        // Apply customer filter (unless excluded)
+        if (excludeFilter !== 'customer' && customersFilters.customers.length > 0) {
+            issues = issues.filter(i => {
+                if (!i.customers) return customersFilters.customers.includes('(No Customer)');
+                const itemCustomers = i.customers.split(';').map(c => c.trim());
+                return itemCustomers.some(c => customersFilters.customers.includes(c));
+            });
+        }
+
+        // Apply category filter (unless excluded)
+        if (excludeFilter !== 'categories' && customersFilters.categories.length > 0) {
+            issues = issues.filter(i => {
+                const category = i.ticketCategory || '(Not Set)';
+                return customersFilters.categories.includes(category);
+            });
+        }
+
+        // Apply state filter (unless excluded) - accept both 'state' and 'states' for compatibility
+        if (excludeFilter !== 'state' && excludeFilter !== 'states' && customersFilters.states.length > 0) {
+            issues = issues.filter(i => customersFilters.states.includes(i.state));
+        }
+
+        // Apply priority filter (unless excluded)
+        if (excludeFilter !== 'priority' && customersFilters.priorities.length > 0) {
+            issues = issues.filter(i => {
+                const priority = i.priority ? 'P' + i.priority : '(No Priority)';
+                return customersFilters.priorities.includes(priority);
+            });
+        }
+
+        // Apply release filter (unless excluded)
+        if (excludeFilter !== 'release' && customersFilters.releases.length > 0) {
+            issues = issues.filter(i => {
+                let releaseCategory;
+                if (i.releaseVersion && i.releaseVersion.trim()) {
+                    releaseCategory = i.releaseVersion.trim();
+                } else {
+                    releaseCategory = i.targetDate ? '(Needs Release)' : '(No Release)';
+                }
+                return customersFilters.releases.includes(releaseCategory);
+            });
+        }
+
+        // Apply team filter (unless excluded)
+        if (excludeFilter !== 'team' && customersFilters.teams.length > 0) {
+            issues = issues.filter(i => {
+                const team = i.team || '(No Team)';
+                return customersFilters.teams.includes(team);
+            });
+        }
+
+        // Apply aging filter (unless excluded)
+        if (excludeFilter !== 'aging' && customersFilters.aging.length > 0) {
+            issues = issues.filter(i => {
+                const aging = calculateAgingBucket(i);
+                return customersFilters.aging.includes(aging);
+            });
+        }
+
+        return issues;
+    }
+
     // Check if any filters are active
     function hasActiveCustomersFilters() {
         return hasGenericSearchFilter('customers') ||
@@ -835,6 +909,7 @@
                customersFilters.states.length > 0 ||
                customersFilters.priorities.length > 0 ||
                customersFilters.releases.length > 0 ||
+               customersFilters.teams.length > 0 ||
                customersFilters.aging.length > 0;
     }
 
@@ -849,6 +924,7 @@
         customersFilters.states = [];
         customersFilters.priorities = [];
         customersFilters.releases = [];
+        customersFilters.teams = [];
         customersFilters.aging = [];
 
         saveStateToStorage();
@@ -1083,12 +1159,13 @@
         const allReleases = Object.keys(releaseInfo).sort();
 
         // Populate dropdowns
-        // Customer dropdown using generic component
+        // Customer dropdown using generic component (cross-filter aware)
         const customerMenu = document.getElementById('customers-customer-menu');
         if (customerMenu) {
+            const customerFilteredIssues = getCustomersIssuesExcludingFilter('customer');
             customerMenu.innerHTML = buildCustomerFilterDropdown({
                 dashboardId: 'customers',
-                items: issues,
+                items: customerFilteredIssues,
                 selectedCustomers: customersFilters.customers
             });
         }
@@ -1098,24 +1175,46 @@
             categoryMenu.innerHTML = buildCustomersDropdownHtml('categories', allCategories, customersFilters.categories);
         }
 
+        // Build state dropdown using generic component (cross-filter aware)
         const stateMenu = document.getElementById('customers-state-menu');
         if (stateMenu) {
-            stateMenu.innerHTML = buildCustomersDropdownHtml('states', allStates, customersFilters.states);
+            const stateFilteredIssues = getCustomersIssuesExcludingFilter('state');
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'customers',
+                items: stateFilteredIssues,
+                selectedStates: customersFilters.states
+            });
         }
 
+        // Build team dropdown using generic component (cross-filter aware)
+        const teamMenu = document.getElementById('customers-team-menu');
+        if (teamMenu) {
+            const teamFilteredIssues = getCustomersIssuesExcludingFilter('team');
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'customers',
+                items: teamFilteredIssues,
+                selectedTeams: customersFilters.teams
+            });
+        }
+
+        // Build priority dropdown using generic component (cross-filter aware)
         const priorityMenu = document.getElementById('customers-priority-menu');
         if (priorityMenu) {
-            priorityMenu.innerHTML = buildCustomersDropdownHtml('priorities', allPriorities, customersFilters.priorities);
+            const priorityFilteredIssues = getCustomersIssuesExcludingFilter('priority');
+            priorityMenu.innerHTML = buildPriorityFilterDropdown({
+                dashboardId: 'customers',
+                items: priorityFilteredIssues,
+                selectedPriorities: customersFilters.priorities
+            });
         }
 
-        // Build release dropdown using generic component
+        // Build release dropdown using generic component (cross-filter aware)
         const releaseMenu = document.getElementById('customers-release-menu');
         if (releaseMenu) {
-            // Use Issues for computing release info (Customers dashboard shows Issues only)
-            const allIssues = workItems.filter(w => w.type === 'Issue');
+            const releaseFilteredIssues = getCustomersIssuesExcludingFilter('release');
             releaseMenu.innerHTML = buildReleaseFilterDropdown({
                 dashboardId: 'customers',
-                items: allIssues,
+                items: releaseFilteredIssues,
                 selectedReleases: customersFilters.releases
             });
         }
@@ -1127,9 +1226,14 @@
         }
 
         // Update display text for all filters
-        // Customer display uses generic component, others use dashboard-specific function
+        // Generic components update their own displays
         updateGenericCustomerDisplay('customers');
-        ['categories', 'states', 'priorities', 'releases', 'aging'].forEach(ft => {
+        updateGenericPriorityDisplay('customers');
+        updateGenericReleaseDisplay('customers');
+        updateGenericStateDisplay('customers');
+        updateGenericTeamDisplay('customers');
+        // Dashboard-specific filters
+        ['categories', 'aging'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
         });
     }
@@ -1911,10 +2015,10 @@
             });
         }
 
-        // Apply priority filter
+        // Apply priority filter (generic component uses P1, P2, etc. format)
         if (roadmapFilters.priorities.length > 0) {
             features = features.filter(f => {
-                const priority = f.priority ? String(f.priority) : '(No Priority)';
+                const priority = f.priority ? 'P' + f.priority : '(No Priority)';
                 return roadmapFilters.priorities.includes(priority);
             });
         }
@@ -1985,6 +2089,111 @@
                         return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
                     } else {
                         // OR logic (default): feature must have ANY selected tag
+                        return roadmapFilters.tags.some(selectedTag => featureTags.includes(selectedTag));
+                    }
+                });
+            }
+        }
+
+        return features;
+    }
+
+    /**
+     * Get Roadmap features filtered by all filters EXCEPT the specified one
+     * Used for cross-filter dropdown population
+     * @param {string} excludeFilter - Filter to exclude: 'priority', 'release', 'customer', 'state', 'team', 'iteration', 'tag', 'assignee'
+     */
+    function getRoadmapFeaturesExcludingFilter(excludeFilter) {
+        let features = getRoadmapFeatures();
+
+        // Always apply search filter
+        features = applyGenericSearchFilter(features, roadmapFilters.search, { supportPipeSeparated: true });
+
+        // Apply state filter (unless excluded)
+        if (excludeFilter !== 'state' && roadmapFilters.states.length > 0) {
+            features = features.filter(f => roadmapFilters.states.includes(f.state));
+        }
+
+        // Apply customer filter (unless excluded)
+        if (excludeFilter !== 'customer' && roadmapFilters.customers.length > 0) {
+            features = features.filter(f => {
+                if (!f.customers) return roadmapFilters.customers.includes('(No Customer)');
+                return roadmapFilters.customers.some(c => f.customers.includes(c));
+            });
+        }
+
+        // Apply assignee filter (unless excluded)
+        if (excludeFilter !== 'assignee' && roadmapFilters.assignees.length > 0) {
+            features = features.filter(f => {
+                const assignee = f.assignedTo || '(Unassigned)';
+                return roadmapFilters.assignees.includes(assignee);
+            });
+        }
+
+        // Apply team and iteration filters together (unless excluded)
+        const applyTeam = excludeFilter !== 'team' && roadmapFilters.teams.length > 0;
+        const applyIteration = excludeFilter !== 'iteration' && roadmapFilters.iterations.length > 0;
+        if (applyTeam || applyIteration) {
+            features = features.filter(f => {
+                const slices = getDeliverySlicesForFeatures([f.id]);
+                return slices.some(ds => {
+                    const team = getLastPathSegment(ds.areaPath) || '(No Team)';
+                    const iteration = getLastPathSegment(ds.iterationPath) || '(No Iteration)';
+                    const teamMatch = !applyTeam || roadmapFilters.teams.includes(team);
+                    const iterationMatch = !applyIteration || roadmapFilters.iterations.includes(iteration);
+                    return teamMatch && iterationMatch;
+                });
+            });
+        }
+
+        // Apply priority filter (unless excluded)
+        if (excludeFilter !== 'priority' && roadmapFilters.priorities.length > 0) {
+            features = features.filter(f => {
+                const priority = f.priority ? 'P' + f.priority : '(No Priority)';
+                return roadmapFilters.priorities.includes(priority);
+            });
+        }
+
+        // Apply release filter (unless excluded)
+        if (excludeFilter !== 'release' && roadmapFilters.releases.length > 0) {
+            const getFeatureReleaseCategory = (f) => {
+                if (f.releaseVersion && f.releaseVersion.trim()) return f.releaseVersion.trim();
+                return f.targetDate ? '(Needs Release)' : '(No Release)';
+            };
+
+            if (roadmapFilters.releasesExclusionMode) {
+                const allAvailableReleases = new Set(['(No Release)', '(Needs Release)']);
+                getRoadmapFeatures().forEach(f => {
+                    if (f.releaseVersion && f.releaseVersion.trim()) {
+                        allAvailableReleases.add(f.releaseVersion.trim());
+                    }
+                });
+                const uncheckedReleases = [...allAvailableReleases].filter(r => !roadmapFilters.releases.includes(r));
+                features = features.filter(f => !uncheckedReleases.includes(getFeatureReleaseCategory(f)));
+            } else {
+                features = features.filter(f => roadmapFilters.releases.includes(getFeatureReleaseCategory(f)));
+            }
+        }
+
+        // Apply tag filter (unless excluded)
+        if (excludeFilter !== 'tag' && roadmapFilters.tags.length > 0) {
+            if (roadmapFilters.tagsExclusionMode) {
+                const allAvailableTags = new Set();
+                getRoadmapFeatures().forEach(f => {
+                    const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    tags.forEach(tag => allAvailableTags.add(tag));
+                });
+                const uncheckedTags = [...allAvailableTags].filter(t => !roadmapFilters.tags.includes(t));
+                features = features.filter(f => {
+                    const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    return !featureTags.some(tag => uncheckedTags.includes(tag));
+                });
+            } else {
+                features = features.filter(f => {
+                    const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    if (roadmapFilters.tagsLogicMode === 'and') {
+                        return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+                    } else {
                         return roadmapFilters.tags.some(selectedTag => featureTags.includes(selectedTag));
                     }
                 });
@@ -2374,38 +2583,26 @@
         });
         const tags = [...tagsSet].sort();
 
-        // Populate State dropdown
+        // Populate State dropdown using generic component (cross-filter aware)
         const stateMenu = document.getElementById('roadmap-state-menu');
-        if (stateMenu && !stateMenu.dataset.populated) {
-            stateMenu.innerHTML = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search states..." oninput="filterRoadmapDropdownOptions('state', this.value)">
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-state-options">
-                    ${states.map(s => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.states.includes(s) ? 'checked' : ''} onchange="handleRoadmapFilterChange('state', '${s}', this.checked)">
-                            <span class="option-label">${s}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('state')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('state')">Clear</button>
-                </div>
-            `;
-            stateMenu.dataset.populated = 'true';
+        if (stateMenu) {
+            const stateFilteredFeatures = getRoadmapFeaturesExcludingFilter('state');
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'roadmap',
+                items: stateFilteredFeatures,
+                selectedStates: roadmapFilters.states
+            });
         }
 
-        // Populate Customer dropdown using generic component
+        // Populate Customer dropdown using generic component (cross-filter aware)
         const customerMenu = document.getElementById('roadmap-customer-menu');
-        if (customerMenu && !customerMenu.dataset.populated) {
+        if (customerMenu) {
+            const customerFilteredFeatures = getRoadmapFeaturesExcludingFilter('customer');
             customerMenu.innerHTML = buildCustomerFilterDropdown({
                 dashboardId: 'roadmap',
-                items: features,
+                items: customerFilteredFeatures,
                 selectedCustomers: roadmapFilters.customers
             });
-            customerMenu.dataset.populated = 'true';
         }
 
         // Populate Assignee dropdown
@@ -2431,27 +2628,21 @@
             assigneeMenu.dataset.populated = 'true';
         }
 
-        // Populate Team dropdown
+        // Populate Team dropdown using generic component (cross-filter aware)
         const teamMenu = document.getElementById('roadmap-team-menu');
-        if (teamMenu && !teamMenu.dataset.populated) {
-            teamMenu.innerHTML = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search teams..." oninput="filterRoadmapDropdownOptions('team', this.value)">
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-team-options">
-                    ${teams.map(t => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.teams.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('team', '${t.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${t}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('team')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('team')">Clear</button>
-                </div>
-            `;
-            teamMenu.dataset.populated = 'true';
+        if (teamMenu) {
+            // Get features filtered by all filters EXCEPT team for cross-filter behavior
+            const teamFilteredFeatures = getRoadmapFeaturesExcludingFilter('team');
+            // Convert delivery slices to virtual items with team property for generic component
+            const teamSlices = getDeliverySlicesForFeatures(teamFilteredFeatures.map(f => f.id));
+            const teamItems = teamSlices.map(ds => ({
+                team: getLastPathSegment(ds.areaPath) || null
+            }));
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'roadmap',
+                items: teamItems,
+                selectedTeams: roadmapFilters.teams
+            });
         }
 
         // Populate Iteration dropdown
@@ -2477,37 +2668,27 @@
             iterationMenu.dataset.populated = 'true';
         }
 
-        // Populate Priority dropdown
+        // Populate Priority dropdown using generic component (cross-filter aware)
         const priorityMenu = document.getElementById('roadmap-priority-menu');
-        if (priorityMenu && !priorityMenu.dataset.populated) {
-            priorityMenu.innerHTML = `
-                <div class="filter-dropdown-options" id="roadmap-priority-options">
-                    ${priorities.map(p => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.priorities.includes(p) ? 'checked' : ''} onchange="handleRoadmapFilterChange('priority', '${p}', this.checked)">
-                            <span class="option-label">${p === '(No Priority)' ? p : 'P' + p}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('priority')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('priority')">Clear</button>
-                </div>
-            `;
-            priorityMenu.dataset.populated = 'true';
+        if (priorityMenu) {
+            // Get features filtered by all filters EXCEPT priority for cross-filter behavior
+            const priorityFilteredFeatures = getRoadmapFeaturesExcludingFilter('priority');
+            priorityMenu.innerHTML = buildPriorityFilterDropdown({
+                dashboardId: 'roadmap',
+                items: priorityFilteredFeatures,
+                selectedPriorities: roadmapFilters.priorities
+            });
         }
 
-        // Populate Release dropdown using generic component
+        // Populate Release dropdown using generic component (cross-filter aware)
         const releaseMenu = document.getElementById('roadmap-release-menu');
-        if (releaseMenu && !releaseMenu.dataset.populated) {
-            // Use Features for computing release info
-            const allFeatures = workItems.filter(w => w.type === 'Feature');
+        if (releaseMenu) {
+            const releaseFilteredFeatures = getRoadmapFeaturesExcludingFilter('release');
             releaseMenu.innerHTML = buildReleaseFilterDropdown({
                 dashboardId: 'roadmap',
-                items: allFeatures,
+                items: releaseFilteredFeatures,
                 selectedReleases: roadmapFilters.releases
             });
-            releaseMenu.dataset.populated = 'true';
         }
 
         // Populate Tag dropdown
@@ -2553,15 +2734,11 @@
     // Sync all roadmap filter dropdown checkboxes with current filter state
     // Called after state is loaded from localStorage to update UI
     function syncRoadmapFilterDropdowns() {
-        const filterTypes = ['state', 'customer', 'assignee', 'team', 'iteration', 'priority', 'release', 'tag'];
+        // Filters handled by dashboard-specific logic (excludes generic components)
+        const filterTypes = ['assignee', 'iteration', 'tag'];
         const filterKeyMap = {
-            'state': 'states',
-            'customer': 'customers',
             'assignee': 'assignees',
-            'team': 'teams',
             'iteration': 'iterations',
-            'priority': 'priorities',
-            'release': 'releases',
             'tag': 'tags'
         };
 
@@ -2574,7 +2751,7 @@
 
             optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
                 const cb = opt.querySelector('input[type="checkbox"]');
-                // Generic release component uses value attribute, others use label text
+                // Use value attribute for checkbox matching
                 const matchValue = cb?.value || opt.querySelector('.option-label')?.textContent;
                 if (cb && matchValue) {
                     cb.checked = selectedValues.includes(matchValue);
@@ -2583,6 +2760,13 @@
 
             updateRoadmapFilterDisplay(type);
         });
+
+        // Sync generic components (customer, priority, release, state, team)
+        syncGenericCustomerFilter('roadmap');
+        syncGenericPriorityFilter('roadmap');
+        syncGenericReleaseFilter('roadmap');
+        syncGenericStateFilter('roadmap');
+        syncGenericTeamFilter('roadmap');
 
         // Sync tag logic mode buttons
         document.querySelectorAll('.tag-logic-btn').forEach(btn => {
@@ -2812,14 +2996,27 @@
         roadmapFilters.tagsExclusionMode = false;
         // Note: tagsLogicMode is not reset - user preference is preserved
 
-        // Reset all dropdowns
-        ['state', 'customer', 'assignee', 'team', 'iteration', 'priority', 'release', 'tag'].forEach(type => {
+        // Reset dashboard-specific dropdowns (excludes generic components)
+        ['assignee', 'iteration', 'tag'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
             }
             updateRoadmapFilterDisplay(type);
         });
+
+        // Reset generic component dropdowns (customer, priority, release, state, team)
+        ['customer', 'priority', 'release', 'state', 'team'].forEach(type => {
+            const optionsContainer = document.getElementById(`roadmap-${type}-options`);
+            if (optionsContainer) {
+                optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            }
+        });
+        updateGenericCustomerDisplay('roadmap');
+        updateGenericPriorityDisplay('roadmap');
+        updateGenericReleaseDisplay('roadmap');
+        updateGenericStateDisplay('roadmap');
+        updateGenericTeamDisplay('roadmap');
 
         renderRoadmapView();
         saveStateToStorage(); // Persist filter changes
