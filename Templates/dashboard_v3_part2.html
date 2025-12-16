@@ -3436,10 +3436,12 @@
             return;
         }
 
+
         const {
             tableId,
             icon = '📋',
             title,
+            hideTitleBar = false,  // If true, don't render title bar (for cases where title is in section header)
             adoLink,
             adoLinkText = 'Open in ADO',
             columns,
@@ -3486,27 +3488,26 @@
             sortedItems = genericTableSortItems(sortedItems, defaultSort.column, defaultSort.direction, effortMap);
         }
 
-        // Build title bar
-        const adoLinkHtml = adoLink ?
-            `<a href="${adoLink}" target="_blank" class="generic-table-ado-link">${adoLinkText} →</a>` : '';
-
+        // Build title bar (icon, title, count)
         const titleBarHtml = `
             <div class="generic-table-title-bar">
                 <div class="generic-table-title">
                     <span class="table-icon">${icon}</span>
                     <span>${title}</span>
                     <span class="table-count">(${items.length})</span>
-                    ${adoLinkHtml}
                 </div>
             </div>
         `;
 
-        // Build header bar
-        const effortTotalHtml = hasEffort ?
-            `<span class="generic-table-effort-total">Total: <strong>${totalEffort.toFixed(1)}d</strong>${effortLabel ? ` (${effortLabel})` : ''}</span>` : '';
+        // Build header bar (showing items, hint, ADO link, effort, copy, export)
+        const adoLinkHtml = adoLink ?
+            `<a href="${adoLink}" target="_blank" class="generic-table-ado-link">${adoLinkText} →</a>` : '';
 
         const hintHtml = onRowClick ?
             `<span class="generic-table-hint">${rowClickHint}</span>` : '';
+
+        const effortTotalHtml = hasEffort ?
+            `<span class="generic-table-effort-total">Total: <strong>${totalEffort.toFixed(1)}d</strong>${effortLabel ? ` (${effortLabel})` : ''}</span>` : '';
 
         const resetBtnHtml = isNonDefaultSort ?
             `<button class="reset-sort-btn" onclick="genericTableResetSort('${tableId}')">↺ Reset Sort</button>` : '';
@@ -3516,6 +3517,7 @@
                 <div class="generic-table-header-left">
                     <span class="generic-table-item-count">Showing <strong>${items.length}</strong> items</span>
                     ${hintHtml}
+                    ${adoLinkHtml}
                 </div>
                 <div class="generic-table-header-right">
                     ${effortTotalHtml}
@@ -3582,7 +3584,7 @@
         // Assemble full HTML
         container.innerHTML = `
             <div class="generic-table-section">
-                ${titleBarHtml}
+                ${hideTitleBar ? '' : titleBarHtml}
                 ${headerBarHtml}
                 <div class="generic-table-scroll-container">
                     <table class="generic-table resizable-table" id="${tableId}">
@@ -3638,7 +3640,7 @@
             return `<td class="${colClass} effort-value">${effort > 0 ? effort.toFixed(1) + 'd' : ''}</td>`;
         }
         if (key === 'targetDate') {
-            return `<td class="${colClass}">${formatTargetDate(value)}</td>`;
+            return `<td class="${colClass}">${formatDate(value)}</td>`;
         }
         if (key === 'createdDate' || key === 'closedDate') {
             const d = value ? new Date(value).toLocaleDateString() : '';

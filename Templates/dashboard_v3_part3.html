@@ -1677,7 +1677,7 @@
                 return `<td class="${colClass}">${item.releaseVersion || ''}</td>`;
             }
             if (key === 'targetDate') {
-                return `<td class="${colClass}">${formatTargetDate(item.targetDate)}</td>`;
+                return `<td class="${colClass}">${formatDate(item.targetDate)}</td>`;
             }
             return `<td class="${colClass}">${item[key] || ''}</td>`;
         };
@@ -2525,12 +2525,19 @@
             saveStateToStorage();
         };
 
+        // Update section header with count
+        const countEl = document.getElementById('roadmap-count');
+        if (countEl) {
+            countEl.innerHTML = `⭐ Feature Details (${features.length})`;
+        }
+
         // Build the table using generic component
         buildGenericTable({
             containerId: 'roadmap-table-container',
             tableId: 'roadmap-table',
             icon: '⭐',
             title: 'Feature Details',
+            hideTitleBar: true,  // Title is in section header
             adoLink: 'https://dev.azure.com/ncryptedcloud/eShare/_backlogs/backlog/eShare%20Team/Features?showParents=false',
             adoLinkText: 'Link to ADO Feature Backlog',
             columns: roadmapColumns,
