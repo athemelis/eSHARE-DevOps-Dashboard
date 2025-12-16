@@ -2105,10 +2105,6 @@
                        oninput="filterGenericTeamOptions('${optionsId}', this.value)"
                        onclick="event.stopPropagation();">
             </div>
-            <div class="filter-dropdown-actions">
-                <button onclick="selectAllGenericTeam('${dashboardId}', event)">Select All</button>
-                <button onclick="clearGenericTeam('${dashboardId}', event)">Clear</button>
-            </div>
             <div class="filter-dropdown-options" id="${optionsId}">
         `;
 
@@ -2120,7 +2116,7 @@
                 <label class="filter-dropdown-option" data-search-value="${team.toLowerCase()}" onclick="event.stopPropagation();">
                     <input type="checkbox" value="${team}" ${isChecked ? 'checked' : ''}
                            onchange="handleGenericTeamChange('${dashboardId}', '${team.replace(/'/g, "\\'")}', this.checked, event)">
-                    <span class="option-text">${team}</span>
+                    <span class="option-label">${team}</span>
                     <span class="option-count">(${count})</span>
                 </label>
             `;
@@ -2133,13 +2129,17 @@
                 <label class="filter-dropdown-option" data-search-value="(no team)" onclick="event.stopPropagation();">
                     <input type="checkbox" value="(No Team)" ${isChecked ? 'checked' : ''}
                            onchange="handleGenericTeamChange('${dashboardId}', '(No Team)', this.checked, event)">
-                    <span class="option-text">(No Team)</span>
+                    <span class="option-label">(No Team)</span>
                     <span class="option-count">(${noTeamCount})</span>
                 </label>
             `;
         }
 
         html += `
+            </div>
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericTeam('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericTeam('${dashboardId}', event)">Clear</button>
             </div>
         `;
 
