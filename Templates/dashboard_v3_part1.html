@@ -269,6 +269,23 @@
             white-space: nowrap;
         }
 
+        /* Wide dropdown menu - for Team filter showing team + count */
+        /* Applied to all team filter menus across dashboards */
+        #release-team-header-menu,
+        #roadmap-team-menu,
+        #customers-team-menu {
+            right: auto;
+            min-width: 200px;
+        }
+        #release-team-header-menu .option-count,
+        #roadmap-team-menu .option-count,
+        #customers-team-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
         .filter-dropdown-option {
             display: flex;
             align-items: center;
@@ -3138,6 +3155,17 @@
                 </div>
             </div>
 
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="release-team-header-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-team-header-dropdown')">
+                    <span id="release-team-header-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-team-header-menu">
+                    <!-- Populated dynamically by generic Team filter -->
+                </div>
+            </div>
+
             <span class="filter-row-label">Type:</span>
             <div class="filter-dropdown" id="release-type-header-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-type-header-dropdown')">
@@ -3156,17 +3184,6 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="release-bugtype-header-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Team:</span>
-            <div class="filter-dropdown" id="release-team-header-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-team-header-dropdown')">
-                    <span id="release-team-header-display">All Teams</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="release-team-header-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -3358,6 +3375,17 @@
                 </div>
                 <div class="filter-dropdown-menu" id="customers-state-menu">
                     <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="customers-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-team-dropdown')">
+                    <span id="customers-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-team-menu">
+                    <!-- Populated dynamically by generic Team filter -->
                 </div>
             </div>
 

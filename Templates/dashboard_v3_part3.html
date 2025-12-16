@@ -592,6 +592,7 @@
         states: [],
         priorities: [],
         releases: [],
+        teams: [],
         aging: []
     };
 
@@ -881,6 +882,14 @@
             });
         }
 
+        // Apply team filter (unless excluded)
+        if (excludeFilter !== 'team' && customersFilters.teams.length > 0) {
+            issues = issues.filter(i => {
+                const team = i.team || '(No Team)';
+                return customersFilters.teams.includes(team);
+            });
+        }
+
         // Apply aging filter (unless excluded)
         if (excludeFilter !== 'aging' && customersFilters.aging.length > 0) {
             issues = issues.filter(i => {
@@ -900,6 +909,7 @@
                customersFilters.states.length > 0 ||
                customersFilters.priorities.length > 0 ||
                customersFilters.releases.length > 0 ||
+               customersFilters.teams.length > 0 ||
                customersFilters.aging.length > 0;
     }
 
@@ -914,6 +924,7 @@
         customersFilters.states = [];
         customersFilters.priorities = [];
         customersFilters.releases = [];
+        customersFilters.teams = [];
         customersFilters.aging = [];
 
         saveStateToStorage();
@@ -1175,6 +1186,17 @@
             });
         }
 
+        // Build team dropdown using generic component (cross-filter aware)
+        const teamMenu = document.getElementById('customers-team-menu');
+        if (teamMenu) {
+            const teamFilteredIssues = getCustomersIssuesExcludingFilter('team');
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'customers',
+                items: teamFilteredIssues,
+                selectedTeams: customersFilters.teams
+            });
+        }
+
         // Build priority dropdown using generic component (cross-filter aware)
         const priorityMenu = document.getElementById('customers-priority-menu');
         if (priorityMenu) {
@@ -1209,6 +1231,7 @@
         updateGenericPriorityDisplay('customers');
         updateGenericReleaseDisplay('customers');
         updateGenericStateDisplay('customers');
+        updateGenericTeamDisplay('customers');
         // Dashboard-specific filters
         ['categories', 'aging'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
@@ -2605,27 +2628,21 @@
             assigneeMenu.dataset.populated = 'true';
         }
 
-        // Populate Team dropdown
+        // Populate Team dropdown using generic component (cross-filter aware)
         const teamMenu = document.getElementById('roadmap-team-menu');
-        if (teamMenu && !teamMenu.dataset.populated) {
-            teamMenu.innerHTML = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search teams..." oninput="filterRoadmapDropdownOptions('team', this.value)">
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-team-options">
-                    ${teams.map(t => `
-                        <label class="filter-dropdown-option" onclick="event.stopPropagation();">
-                            <input type="checkbox" ${roadmapFilters.teams.includes(t) ? 'checked' : ''} onchange="handleRoadmapFilterChange('team', '${t.replace(/'/g, "\\'")}', this.checked)">
-                            <span class="option-label">${t}</span>
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('team')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('team')">Clear</button>
-                </div>
-            `;
-            teamMenu.dataset.populated = 'true';
+        if (teamMenu) {
+            // Get features filtered by all filters EXCEPT team for cross-filter behavior
+            const teamFilteredFeatures = getRoadmapFeaturesExcludingFilter('team');
+            // Convert delivery slices to virtual items with team property for generic component
+            const teamSlices = getDeliverySlicesForFeatures(teamFilteredFeatures.map(f => f.id));
+            const teamItems = teamSlices.map(ds => ({
+                team: getLastPathSegment(ds.areaPath) || null
+            }));
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'roadmap',
+                items: teamItems,
+                selectedTeams: roadmapFilters.teams
+            });
         }
 
         // Populate Iteration dropdown
@@ -2717,11 +2734,10 @@
     // Sync all roadmap filter dropdown checkboxes with current filter state
     // Called after state is loaded from localStorage to update UI
     function syncRoadmapFilterDropdowns() {
-        // Filters handled by dashboard-specific logic (excludes state which uses generic component)
-        const filterTypes = ['assignee', 'team', 'iteration', 'tag'];
+        // Filters handled by dashboard-specific logic (excludes generic components)
+        const filterTypes = ['assignee', 'iteration', 'tag'];
         const filterKeyMap = {
             'assignee': 'assignees',
-            'team': 'teams',
             'iteration': 'iterations',
             'tag': 'tags'
         };
@@ -2745,11 +2761,12 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Sync generic components (customer, priority, release, state)
+        // Sync generic components (customer, priority, release, state, team)
         syncGenericCustomerFilter('roadmap');
         syncGenericPriorityFilter('roadmap');
         syncGenericReleaseFilter('roadmap');
         syncGenericStateFilter('roadmap');
+        syncGenericTeamFilter('roadmap');
 
         // Sync tag logic mode buttons
         document.querySelectorAll('.tag-logic-btn').forEach(btn => {
@@ -2979,8 +2996,8 @@
         roadmapFilters.tagsExclusionMode = false;
         // Note: tagsLogicMode is not reset - user preference is preserved
 
-        // Reset dashboard-specific dropdowns (excludes state which uses generic component)
-        ['assignee', 'team', 'iteration', 'tag'].forEach(type => {
+        // Reset dashboard-specific dropdowns (excludes generic components)
+        ['assignee', 'iteration', 'tag'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -2988,8 +3005,8 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Reset generic component dropdowns (customer, priority, release, state)
-        ['customer', 'priority', 'release', 'state'].forEach(type => {
+        // Reset generic component dropdowns (customer, priority, release, state, team)
+        ['customer', 'priority', 'release', 'state', 'team'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -2999,6 +3016,7 @@
         updateGenericPriorityDisplay('roadmap');
         updateGenericReleaseDisplay('roadmap');
         updateGenericStateDisplay('roadmap');
+        updateGenericTeamDisplay('roadmap');
 
         renderRoadmapView();
         saveStateToStorage(); // Persist filter changes

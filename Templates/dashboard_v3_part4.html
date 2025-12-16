@@ -3857,40 +3857,15 @@
             });
         }
         
-        // Populate Team filter dropdown based on cross-filtered items
+        // Populate Team filter dropdown using generic component
         const teamFilteredItems = getItemsExcludingFilter(releaseItems, 'team');
         const teamMenu = document.getElementById('release-team-header-menu');
         if (teamMenu) {
-            const byTeam = countBy(teamFilteredItems, 'team');
-            const sortedTeams = Object.keys(sortObjectByValue(byTeam));
-            let teamHtml = '';
-            if (sortedTeams.length > 0) {
-                teamHtml += `
-                    <div class="filter-dropdown-search">
-                        <input type="text" placeholder="Search teams..." oninput="filterDropdownOptions('team', this.value)" onclick="event.stopPropagation();">
-                    </div>
-                    <div class="filter-dropdown-options" id="release-team-options">
-                `;
-                sortedTeams.forEach(team => {
-                    const isChecked = releaseHeaderFilters.team.includes(team);
-                    teamHtml += `
-                        <label class="filter-dropdown-option" data-search-value="${team.toLowerCase()}" onclick="event.stopPropagation();">
-                            <input type="checkbox" data-filter="team" value="${team}" ${isChecked ? 'checked' : ''} onchange="updateReleaseHeaderFilter('team', event)">
-                            <span class="option-label">${team}</span>
-                        </label>
-                    `;
-                });
-                teamHtml += `</div>`;
-                teamHtml += `
-                    <div class="filter-dropdown-actions">
-                        <button class="filter-btn-primary" onclick="selectAllHeaderFilter('team', event)">Select All</button>
-                        <button class="filter-btn-secondary" onclick="clearHeaderFilter('team', event)">Clear</button>
-                    </div>
-                `;
-            } else {
-                teamHtml = '<div class="filter-dropdown-empty">No teams available</div>';
-            }
-            teamMenu.innerHTML = teamHtml;
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'releases',
+                items: teamFilteredItems,
+                selectedTeams: releaseHeaderFilters.team
+            });
         }
         
         // Populate Customer filter dropdown using generic component

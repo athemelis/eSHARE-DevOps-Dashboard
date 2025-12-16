@@ -643,6 +643,81 @@ if (dashboardFilters.states.length > 0) {
 - **Search box** filters options as you type
 - **Scroll position preserved** when selecting items
 
+### Generic Team Filter Component (part2.html)
+The Team filter is shared across **Releases**, **Roadmap**, and **Customers** dashboards.
+
+**Location:** `Templates/dashboard_v3_part2.html` (lines 2054-2376)
+
+**Core Functions:**
+| Function | Purpose |
+|----------|---------|
+| `computeTeamInfo(items, options)` | Analyzes items → team list, counts, noTeamCount |
+| `buildTeamFilterDropdown(config)` | Builds dropdown HTML with search, options (alphabetical), actions |
+| `filterGenericTeamOptions(optionsId, searchText)` | Filters options by search text |
+| `handleGenericTeamChange(dashboardId, ...)` | Routes checkbox changes to correct dashboard state |
+| `selectAllGenericTeam(dashboardId, ...)` | Select All handler |
+| `clearGenericTeam(dashboardId, ...)` | Clear handler |
+| `updateGenericTeamDisplay(dashboardId)` | Updates display text |
+| `syncGenericTeamFilter(dashboardId)` | Syncs checkboxes after localStorage load |
+| `getLastPathSegment(path)` | Helper to extract team name from area path |
+
+**Usage - Adding Team Filter to a New Dashboard:**
+```javascript
+// 1. In HTML (part1.html), add the dropdown structure:
+<span class="filter-row-label">Team:</span>
+<div class="filter-dropdown" id="DASHBOARD-team-dropdown">
+    <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('DASHBOARD-team-dropdown')">
+        <span id="DASHBOARD-team-display">All Teams</span>
+        <span class="arrow">▼</span>
+    </div>
+    <div class="filter-dropdown-menu" id="DASHBOARD-team-menu">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+
+// 2. In CSS (part1.html), add to wide dropdown list:
+#DASHBOARD-team-menu { right: auto; min-width: 200px; }
+
+// 3. In dashboard state, add teams property:
+let dashboardFilters = {
+    teams: [],
+    // ... other filters
+};
+
+// 4. In render function, populate the dropdown:
+const teamMenu = document.getElementById('DASHBOARD-team-menu');
+if (teamMenu) {
+    teamMenu.innerHTML = buildTeamFilterDropdown({
+        dashboardId: 'DASHBOARD',
+        items: workItems,
+        selectedTeams: dashboardFilters.teams
+    });
+}
+
+// 5. In handleGenericTeamChange() (part2.html), add dashboard routing:
+} else if (dashboardId === 'DASHBOARD') {
+    // Update state, call render function
+}
+
+// 6. In filter logic, apply team filter:
+if (dashboardFilters.teams.length > 0) {
+    items = items.filter(item => {
+        const team = item.team || '(No Team)';
+        return dashboardFilters.teams.includes(team);
+    });
+}
+```
+
+**Features:**
+- **Teams sorted alphabetically** (case-insensitive)
+- **"(No Team)" option** shown last with count (if items exist without team)
+- **Item count** displayed next to each team
+- **Search box** filters options as you type
+- **Scroll position preserved** when selecting items
+
+**Special Cases:**
+- **Roadmap Dashboard:** Teams come from delivery slices, not directly from features. The populate function extracts teams from `areaPath` of delivery slices.
+
 ### Filter Row Order Convention
 For consistency, generic filters should follow this order across all dashboards:
 1. **Search** (always first)
@@ -650,9 +725,10 @@ For consistency, generic filters should follow this order across all dashboards:
 3. **Customer** (third)
 4. **Priority** (fourth)
 5. **State** (fifth)
-6. Dashboard-specific filters (Team, Iteration, Tag, etc.)
-7. **Clear All button** (before Info)
-8. **Info popup** (always last, `margin-left: auto`)
+6. **Team** (sixth)
+7. Dashboard-specific filters (Iteration, Tag, Category, etc.)
+8. **Clear All button** (before Info)
+9. **Info popup** (always last, `margin-left: auto`)
 
 This order ensures users have a consistent experience when switching between dashboards.
 
@@ -694,8 +770,28 @@ This order ensures users have a consistent experience when switching between das
 - `updateGenericStateDisplay()` - Update display text
 - `syncGenericStateFilter()` - Sync checkboxes after localStorage load
 
+**Generic Team Filter Component:**
+- Created shared Team filter component in part2.html
+- Used by Releases, Roadmap, and Customers dashboards
+- Teams sorted alphabetically (case-insensitive)
+- Shows "(No Team)" option last with count (if items exist without team)
+- Includes search box at top for filtering options
+- Wide dropdown (200px) for better readability
+- Full cross-filter support
+
+**Team Functions Added:**
+- `computeTeamInfo()` - Analyze items for team data
+- `buildTeamFilterDropdown()` - Build dropdown HTML with search, options, actions
+- `filterGenericTeamOptions()` - Search filter for options
+- `handleGenericTeamChange()` - Checkbox change handler
+- `selectAllGenericTeam()` - Select All handler
+- `clearGenericTeam()` - Clear handler
+- `updateGenericTeamDisplay()` - Update display text
+- `syncGenericTeamFilter()` - Sync checkboxes after localStorage load
+- `getLastPathSegment()` - Helper to extract team from area path
+
 **Cross-Filter Behavior for All Generic Filters:**
-- All generic filters (Search, Release, Customer, Priority, State) now have cross-filter behavior
+- All generic filters (Search, Release, Customer, Priority, State, Team) now have cross-filter behavior
 - Selecting a value in one filter updates options shown in other filter dropdowns
 - Ensures users only see relevant options based on current selections
 - Documented cross-filter pattern in CLAUDE.md for future components
@@ -706,25 +802,27 @@ This order ensures users have a consistent experience when switching between das
 - `getItemsExcludingFilter(items, excludeFilter)` - Releases cross-filter helper (part4.html)
 
 **Filter Order Standardized:**
-- All three dashboards now use consistent filter order: Search → Release → Customer → Priority → State
-- Standard order: Search → Release → Customer → Priority → State → dashboard-specific filters
+- All three dashboards now use consistent filter order: Search → Release → Customer → Priority → State → Team
+- Standard order: Search → Release → Customer → Priority → State → Team → dashboard-specific filters
 
 **Releases Dashboard:**
 - Added Priority filter after Customer filter (before Type)
-- Refactored State filter to use generic component with item counts
+- Refactored State and Team filters to use generic components with item counts
 - Cross-filter aware: dropdown options update based on other active filters
 
 **Roadmap Dashboard:**
-- Refactored to use generic Priority and State components
+- Refactored to use generic Priority, State, and Team components
 - Updated filter logic to use P1/P2/P3/P4 format (instead of raw numbers)
 - Updated sync and clear functions to use generic components
 - All generic filter dropdowns now rebuild dynamically (removed `dataset.populated` caching)
+- Team filter extracts teams from delivery slices' areaPath
 
 **Customers Dashboard:**
-- Refactored to use generic Priority and State components
+- Refactored to use generic Priority, State, and Team components
+- Added Team filter (new) with full cross-filter support
 - Updated dropdown population and display functions
 - All generic filter dropdowns now rebuild dynamically (removed `dataset.populated` caching)
-- Updated `getCustomersIssuesExcludingFilter()` to accept 'state' parameter
+- Updated `getCustomersIssuesExcludingFilter()` to accept 'state' and 'team' parameters
 
 ## v84 Summary (December 2024)
 **Generic Search Filter Component:**
