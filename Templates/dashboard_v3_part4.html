@@ -4199,6 +4199,12 @@
     let releaseCustomerBugsSort = { column: null, direction: 'asc' };
     let releaseInternalBugsSort = { column: null, direction: 'asc' };
     const defaultReleaseSort = { column: 'backlogPriority', direction: 'asc' };
+
+    // Column widths for Release tables (persisted)
+    let releaseFeaturesColumnWidths = {};
+    let releaseIssuesColumnWidths = {};
+    let releaseCustomerBugsColumnWidths = {};
+    let releaseInternalBugsColumnWidths = {};
     
     function filterReleaseTablesByState(state) {
         if (releaseTableData.activeFilter === `state:${state}`) {
@@ -4296,7 +4302,9 @@
                 defaultSort: defaultReleaseSort,
                 onSort: (col, dir) => handleReleaseSortChange('features', col, dir),
                 onRowClick: (item) => handleReleaseRowClick(item),
-                rowClickHint: 'Click on a row to view relationships'
+                rowClickHint: 'Click on a row to view relationships',
+                columnWidths: releaseFeaturesColumnWidths,
+                onColumnResize: (col, width) => handleReleaseColumnResize('features', col, width)
             });
         } else if (featuresContainer) {
             featuresContainer.innerHTML = '';
@@ -4324,7 +4332,9 @@
                 defaultSort: defaultReleaseSort,
                 onSort: (col, dir) => handleReleaseSortChange('issues', col, dir),
                 onRowClick: (item) => handleReleaseRowClick(item),
-                rowClickHint: 'Click on a row to view relationships'
+                rowClickHint: 'Click on a row to view relationships',
+                columnWidths: releaseIssuesColumnWidths,
+                onColumnResize: (col, width) => handleReleaseColumnResize('issues', col, width)
             });
         } else if (issuesContainer) {
             issuesContainer.innerHTML = '';
@@ -4353,7 +4363,9 @@
                 defaultSort: defaultReleaseSort,
                 onSort: (col, dir) => handleReleaseSortChange('customerBugs', col, dir),
                 onRowClick: (item) => handleReleaseRowClick(item),
-                rowClickHint: 'Click on a row to view relationships'
+                rowClickHint: 'Click on a row to view relationships',
+                columnWidths: releaseCustomerBugsColumnWidths,
+                onColumnResize: (col, width) => handleReleaseColumnResize('customerBugs', col, width)
             });
         } else if (customerBugsContainer) {
             customerBugsContainer.innerHTML = '';
@@ -4382,7 +4394,9 @@
                 defaultSort: defaultReleaseSort,
                 onSort: (col, dir) => handleReleaseSortChange('internalBugs', col, dir),
                 onRowClick: (item) => handleReleaseRowClick(item),
-                rowClickHint: 'Click on a row to view relationships'
+                rowClickHint: 'Click on a row to view relationships',
+                columnWidths: releaseInternalBugsColumnWidths,
+                onColumnResize: (col, width) => handleReleaseColumnResize('internalBugs', col, width)
             });
         } else if (internalBugsContainer) {
             internalBugsContainer.innerHTML = '';
@@ -4402,6 +4416,20 @@
         }
         saveStateToStorage();
         // Note: buildGenericTable handles re-render via callback
+    }
+
+    // Handle column resize for Release tables
+    function handleReleaseColumnResize(tableType, columnKey, width) {
+        if (tableType === 'features') {
+            releaseFeaturesColumnWidths[columnKey] = width;
+        } else if (tableType === 'issues') {
+            releaseIssuesColumnWidths[columnKey] = width;
+        } else if (tableType === 'customerBugs') {
+            releaseCustomerBugsColumnWidths[columnKey] = width;
+        } else if (tableType === 'internalBugs') {
+            releaseInternalBugsColumnWidths[columnKey] = width;
+        }
+        saveStateToStorage();
     }
 
     // Helper to apply active filter

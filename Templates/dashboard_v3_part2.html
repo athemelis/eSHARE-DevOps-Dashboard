@@ -33,6 +33,11 @@
                 releaseHeaderFilters: typeof releaseHeaderFilters !== 'undefined' ? releaseHeaderFilters : null,
                 releasesSearchFilter: typeof releasesSearchFilter !== 'undefined' ? releasesSearchFilter : '',
                 selectedReleases: typeof selectedReleases !== 'undefined' ? selectedReleases : [],
+                // Releases table column widths
+                releaseFeaturesColumnWidths: typeof releaseFeaturesColumnWidths !== 'undefined' ? releaseFeaturesColumnWidths : {},
+                releaseIssuesColumnWidths: typeof releaseIssuesColumnWidths !== 'undefined' ? releaseIssuesColumnWidths : {},
+                releaseCustomerBugsColumnWidths: typeof releaseCustomerBugsColumnWidths !== 'undefined' ? releaseCustomerBugsColumnWidths : {},
+                releaseInternalBugsColumnWidths: typeof releaseInternalBugsColumnWidths !== 'undefined' ? releaseInternalBugsColumnWidths : {},
                 // Executive view state
                 execChartFilters: typeof execChartFilters !== 'undefined' ? execChartFilters : null,
                 execTeamFilter: document.getElementById('exec-team-filter')?.value || 'all',
@@ -146,6 +151,19 @@
         }
         if (state.selectedReleases && typeof selectedReleases !== 'undefined') {
             selectedReleases = [...state.selectedReleases];
+        }
+        // Restore Releases table column widths
+        if (state.releaseFeaturesColumnWidths && typeof releaseFeaturesColumnWidths !== 'undefined') {
+            Object.assign(releaseFeaturesColumnWidths, state.releaseFeaturesColumnWidths);
+        }
+        if (state.releaseIssuesColumnWidths && typeof releaseIssuesColumnWidths !== 'undefined') {
+            Object.assign(releaseIssuesColumnWidths, state.releaseIssuesColumnWidths);
+        }
+        if (state.releaseCustomerBugsColumnWidths && typeof releaseCustomerBugsColumnWidths !== 'undefined') {
+            Object.assign(releaseCustomerBugsColumnWidths, state.releaseCustomerBugsColumnWidths);
+        }
+        if (state.releaseInternalBugsColumnWidths && typeof releaseInternalBugsColumnWidths !== 'undefined') {
+            Object.assign(releaseInternalBugsColumnWidths, state.releaseInternalBugsColumnWidths);
         }
 
         // Restore Executive view state
