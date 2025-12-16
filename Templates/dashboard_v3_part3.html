@@ -2547,12 +2547,6 @@
             showTotalRow: true,
             totalColspan: 8
         });
-
-        // Update the section header count
-        const countEl = document.getElementById('roadmap-count');
-        if (countEl) {
-            countEl.textContent = `${features.length} feature${features.length !== 1 ? 's' : ''}`;
-        }
     }
 
     function populateRoadmapFilterDropdowns() {
