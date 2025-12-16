@@ -1337,26 +1337,26 @@
     function updateCustomersFilterDisplay(filterType) {
         const displayId = getCustomersDisplayId(filterType);
         const menuId = getCustomersMenuId(filterType);
-        const allLabels = {
-            customers: 'All Customers',
-            categories: 'All Categories',
-            states: 'All States',
-            priorities: 'All Priorities',
-            releases: 'All Releases',
-            aging: 'All Ages'
+        const filterConfig = {
+            customers: { allLabel: 'All Customers', plural: 'customers' },
+            categories: { allLabel: 'All Categories', plural: 'categories' },
+            states: { allLabel: 'All States', plural: 'states' },
+            priorities: { allLabel: 'All Priorities', plural: 'priorities' },
+            releases: { allLabel: 'All Releases', plural: 'releases' },
+            aging: { allLabel: 'All Ages', plural: 'ages' }
         };
 
         const displayEl = document.getElementById(displayId);
         const checkboxes = document.querySelectorAll(`#${menuId} .filter-dropdown-option:not(.select-all) input[type="checkbox"]`);
         const selected = customersFilters[filterType];
+        const config = filterConfig[filterType];
 
         if (displayEl) {
+            // If all selected, show "All X" (same as if none selected)
             if (selected.length === 0 || selected.length === checkboxes.length) {
-                displayEl.textContent = allLabels[filterType];
-            } else if (selected.length === 1) {
-                displayEl.textContent = selected[0];
+                displayEl.textContent = config.allLabel;
             } else {
-                displayEl.textContent = `${selected.length} selected`;
+                displayEl.textContent = formatFilterDisplay(selected, config.allLabel, config.plural);
             }
         }
     }
@@ -3005,14 +3005,22 @@
         const filterKey = getFilterKey(filterType);
         const displayEl = document.getElementById(`roadmap-${filterType}-display`);
         const selected = roadmapFilters[filterKey];
+        const allLabel = getFilterLabel(filterType);
 
-        if (selected.length === 0) {
-            displayEl.textContent = getFilterLabel(filterType);
-        } else if (selected.length === 1) {
-            displayEl.textContent = selected[0];
-        } else {
-            displayEl.textContent = `${selected.length} selected`;
-        }
+        // Map filterType to plural noun for consistent display
+        const pluralMap = {
+            'state': 'states',
+            'customer': 'customers',
+            'assignee': 'assignees',
+            'team': 'teams',
+            'iteration': 'iterations',
+            'priority': 'priorities',
+            'release': 'releases',
+            'tag': 'tags'
+        };
+        const plural = pluralMap[filterType] || 'items';
+
+        displayEl.textContent = formatFilterDisplay(selected, allLabel, plural);
     }
 
     function clearRoadmapFilter(filterType) {

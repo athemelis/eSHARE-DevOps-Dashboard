@@ -369,18 +369,8 @@
     function updateReleaseHeaderDisplay() {
         const display = document.getElementById('release-filter-display');
         if (!display) return;
-        
-        const totalOptions = document.querySelectorAll('#release-filter-menu .filter-dropdown-option input[type="checkbox"]').length;
-        
-        if (selectedReleases.length === 0) {
-            display.textContent = 'All Releases';
-        } else if (selectedReleases.length === 1) {
-            display.textContent = selectedReleases[0];
-        } else if (selectedReleases.length <= 2) {
-            display.textContent = selectedReleases.join(', ');
-        } else {
-            display.textContent = `${selectedReleases.length} releases selected`;
-        }
+
+        display.textContent = formatFilterDisplay(selectedReleases, 'All Releases', 'releases');
     }
     
     // Handle release checkbox change - standard multi-select behavior
@@ -511,24 +501,24 @@
     function updateReleaseHeaderFilterDisplay(filterType) {
         const display = document.getElementById(`release-${filterType}-header-display`);
         if (!display) return;
-        
-        const labels = {
-            type: 'All Types',
-            bugtype: 'All Bug Types',
-            state: 'All States',
-            team: 'All Teams',
-            customer: 'All Customers'
+
+        const filterConfig = {
+            type: { allLabel: 'All Types', plural: 'types' },
+            bugtype: { allLabel: 'All Bug Types', plural: 'bug types' },
+            state: { allLabel: 'All States', plural: 'states' },
+            team: { allLabel: 'All Teams', plural: 'teams' },
+            customer: { allLabel: 'All Customers', plural: 'customers' }
         };
-        
+
+        const config = filterConfig[filterType];
         const selected = releaseHeaderFilters[filterType];
         const totalCheckboxes = document.querySelectorAll(`#release-${filterType}-header-menu input[data-filter="${filterType}"]`).length;
-        
+
+        // If all selected, show "All X" (same as if none selected)
         if (selected.length === 0 || selected.length === totalCheckboxes) {
-            display.textContent = labels[filterType];
-        } else if (selected.length === 1) {
-            display.textContent = selected[0];
+            display.textContent = config.allLabel;
         } else {
-            display.textContent = `${selected.length} selected`;
+            display.textContent = formatFilterDisplay(selected, config.allLabel, config.plural);
         }
     }
     
@@ -722,6 +712,29 @@
 
             return true;
         });
+    }
+
+    // ==================== GENERIC FILTER DISPLAY HELPER ====================
+    // Shared helper function for consistent filter display text across all generic filters
+    // Pattern: 0 items = "All X", 1 item = value, 2 items = "A, B", 3+ items = "N items"
+
+    /**
+     * Format filter display text consistently across all generic filters
+     * @param {Array} selectedItems - Array of selected item values
+     * @param {string} allLabel - Label when nothing is selected (e.g., "All Releases")
+     * @param {string} pluralNoun - Plural noun for 3+ items (e.g., "releases", "customers")
+     * @returns {string} Formatted display text
+     */
+    function formatFilterDisplay(selectedItems, allLabel, pluralNoun) {
+        if (selectedItems.length === 0) {
+            return allLabel;
+        } else if (selectedItems.length === 1) {
+            return selectedItems[0];
+        } else if (selectedItems.length === 2) {
+            return selectedItems.join(', ');
+        } else {
+            return `${selectedItems.length} ${pluralNoun}`;
+        }
     }
 
     // ==================== GENERIC RELEASE FILTER COMPONENT ====================
@@ -1028,15 +1041,7 @@
         const display = document.getElementById(displayId);
         if (!display) return;
 
-        if (selected.length === 0) {
-            display.textContent = 'All Releases';
-        } else if (selected.length === 1) {
-            display.textContent = selected[0];
-        } else if (selected.length <= 2) {
-            display.textContent = selected.join(', ');
-        } else {
-            display.textContent = `${selected.length} releases`;
-        }
+        display.textContent = formatFilterDisplay(selected, 'All Releases', 'releases');
     }
 
     /**
@@ -1457,7 +1462,7 @@
         let displayId, selectedCustomers;
 
         if (dashboardId === 'releases') {
-            displayId = 'release-customer-display';
+            displayId = 'release-customer-header-display';
             selectedCustomers = releaseHeaderFilters.customer;
         } else if (dashboardId === 'roadmap') {
             displayId = 'roadmap-customer-display';
@@ -1472,13 +1477,7 @@
         const display = document.getElementById(displayId);
         if (!display) return;
 
-        if (selectedCustomers.length === 0) {
-            display.textContent = 'All Customers';
-        } else if (selectedCustomers.length === 1) {
-            display.textContent = selectedCustomers[0];
-        } else {
-            display.textContent = `${selectedCustomers.length} selected`;
-        }
+        display.textContent = formatFilterDisplay(selectedCustomers, 'All Customers', 'customers');
     }
 
     /**
@@ -1767,13 +1766,7 @@
         const display = document.getElementById(displayId);
         if (!display) return;
 
-        if (selectedPriorities.length === 0) {
-            display.textContent = 'All Priorities';
-        } else if (selectedPriorities.length === 1) {
-            display.textContent = selectedPriorities[0];
-        } else {
-            display.textContent = `${selectedPriorities.length} selected`;
-        }
+        display.textContent = formatFilterDisplay(selectedPriorities, 'All Priorities', 'priorities');
     }
 
     /**
@@ -1964,6 +1957,9 @@
             return;
         }
 
+        // Update display text
+        updateGenericStateDisplay(dashboardId);
+
         // Preserve scroll position and keep dropdown open
         const optionsContainer = document.getElementById(`${dashboardId}-state-options`);
         const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
@@ -2060,13 +2056,7 @@
         const display = document.getElementById(displayId);
         if (!display) return;
 
-        if (selectedStates.length === 0) {
-            display.textContent = 'All States';
-        } else if (selectedStates.length === 1) {
-            display.textContent = selectedStates[0];
-        } else {
-            display.textContent = `${selectedStates.length} selected`;
-        }
+        display.textContent = formatFilterDisplay(selectedStates, 'All States', 'states');
     }
 
     /**
@@ -2374,13 +2364,7 @@
         const display = document.getElementById(displayId);
         if (!display) return;
 
-        if (selectedTeams.length === 0) {
-            display.textContent = 'All Teams';
-        } else if (selectedTeams.length === 1) {
-            display.textContent = selectedTeams[0];
-        } else {
-            display.textContent = `${selectedTeams.length} selected`;
-        }
+        display.textContent = formatFilterDisplay(selectedTeams, 'All Teams', 'teams');
     }
 
     /**
