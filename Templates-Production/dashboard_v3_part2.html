@@ -3998,9 +3998,25 @@
         return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     }
     
+    // Parse date string to Date object, handling timezone correctly
+    // For date-only strings (YYYY-MM-DD), parses as local date to avoid UTC timezone shift
+    function parseLocalDate(dateStr) {
+        if (!dateStr) return null;
+        // For date-only strings (YYYY-MM-DD), parse as local date to avoid timezone shift
+        // JavaScript's new Date("YYYY-MM-DD") parses as midnight UTC, which shifts dates
+        // backwards by 1 day in US timezones. Parsing components directly creates local date.
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day); // month is 0-indexed
+        }
+        // For datetime strings (with time component), parse normally
+        return new Date(dateStr);
+    }
+
+    // Format date for display - uses parseLocalDate to handle timezone correctly
     function formatDate(dateStr) {
         if (!dateStr) return '';
-        const d = new Date(dateStr);
+        const d = parseLocalDate(dateStr);
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
     
@@ -4362,13 +4378,13 @@
             const endInput = (document.getElementById('bugs-trend-end-inline') || document.getElementById('bug-trend-end'))?.value;
             
             if (startInput && endInput) {
-                ganttStartDate = new Date(startInput);
-                ganttEndDate = new Date(endInput);
+                ganttStartDate = parseLocalDate(startInput);
+                ganttEndDate = parseLocalDate(endInput);
             } else {
                 // Find min/max dates from items
                 const dates = items.flatMap(item => {
                     const d = [];
-                    if (item.createdDate) d.push(new Date(item.createdDate));
+                    if (item.createdDate) d.push(parseLocalDate(item.createdDate));
                     const closed = getBugClosedDateForTable(item);
                     if (closed) d.push(closed);
                     return d;
@@ -4452,12 +4468,11 @@
                         return `<td class="effort-value">${item.effort ? item.effort.toFixed(1) + 'd' : ''}</td>`;
                     }
                     if (col.key === 'createdDate') {
-                        const d = item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '';
-                        return `<td>${d}</td>`;
+                        return `<td>${formatDate(item.createdDate)}</td>`;
                     }
                     if (col.key === 'closedDate') {
                         const closed = getBugClosedDateForTable(item);
-                        const d = closed ? closed.toLocaleDateString() : (item.state === 'Done' || item.state === 'Closed' ? '?' : '');
+                        const d = closed ? closed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (item.state === 'Done' || item.state === 'Closed' ? '?' : '');
                         return `<td>${d}</td>`;
                     }
                     if (col.key === 'gantt' && ganttWeeks.length > 0) {
@@ -4494,28 +4509,22 @@
     }
     
     function getBugClosedDateForTable(item) {
-        // For table display - get closed date
+        // For table display - get closed date using parseLocalDate for timezone correctness
         if (item.closedDate) {
-            try {
-                return new Date(item.closedDate);
-            } catch {
-                // fall through
-            }
+            const d = parseLocalDate(item.closedDate);
+            if (d) return d;
         }
         if (item.stateChangeDate && (item.state === 'Done' || item.state === 'Closed')) {
-            try {
-                return new Date(item.stateChangeDate);
-            } catch {
-                // fall through
-            }
+            const d = parseLocalDate(item.stateChangeDate);
+            if (d) return d;
         }
         return null;
     }
     
     function renderGanttBar(item, ganttStartDate, ganttEndDate, ganttWeeks) {
         if (!ganttStartDate || !ganttEndDate || ganttWeeks.length === 0) return '';
-        
-        const created = item.createdDate ? new Date(item.createdDate) : null;
+
+        const created = parseLocalDate(item.createdDate);
         const closed = getBugClosedDateForTable(item);
         
         if (!created) return '<div class="gantt-bar-container"></div>';
@@ -4787,15 +4796,14 @@
             return `<td class="effort-value">${item.effort ? item.effort.toFixed(1) + 'd' : ''}</td>`;
         }
         if (col.key === 'targetDate') {
-            return `<td>${item.targetDate ? item.targetDate.split(' ')[0] : ''}</td>`;
+            return `<td>${formatDate(item.targetDate)}</td>`;
         }
         if (col.key === 'createdDate') {
-            const d = item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '';
-            return `<td>${d}</td>`;
+            return `<td>${formatDate(item.createdDate)}</td>`;
         }
         if (col.key === 'closedDate') {
             const closed = getBugClosedDateForTable(item);
-            const d = closed ? closed.toLocaleDateString() : (item.state === 'Done' || item.state === 'Closed' ? '?' : '');
+            const d = closed ? closed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (item.state === 'Done' || item.state === 'Closed' ? '?' : '');
             return `<td>${d}</td>`;
         }
         if (col.key === 'backlogPriority') {
@@ -5174,12 +5182,9 @@
             const effort = effortMap[item.id] || item.effort || 0;
             return `<td class="${colClass} effort-value">${effort > 0 ? effort.toFixed(1) + 'd' : ''}</td>`;
         }
-        if (key === 'targetDate') {
+        if (key === 'targetDate' || key === 'closedDate' || key === 'createdDate') {
+            // Use formatDate() for all date fields - handles timezone correctly
             return `<td class="${colClass}">${formatDate(value)}</td>`;
-        }
-        if (key === 'createdDate' || key === 'closedDate') {
-            const d = value ? new Date(value).toLocaleDateString() : '';
-            return `<td class="${colClass}">${d}</td>`;
         }
         if (key === 'priority') {
             const priorityDisplay = value ? `P${value}` : '';

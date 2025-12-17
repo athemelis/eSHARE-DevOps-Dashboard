@@ -1998,7 +1998,7 @@
         }
         
         return items.filter(w => {
-            const createdDate = w.createdDate ? new Date(w.createdDate) : null;
+            const createdDate = parseLocalDate(w.createdDate);
             const closedDate = getWorkItemClosedDate(w);
             
             if (!createdDate) return false;
@@ -2015,9 +2015,10 @@
     
     function getWorkItemClosedDate(w) {
         // Use same logic as bugs: closedDate if available, else stateChangeDate if state is Done/Closed
-        if (w.closedDate) return new Date(w.closedDate);
+        // Uses parseLocalDate for timezone-correct date handling
+        if (w.closedDate) return parseLocalDate(w.closedDate);
         if ((w.state === 'Done' || w.state === 'Closed') && w.stateChangeDate) {
-            return new Date(w.stateChangeDate);
+            return parseLocalDate(w.stateChangeDate);
         }
         return null;
     }
@@ -2063,8 +2064,8 @@
                     let maxDate = new Date('2020-01-01');
                     items.forEach(w => {
                         if (w.createdDate) {
-                            const created = new Date(w.createdDate);
-                            if (created < minDate) minDate = created;
+                            const created = parseLocalDate(w.createdDate);
+                            if (created && created < minDate) minDate = created;
                         }
                         const closed = getWorkItemClosedDate(w);
                         if (closed && closed > maxDate) maxDate = closed;
@@ -2340,7 +2341,7 @@
                         <tbody>`;
                 
                 items.forEach(w => {
-                    const createdDate = w.createdDate ? new Date(w.createdDate) : null;
+                    const createdDate = parseLocalDate(w.createdDate);
                     const closedDate = getWorkItemClosedDate(w);
                     const ganttBar = renderGanttBar(createdDate, closedDate, periodStart, periodEnd, typeClass);
                     const createdStr = createdDate ? formatDateShort(createdDate) : '-';
@@ -2521,8 +2522,8 @@
                 // Filter by created date (for trend chart)
                 bugs = bugs.filter(b => {
                     if (!b.createdDate) return false;
-                    const created = new Date(b.createdDate);
-                    return created >= startDate && created <= endDate;
+                    const created = parseLocalDate(b.createdDate);
+                    return created && created >= startDate && created <= endDate;
                 });
             } else if (dateFilterType === 'closed') {
                 // Filter by closed date (for effort - bugs closed in this period)
@@ -2536,7 +2537,8 @@
                 // Active = created before end date AND (not closed OR closed after start date)
                 bugs = bugs.filter(b => {
                     if (!b.createdDate) return false;
-                    const created = new Date(b.createdDate);
+                    const created = parseLocalDate(b.createdDate);
+                    if (!created) return false;
                     // Must be created before or during the period
                     if (created > endDate) return false;
 
@@ -3046,8 +3048,9 @@
         activeBugs.forEach(bug => {
             if (!bug.effort || bug.effort <= 0) return;
             if (!bug.createdDate) return;
-            
-            const bugCreated = new Date(bug.createdDate);
+
+            const bugCreated = parseLocalDate(bug.createdDate);
+            if (!bugCreated) return;
             const bugClosed = getBugClosedDate(bug) || new Date(); // Use today if still open
             
             // Calculate total bug lifetime in days
@@ -3327,8 +3330,9 @@
         bugsToShow.forEach(bug => {
             if (!bug.effort || bug.effort <= 0) return;
             if (!bug.createdDate) return;
-            
-            const bugCreated = new Date(bug.createdDate);
+
+            const bugCreated = parseLocalDate(bug.createdDate);
+            if (!bugCreated) return;
             const bugClosed = getBugClosedDate(bug) || new Date();
             const totalLifetimeDays = Math.max(1, (bugClosed - bugCreated) / (1000 * 60 * 60 * 24));
             const overlapStart = new Date(Math.max(bugCreated.getTime(), periodStart.getTime()));
@@ -3566,31 +3570,22 @@
     }
     
     function parseCreatedDate(dateStr) {
-        if (!dateStr) return null;
-        try {
-            return new Date(dateStr);
-        } catch {
-            return null;
-        }
+        // Uses parseLocalDate for timezone-correct date handling
+        return parseLocalDate(dateStr);
     }
     
     function getBugClosedDate(bug) {
         // For closed bugs, use closedDate if available, otherwise stateChangeDate
         // closedDate is set when state becomes "Done"
         // For "Closed" state (no code change), use stateChangeDate
+        // Uses parseLocalDate for timezone-correct date handling
         if (bug.closedDate) {
-            try {
-                return new Date(bug.closedDate);
-            } catch {
-                // fall through
-            }
+            const d = parseLocalDate(bug.closedDate);
+            if (d) return d;
         }
         if (bug.stateChangeDate && (bug.state === 'Done' || bug.state === 'Closed')) {
-            try {
-                return new Date(bug.stateChangeDate);
-            } catch {
-                // fall through
-            }
+            const d = parseLocalDate(bug.stateChangeDate);
+            if (d) return d;
         }
         return null;
     }
