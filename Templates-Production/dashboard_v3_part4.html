@@ -518,6 +518,9 @@
         // Restore search input using generic component
         syncGenericSearchFilter('customers');
 
+        // Sync tag filter using generic component
+        syncGenericTagFilter('customers');
+
         // Filter dropdowns are populated and synced in renderCustomersView via populateCustomersFilterDropdowns
     }
 
@@ -3772,6 +3775,26 @@
                     if (!releaseHeaderFilters.priority.includes(itemPriority)) return false;
                 }
 
+                // Apply tag filter (unless excluded)
+                if (excludeFilter !== 'tag' && releaseHeaderFilters.tag.length > 0) {
+                    const itemTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    if (releaseHeaderFilters.tagExclusionMode) {
+                        // Exclusion mode: hide items with unchecked tags
+                        const allAvailableTags = getAllTagsFromItems(items);
+                        const uncheckedTags = allAvailableTags.filter(t => !releaseHeaderFilters.tag.includes(t));
+                        if (itemTags.some(tag => uncheckedTags.includes(tag))) return false;
+                    } else {
+                        // Inclusion mode
+                        if (releaseHeaderFilters.tagLogicMode === 'and') {
+                            // AND logic: item must have ALL selected tags
+                            if (!releaseHeaderFilters.tag.every(selectedTag => itemTags.includes(selectedTag))) return false;
+                        } else {
+                            // OR logic: item must have ANY selected tag
+                            if (!itemTags.some(selectedTag => releaseHeaderFilters.tag.includes(selectedTag))) return false;
+                        }
+                    }
+                }
+
                 return true;
             });
         }
@@ -3930,6 +3953,18 @@
             });
         }
 
+        // Populate Tag filter dropdown using generic component
+        const tagFilteredItems = getItemsExcludingFilter(releaseItems, 'tag');
+        const tagMenu = document.getElementById('release-tag-menu');
+        if (tagMenu) {
+            tagMenu.innerHTML = buildTagFilterDropdown({
+                dashboardId: 'releases',
+                items: tagFilteredItems,
+                selectedTags: releaseHeaderFilters.tag,
+                logicMode: releaseHeaderFilters.tagLogicMode
+            });
+        }
+
         // Update all header filter displays
         updateReleaseHeaderFilterDisplay('type');
         updateReleaseHeaderFilterDisplay('bugtype');
@@ -3937,6 +3972,7 @@
         updateGenericTeamDisplay('releases');      // Use generic component for team
         updateGenericCustomerDisplay('releases');  // Use generic component for customer
         updateGenericPriorityDisplay('releases');  // Use generic component for priority
+        updateGenericTagDisplay('releases');       // Use generic component for tag
 
         // ==================== END CROSS-FILTER DROPDOWN POPULATION ====================
         

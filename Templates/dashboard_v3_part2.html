@@ -47,6 +47,7 @@
                 customersFilters: typeof customersFilters !== 'undefined' ? customersFilters : null,
                 customersSortState: typeof customersSortState !== 'undefined' ? customersSortState : null,
                 customersColumnWidths: typeof customersColumnWidths !== 'undefined' ? customersColumnWidths : {},
+                erPrioritizationCollapsed: typeof erPrioritizationCollapsed !== 'undefined' ? erPrioritizationCollapsed : false,
                 // Bugs view state
                 bugsChartFilters: typeof bugsChartFilters !== 'undefined' ? bugsChartFilters : null,
                 bugTrendFilters: typeof bugTrendFilters !== 'undefined' ? bugTrendFilters : null,
@@ -190,6 +191,10 @@
         }
         if (state.customersColumnWidths && typeof customersColumnWidths !== 'undefined') {
             Object.assign(customersColumnWidths, state.customersColumnWidths);
+        }
+        // Restore ER Prioritization Summary collapse state
+        if (typeof state.erPrioritizationCollapsed !== 'undefined' && typeof erPrioritizationCollapsed !== 'undefined') {
+            erPrioritizationCollapsed = state.erPrioritizationCollapsed;
         }
         // Always mark as loaded if we have any customer state
         if (state.customersFilters || state.customersSortState || state.customersColumnWidths) {
@@ -444,7 +449,10 @@
         state: [],
         team: [],
         customer: [],
-        priority: []
+        priority: [],
+        tag: [],
+        tagExclusionMode: false,
+        tagLogicMode: 'or'
     };
 
     // Releases search filter
@@ -586,6 +594,7 @@
         if (releaseHeaderFilters.team.length > 0) return true;
         if (releaseHeaderFilters.customer.length > 0) return true;
         if (releaseHeaderFilters.priority.length > 0) return true;
+        if (releaseHeaderFilters.tag.length > 0) return true;
         return false;
     }
     
@@ -615,6 +624,9 @@
 
         // Clear priority using generic component
         clearGenericPriority('releases');
+
+        // Clear tag using generic component
+        clearGenericTag('releases');
 
         // Hide clear button
         const clearBtn = document.getElementById('release-clear-filters-btn');
@@ -648,6 +660,7 @@
         syncGenericPriorityFilter('releases');
         syncGenericStateFilter('releases');
         syncGenericTeamFilter('releases');
+        syncGenericTagFilter('releases');
 
         updateClearFiltersButton();
     }
@@ -708,6 +721,26 @@
             if (releaseHeaderFilters.priority.length > 0) {
                 const itemPriority = item.priority ? 'P' + item.priority : '(No Priority)';
                 if (!releaseHeaderFilters.priority.includes(itemPriority)) return false;
+            }
+
+            // Tag filter
+            if (releaseHeaderFilters.tag.length > 0) {
+                const itemTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                if (releaseHeaderFilters.tagExclusionMode) {
+                    // Exclusion mode: hide items with unchecked tags
+                    const allAvailableTags = getAllTagsFromItems(items);
+                    const uncheckedTags = allAvailableTags.filter(t => !releaseHeaderFilters.tag.includes(t));
+                    if (itemTags.some(tag => uncheckedTags.includes(tag))) return false;
+                } else {
+                    // Inclusion mode
+                    if (releaseHeaderFilters.tagLogicMode === 'and') {
+                        // AND logic: item must have ALL selected tags
+                        if (!releaseHeaderFilters.tag.every(selectedTag => itemTags.includes(selectedTag))) return false;
+                    } else {
+                        // OR logic: item must have ANY selected tag
+                        if (!itemTags.some(selectedTag => releaseHeaderFilters.tag.includes(selectedTag))) return false;
+                    }
+                }
             }
 
             return true;
@@ -2403,6 +2436,437 @@
     }
 
     // ==================== END GENERIC TEAM FILTER COMPONENT ====================
+
+    // ==================== GENERIC TAG FILTER COMPONENT ====================
+    // Shared Tag filter used by Releases, Roadmap, and Customers dashboards
+    // Features: search box, AND/OR logic toggle, item counts, cross-filter support, dual-mode (inclusion/exclusion)
+
+    /**
+     * Compute tag information from a list of items
+     * @param {Array} items - Array of work items
+     * @returns {Object} { tags: [], tagInfo: {} }
+     */
+    function computeTagInfo(items) {
+        const tagInfo = {};
+
+        items.forEach(item => {
+            if (!item.tags) return;
+            const tags = item.tags.split(';').map(t => t.trim()).filter(t => t);
+            tags.forEach(tag => {
+                if (!tagInfo[tag]) {
+                    tagInfo[tag] = { count: 0 };
+                }
+                tagInfo[tag].count++;
+            });
+        });
+
+        // Sort tags alphabetically
+        const tags = Object.keys(tagInfo).sort((a, b) => a.localeCompare(b));
+
+        return { tags, tagInfo };
+    }
+
+    /**
+     * Build Tag filter dropdown HTML
+     * @param {Object} config - { dashboardId, items, selectedTags, logicMode }
+     * @returns {string} HTML string for dropdown content
+     */
+    function buildTagFilterDropdown(config) {
+        const { dashboardId, items, selectedTags, logicMode = 'or' } = config;
+        const { tags, tagInfo } = computeTagInfo(items);
+
+        if (tags.length === 0) {
+            return '<div class="filter-dropdown-empty">No tags available</div>';
+        }
+
+        const optionsId = `${dashboardId}-tag-options`;
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search tags..."
+                       oninput="filterGenericTagOptions('${optionsId}', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="tag-logic-toggle" onclick="event.stopPropagation();">
+                <span class="tag-logic-label">Match:</span>
+                <button class="tag-logic-btn ${logicMode === 'or' ? 'active' : ''}" onclick="setGenericTagLogicMode('${dashboardId}', 'or', event)">Any (OR)</button>
+                <button class="tag-logic-btn ${logicMode === 'and' ? 'active' : ''}" onclick="setGenericTagLogicMode('${dashboardId}', 'and', event)">All (AND)</button>
+            </div>
+            <div class="filter-dropdown-options" id="${optionsId}">
+        `;
+
+        // Add tag options in alphabetical order
+        tags.forEach(tag => {
+            const isChecked = selectedTags.includes(tag);
+            const count = tagInfo[tag].count;
+            const escapedValue = tag.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${tag.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${tag.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericTagChange('${dashboardId}', '${escapedValue}', this.checked, event)">
+                    <span class="option-label">${tag}</span>
+                    <span class="option-count">${count}</span>
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+
+        // Add Select All / Clear buttons
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericTag('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericTag('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    /**
+     * Filter tag options by search text
+     */
+    function filterGenericTagOptions(optionsId, searchText) {
+        const container = document.getElementById(optionsId);
+        if (!container) return;
+
+        const search = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const value = opt.getAttribute('data-search-value') || '';
+            opt.style.display = value.includes(search) ? '' : 'none';
+        });
+    }
+
+    /**
+     * Handle tag checkbox change
+     */
+    function handleGenericTagChange(dashboardId, value, checked, event) {
+        if (event) event.stopPropagation();
+
+        // Save scroll position before potential re-render
+        const optionsContainer = document.getElementById(`${dashboardId}-tag-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        let openDropdownId;
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-tag-dropdown';
+            if (checked) {
+                if (!releaseHeaderFilters.tag.includes(value)) {
+                    releaseHeaderFilters.tag.push(value);
+                }
+            } else {
+                releaseHeaderFilters.tag = releaseHeaderFilters.tag.filter(v => v !== value);
+                // Reset exclusion mode if all tags are unchecked
+                if (releaseHeaderFilters.tag.length === 0) {
+                    releaseHeaderFilters.tagExclusionMode = false;
+                }
+            }
+            updateGenericTagDisplay('releases');
+            renderReleasesView();
+            saveStateToStorage();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-tag-dropdown';
+            if (checked) {
+                if (!roadmapFilters.tags.includes(value)) {
+                    roadmapFilters.tags.push(value);
+                }
+            } else {
+                roadmapFilters.tags = roadmapFilters.tags.filter(v => v !== value);
+                // Reset exclusion mode if all tags are unchecked
+                if (roadmapFilters.tags.length === 0) {
+                    roadmapFilters.tagsExclusionMode = false;
+                }
+            }
+            updateGenericTagDisplay('roadmap');
+            renderRoadmapView();
+            saveStateToStorage();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-tag-dropdown';
+            if (checked) {
+                if (!customersFilters.tags.includes(value)) {
+                    customersFilters.tags.push(value);
+                }
+            } else {
+                customersFilters.tags = customersFilters.tags.filter(v => v !== value);
+                // Reset exclusion mode if all tags are unchecked
+                if (customersFilters.tags.length === 0) {
+                    customersFilters.tagsExclusionMode = false;
+                }
+            }
+            updateGenericTagDisplay('customers');
+            renderCustomersView();
+            saveStateToStorage();
+        }
+
+        // Restore scroll position after re-render
+        setTimeout(() => {
+            const newOptionsContainer = document.getElementById(`${dashboardId}-tag-options`);
+            if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+        }, 0);
+
+        // Keep dropdown open
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+            }, 10);
+        }
+    }
+
+    /**
+     * Set tag logic mode (AND/OR)
+     */
+    function setGenericTagLogicMode(dashboardId, mode, event) {
+        if (event) event.stopPropagation();
+
+        if (dashboardId === 'releases') {
+            releaseHeaderFilters.tagLogicMode = mode;
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            roadmapFilters.tagsLogicMode = mode;
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            customersFilters.tagsLogicMode = mode;
+            renderCustomersView();
+        }
+
+        // Update button states
+        const dropdown = document.getElementById(`${dashboardId}-tag-menu`) ||
+                        document.getElementById(`release-tag-menu`);
+        if (dropdown) {
+            dropdown.querySelectorAll('.tag-logic-btn').forEach(btn => {
+                const isOrBtn = btn.textContent.includes('OR');
+                const isAndBtn = btn.textContent.includes('AND');
+                btn.classList.toggle('active',
+                    (isOrBtn && mode === 'or') ||
+                    (isAndBtn && mode === 'and')
+                );
+            });
+        }
+
+        saveStateToStorage();
+    }
+
+    /**
+     * Select all visible tags
+     */
+    function selectAllGenericTag(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-tag-options`;
+        const optionsContainer = document.getElementById(optionsId);
+        if (!optionsContainer) return;
+
+        // Check all visible checkboxes and collect their values
+        const values = [];
+        optionsContainer.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            if (opt.style.display !== 'none') {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                if (cb) {
+                    cb.checked = true;
+                    values.push(cb.value);
+                }
+            }
+        });
+
+        let openDropdownId;
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-tag-dropdown';
+            releaseHeaderFilters.tag = values;
+            releaseHeaderFilters.tagExclusionMode = true;
+            updateGenericTagDisplay('releases');
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-tag-dropdown';
+            roadmapFilters.tags = values;
+            roadmapFilters.tagsExclusionMode = true;
+            updateGenericTagDisplay('roadmap');
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-tag-dropdown';
+            customersFilters.tags = values;
+            customersFilters.tagsExclusionMode = true;
+            updateGenericTagDisplay('customers');
+            renderCustomersView();
+        }
+
+        saveStateToStorage();
+
+        // Keep dropdown open
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+            }, 10);
+        }
+    }
+
+    /**
+     * Clear all tag selections
+     */
+    function clearGenericTag(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsId = `${dashboardId}-tag-options`;
+        const optionsContainer = document.getElementById(optionsId);
+        if (optionsContainer) {
+            optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+
+        let openDropdownId;
+
+        if (dashboardId === 'releases') {
+            openDropdownId = 'release-tag-dropdown';
+            releaseHeaderFilters.tag = [];
+            releaseHeaderFilters.tagExclusionMode = false;
+            updateGenericTagDisplay('releases');
+            renderReleasesView();
+        } else if (dashboardId === 'roadmap') {
+            openDropdownId = 'roadmap-tag-dropdown';
+            roadmapFilters.tags = [];
+            roadmapFilters.tagsExclusionMode = false;
+            updateGenericTagDisplay('roadmap');
+            renderRoadmapView();
+        } else if (dashboardId === 'customers') {
+            openDropdownId = 'customers-tag-dropdown';
+            customersFilters.tags = [];
+            customersFilters.tagsExclusionMode = false;
+            updateGenericTagDisplay('customers');
+            renderCustomersView();
+        }
+
+        saveStateToStorage();
+
+        // Keep dropdown open
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+            }, 10);
+        }
+    }
+
+    /**
+     * Update tag filter display text
+     */
+    function updateGenericTagDisplay(dashboardId) {
+        let displayId, selectedTags;
+
+        if (dashboardId === 'releases') {
+            displayId = 'release-tag-display';
+            selectedTags = releaseHeaderFilters.tag;
+        } else if (dashboardId === 'roadmap') {
+            displayId = 'roadmap-tag-display';
+            selectedTags = roadmapFilters.tags;
+        } else if (dashboardId === 'customers') {
+            displayId = 'customers-tag-display';
+            selectedTags = customersFilters.tags;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        display.textContent = formatFilterDisplay(selectedTags, 'All Tags', 'tags');
+    }
+
+    /**
+     * Sync tag filter checkboxes with current state (after loading from localStorage)
+     */
+    function syncGenericTagFilter(dashboardId) {
+        let selectedTags, logicMode;
+
+        if (dashboardId === 'releases') {
+            selectedTags = releaseHeaderFilters.tag;
+            logicMode = releaseHeaderFilters.tagLogicMode;
+        } else if (dashboardId === 'roadmap') {
+            selectedTags = roadmapFilters.tags;
+            logicMode = roadmapFilters.tagsLogicMode;
+        } else if (dashboardId === 'customers') {
+            selectedTags = customersFilters.tags;
+            logicMode = customersFilters.tagsLogicMode;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-tag-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedTags.includes(cb.value);
+        });
+
+        // Sync logic mode buttons
+        const menuId = dashboardId === 'releases' ? 'release-tag-menu' : `${dashboardId}-tag-menu`;
+        const menu = document.getElementById(menuId);
+        if (menu) {
+            menu.querySelectorAll('.tag-logic-btn').forEach(btn => {
+                const isOrBtn = btn.textContent.includes('OR');
+                const isAndBtn = btn.textContent.includes('AND');
+                btn.classList.toggle('active',
+                    (isOrBtn && logicMode === 'or') ||
+                    (isAndBtn && logicMode === 'and')
+                );
+            });
+        }
+
+        updateGenericTagDisplay(dashboardId);
+    }
+
+    /**
+     * Apply generic tag filter to items
+     * @param {Array} items - Array of work items
+     * @param {Array} selectedTags - Selected tag values
+     * @param {boolean} exclusionMode - If true, exclude items with unchecked tags
+     * @param {string} logicMode - 'and' or 'or'
+     * @param {Array} allAvailableTags - All available tags (needed for exclusion mode)
+     * @returns {Array} Filtered items
+     */
+    function applyGenericTagFilter(items, selectedTags, exclusionMode, logicMode, allAvailableTags) {
+        if (selectedTags.length === 0) return items;
+
+        if (exclusionMode) {
+            // Exclusion mode: hide items with unchecked tags
+            const uncheckedTags = allAvailableTags.filter(t => !selectedTags.includes(t));
+            return items.filter(item => {
+                const itemTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                // Exclude items that have any unchecked tag
+                return !itemTags.some(tag => uncheckedTags.includes(tag));
+            });
+        } else {
+            // Inclusion mode
+            return items.filter(item => {
+                const itemTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                if (logicMode === 'and') {
+                    // AND logic: item must have ALL selected tags
+                    return selectedTags.every(selectedTag => itemTags.includes(selectedTag));
+                } else {
+                    // OR logic (default): item must have ANY selected tag
+                    return itemTags.some(selectedTag => selectedTags.includes(selectedTag));
+                }
+            });
+        }
+    }
+
+    /**
+     * Get all unique tags from a list of items
+     */
+    function getAllTagsFromItems(items) {
+        const allTags = new Set();
+        items.forEach(item => {
+            if (item.tags) {
+                item.tags.split(';').forEach(t => {
+                    const trimmed = t.trim();
+                    if (trimmed) allTags.add(trimmed);
+                });
+            }
+        });
+        return [...allTags];
+    }
+
+    // ==================== END GENERIC TAG FILTER COMPONENT ====================
 
     // Utility functions
     function getStateClass(state) {

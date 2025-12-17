@@ -592,7 +592,10 @@
         states: [],
         priorities: [],
         releases: [],
-        aging: []
+        aging: [],
+        tags: [],
+        tagsExclusionMode: false,
+        tagsLogicMode: 'or'
     };
 
     // Customers View sort state (null = use default sort from config)
@@ -769,8 +772,8 @@
     function getFilteredIssues() {
         let issues = getAllIssues();
 
-        // Apply search filter using generic component
-        issues = applyGenericSearchFilter(issues, customersFilters.search);
+        // Apply search filter using generic component (supports pipe-separated IDs)
+        issues = applyGenericSearchFilter(issues, customersFilters.search, { supportPipeSeparated: true });
 
         // Apply customer filter
         if (customersFilters.customers.length > 0) {
@@ -824,6 +827,12 @@
             });
         }
 
+        // Apply tag filter
+        if (customersFilters.tags.length > 0) {
+            const allAvailableTags = getAllTagsFromItems(getAllIssues());
+            issues = applyGenericTagFilter(issues, customersFilters.tags, customersFilters.tagsExclusionMode, customersFilters.tagsLogicMode, allAvailableTags);
+        }
+
         return issues;
     }
 
@@ -835,8 +844,8 @@
     function getCustomersIssuesExcludingFilter(excludeFilter) {
         let issues = getAllIssues();
 
-        // Always apply search filter
-        issues = applyGenericSearchFilter(issues, customersFilters.search);
+        // Always apply search filter (supports pipe-separated IDs)
+        issues = applyGenericSearchFilter(issues, customersFilters.search, { supportPipeSeparated: true });
 
         // Apply customer filter (unless excluded)
         if (excludeFilter !== 'customer' && customersFilters.customers.length > 0) {
@@ -889,6 +898,12 @@
             });
         }
 
+        // Apply tag filter (unless excluded)
+        if (excludeFilter !== 'tag' && customersFilters.tags.length > 0) {
+            const allAvailableTags = getAllTagsFromItems(getAllIssues());
+            issues = applyGenericTagFilter(issues, customersFilters.tags, customersFilters.tagsExclusionMode, customersFilters.tagsLogicMode, allAvailableTags);
+        }
+
         return issues;
     }
 
@@ -900,7 +915,8 @@
                customersFilters.states.length > 0 ||
                customersFilters.priorities.length > 0 ||
                customersFilters.releases.length > 0 ||
-               customersFilters.aging.length > 0;
+               customersFilters.aging.length > 0 ||
+               customersFilters.tags.length > 0;
     }
 
     // Clear all filters
@@ -915,6 +931,9 @@
         customersFilters.priorities = [];
         customersFilters.releases = [];
         customersFilters.aging = [];
+        customersFilters.tags = [];
+        customersFilters.tagsExclusionMode = false;
+        // Note: tagsLogicMode is not reset - user preference is preserved
 
         saveStateToStorage();
         renderCustomersView();
@@ -1238,6 +1257,18 @@
             });
         }
 
+        // Build Tag dropdown using generic component (cross-filter aware)
+        const tagMenu = document.getElementById('customers-tag-menu');
+        if (tagMenu) {
+            const tagFilteredIssues = getCustomersIssuesExcludingFilter('tag');
+            tagMenu.innerHTML = buildTagFilterDropdown({
+                dashboardId: 'customers',
+                items: tagFilteredIssues,
+                selectedTags: customersFilters.tags,
+                logicMode: customersFilters.tagsLogicMode
+            });
+        }
+
         // Build Aging dropdown (cross-filter aware with counts)
         const agingMenu = document.getElementById('customers-aging-menu');
         if (agingMenu) {
@@ -1290,6 +1321,7 @@
         updateGenericPriorityDisplay('customers');
         updateGenericReleaseDisplay('customers');
         updateGenericStateDisplay('customers');
+        updateGenericTagDisplay('customers');
         // Dashboard-specific filters
         ['categories', 'aging'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
@@ -1371,7 +1403,10 @@
             states: [],
             priorities: [],
             releases: [],
-            aging: []
+            aging: [],
+            tags: [],
+            tagsExclusionMode: false,
+            tagsLogicMode: 'or'
         };
         document.getElementById('customers-search-input').value = '';
         saveStateToStorage();
@@ -1404,6 +1439,169 @@
         populateCustomersFilterDropdowns();
         updateCustomersClearButton();
     }
+
+    // ==================== ENHANCEMENT REQUEST PRIORITIZATION SUMMARY ====================
+    // Visible only when Category = "Enhancement Request" is filtered
+
+    // CS Tag categories for Enhancement Request prioritization
+    const CS_TAG_CATEGORIES = [
+        { tag: 'CS: High Value', label: 'CS: High Value' },
+        { tag: 'CS: Low Value', label: 'CS: Low Value' },
+        { tag: 'CS: Strategic', label: 'CS: Strategic' }
+    ];
+
+    /**
+     * Check if a tag matches "CS:*" pattern (starts with "CS:")
+     */
+    function isCSTag(tag) {
+        return tag && tag.trim().startsWith('CS:');
+    }
+
+    /**
+     * Check if an issue has any CS tag
+     */
+    function hasCSTag(issue) {
+        if (!issue.tags) return false;
+        const tags = issue.tags.split(';').map(t => t.trim()).filter(t => t);
+        return tags.some(t => isCSTag(t));
+    }
+
+    /**
+     * Calculate Enhancement Request prioritization summary
+     * @param {Array} enhancementRequests - Already filtered to Enhancement Requests only
+     * @returns {Object} { results: [{tag, label, count}], untaggedCount }
+     */
+    function calculateERPrioritizationSummary(enhancementRequests) {
+        // Initialize results for each CS tag category
+        const results = CS_TAG_CATEGORIES.map(cat => ({
+            tag: cat.tag,
+            label: cat.label,
+            count: 0,
+            issueIds: []
+        }));
+
+        // Count issues without any CS tag
+        let untaggedCount = 0;
+        const untaggedIssueIds = [];
+
+        enhancementRequests.forEach(issue => {
+            const tags = (issue.tags || '').split(';').map(t => t.trim()).filter(t => t);
+
+            // Check each CS tag category
+            results.forEach(cat => {
+                if (tags.includes(cat.tag)) {
+                    cat.count++;
+                    cat.issueIds.push(issue.id);
+                }
+            });
+
+            // Check if issue has NO CS:* tags at all
+            if (!hasCSTag(issue)) {
+                untaggedCount++;
+                untaggedIssueIds.push(issue.id);
+            }
+        });
+
+        return { results, untaggedCount, untaggedIssueIds, totalERs: enhancementRequests.length };
+    }
+
+    // State for ER Prioritization Summary collapse
+    let erPrioritizationCollapsed = false;
+
+    /**
+     * Toggle ER Prioritization Summary collapsed state
+     */
+    function toggleERPrioritizationSummary() {
+        const section = document.getElementById('er-prioritization-section');
+        if (section) {
+            section.classList.toggle('collapsed');
+            erPrioritizationCollapsed = section.classList.contains('collapsed');
+            saveStateToStorage();
+        }
+    }
+
+    /**
+     * Render Enhancement Request Prioritization Summary table
+     * Always visible (collapsible), shows stats for all Enhancement Requests
+     */
+    function renderERPrioritizationSummary(filteredIssues) {
+        const section = document.getElementById('er-prioritization-section');
+        const tbody = document.getElementById('er-prioritization-body');
+        const untaggedNote = document.getElementById('er-untagged-note');
+
+        if (!section || !tbody) return;
+
+        // Restore collapsed state
+        if (erPrioritizationCollapsed) {
+            section.classList.add('collapsed');
+        } else {
+            section.classList.remove('collapsed');
+        }
+
+        // Calculate stats for Enhancement Requests only (from filtered issues)
+        const enhancementRequests = filteredIssues.filter(i => i.ticketCategory === 'Enhancement Request');
+        const { results, untaggedCount, untaggedIssueIds, totalERs } = calculateERPrioritizationSummary(enhancementRequests);
+
+        // Build table rows
+        // Row 1: Issue counts (clickable)
+        // Row 2: Percentages
+        tbody.innerHTML = `
+            <tr>
+                <td class="row-label">Issues</td>
+                ${results.map(r => `<td class="count-value clickable" onclick="filterERByCSTag('${r.tag}')" title="Click to filter by ${r.tag}">${r.count}</td>`).join('')}
+            </tr>
+            <tr>
+                <td class="row-label">%</td>
+                ${results.map(r => {
+                    const pct = totalERs > 0 ? (r.count / totalERs * 100) : 0;
+                    return `<td class="effort-value"><span class="effort-pct">${pct > 0 ? pct.toFixed(0) + '%' : '0%'}</span></td>`;
+                }).join('')}
+            </tr>
+        `;
+
+        // Show untagged issues note (right-justified, clickable)
+        if (untaggedNote) {
+            if (untaggedCount > 0) {
+                untaggedNote.textContent = `${untaggedCount} Issue${untaggedCount !== 1 ? 's' : ''} (Enhancement Request${untaggedCount !== 1 ? 's' : ''}) without CS tags`;
+                untaggedNote.onclick = () => filterERUntagged(untaggedIssueIds);
+                untaggedNote.classList.add('clickable');
+            } else {
+                untaggedNote.textContent = '';
+                untaggedNote.onclick = null;
+                untaggedNote.classList.remove('clickable');
+            }
+        }
+    }
+
+    /**
+     * Filter issues by a specific CS tag
+     */
+    function filterERByCSTag(tag) {
+        // Keep Enhancement Request category filter, add tag filter
+        customersFilters.tags = [tag];
+        customersFilters.tagsExclusionMode = false;
+        customersFilters.tagsLogicMode = 'or';
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    /**
+     * Filter to show Enhancement Requests without CS tags
+     * Uses pipe-separated search to show specific IDs
+     */
+    function filterERUntagged(issueIds) {
+        // Use search filter with pipe-separated IDs to show only untagged issues
+        customersFilters.search = issueIds.join('|');
+        document.getElementById('customers-search-input').value = customersFilters.search;
+        saveStateToStorage();
+        renderCustomersView();
+        populateCustomersFilterDropdowns();
+        updateCustomersClearButton();
+    }
+
+    // ==================== END ENHANCEMENT REQUEST PRIORITIZATION SUMMARY ====================
 
     // Sort Issues for table
     function sortCustomersIssues(issues) {
@@ -1576,6 +1774,9 @@
                 <span class="insight-item info clickable" onclick="filterCustomersByState('In Progress')"><span class="insight-icon">🔄</span> ${inProgress.length} in progress</span>
             </div>
         `;
+
+        // Enhancement Request Prioritization Summary (visible only when Category = Enhancement Request is filtered)
+        renderERPrioritizationSummary(filteredIssues);
 
         // Aging histogram
         const agingCounts = {};
@@ -2807,86 +3008,28 @@
             });
         }
 
-        // Populate Tag dropdown (cross-filter aware with counts)
+        // Populate Tag dropdown using generic component (cross-filter aware)
         const tagMenu = document.getElementById('roadmap-tag-menu');
         if (tagMenu) {
             // Get features filtered by all filters EXCEPT tag for cross-filter behavior
             const tagFilteredFeatures = getRoadmapFeaturesExcludingFilter('tag');
-
-            // Count features by tag
-            const tagCounts = {};
-            tagFilteredFeatures.forEach(f => {
-                if (f.tags) {
-                    f.tags.split(';').forEach(t => {
-                        const tag = t.trim();
-                        if (tag) {
-                            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-                        }
-                    });
-                }
+            tagMenu.innerHTML = buildTagFilterDropdown({
+                dashboardId: 'roadmap',
+                items: tagFilteredFeatures,
+                selectedTags: roadmapFilters.tags,
+                logicMode: roadmapFilters.tagsLogicMode
             });
-
-            // Get sorted tags with counts > 0
-            const availableTags = Object.keys(tagCounts).sort((a, b) => a.localeCompare(b));
-
-            let tagHtml = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search tags..."
-                           oninput="filterRoadmapDropdownOptions('tag', this.value)"
-                           onclick="event.stopPropagation();">
-                </div>
-                <div class="tag-logic-toggle" onclick="event.stopPropagation();">
-                    <span class="tag-logic-label">Match:</span>
-                    <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'or' ? 'active' : ''}" onclick="setTagLogicMode('or')">Any (OR)</button>
-                    <button class="tag-logic-btn ${roadmapFilters.tagsLogicMode === 'and' ? 'active' : ''}" onclick="setTagLogicMode('and')">All (AND)</button>
-                </div>
-                <div class="filter-dropdown-options" id="roadmap-tag-options">
-            `;
-
-            availableTags.forEach(t => {
-                const isChecked = roadmapFilters.tags.includes(t);
-                const escapedValue = t.replace(/"/g, '&quot;').replace(/'/g, "\\'");
-                tagHtml += `
-                    <label class="filter-dropdown-option" data-search-value="${t.toLowerCase()}" onclick="event.stopPropagation();">
-                        <input type="checkbox" value="${t.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
-                               onchange="handleRoadmapFilterChange('tag', '${escapedValue}', this.checked)">
-                        <span class="option-label">${t}</span>
-                        <span class="option-count">${tagCounts[t]}</span>
-                    </label>
-                `;
-            });
-
-            tagHtml += `</div>`;
-            tagHtml += `
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllRoadmapFilter('tag')">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearRoadmapFilter('tag')">Clear</button>
-                </div>
-            `;
-            tagMenu.innerHTML = tagHtml;
         }
-    }
-
-    // Toggle between AND/OR logic for tag filter
-    function setTagLogicMode(mode) {
-        roadmapFilters.tagsLogicMode = mode;
-        // Update button states
-        document.querySelectorAll('.tag-logic-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.textContent.toLowerCase().includes(mode));
-        });
-        renderRoadmapView();
-        saveStateToStorage(); // Persist logic mode change
     }
 
     // Sync all roadmap filter dropdown checkboxes with current filter state
     // Called after state is loaded from localStorage to update UI
     function syncRoadmapFilterDropdowns() {
         // Filters handled by dashboard-specific logic (excludes generic components)
-        const filterTypes = ['assignee', 'iteration', 'tag'];
+        const filterTypes = ['assignee', 'iteration'];
         const filterKeyMap = {
             'assignee': 'assignees',
-            'iteration': 'iterations',
-            'tag': 'tags'
+            'iteration': 'iterations'
         };
 
         filterTypes.forEach(type => {
@@ -2908,22 +3051,13 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Sync generic components (customer, priority, release, state, team)
+        // Sync generic components (customer, priority, release, state, team, tag)
         syncGenericCustomerFilter('roadmap');
         syncGenericPriorityFilter('roadmap');
         syncGenericReleaseFilter('roadmap');
         syncGenericStateFilter('roadmap');
         syncGenericTeamFilter('roadmap');
-
-        // Sync tag logic mode buttons
-        document.querySelectorAll('.tag-logic-btn').forEach(btn => {
-            const isOrBtn = btn.textContent.includes('OR');
-            const isAndBtn = btn.textContent.includes('AND');
-            btn.classList.toggle('active',
-                (isOrBtn && roadmapFilters.tagsLogicMode === 'or') ||
-                (isAndBtn && roadmapFilters.tagsLogicMode === 'and')
-            );
-        });
+        syncGenericTagFilter('roadmap');
 
         // Sync search input using generic component
         syncGenericSearchFilter('roadmap');
@@ -3152,7 +3286,7 @@
         // Note: tagsLogicMode is not reset - user preference is preserved
 
         // Reset dashboard-specific dropdowns (excludes generic components)
-        ['assignee', 'iteration', 'tag'].forEach(type => {
+        ['assignee', 'iteration'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -3160,8 +3294,8 @@
             updateRoadmapFilterDisplay(type);
         });
 
-        // Reset generic component dropdowns (customer, priority, release, state, team)
-        ['customer', 'priority', 'release', 'state', 'team'].forEach(type => {
+        // Reset generic component dropdowns (customer, priority, release, state, team, tag)
+        ['customer', 'priority', 'release', 'state', 'team', 'tag'].forEach(type => {
             const optionsContainer = document.getElementById(`roadmap-${type}-options`);
             if (optionsContainer) {
                 optionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -3172,6 +3306,7 @@
         updateGenericReleaseDisplay('roadmap');
         updateGenericStateDisplay('roadmap');
         updateGenericTeamDisplay('roadmap');
+        updateGenericTagDisplay('roadmap');
 
         renderRoadmapView();
         saveStateToStorage(); // Persist filter changes

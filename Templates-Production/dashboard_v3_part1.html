@@ -321,11 +321,16 @@
         }
 
         /* Wide dropdown menu - for Tag filter showing tag + count */
-        #roadmap-tag-menu {
+        /* Applied to all tag filter menus across dashboards */
+        #release-tag-menu,
+        #roadmap-tag-menu,
+        #customers-tag-menu {
             right: auto;
             min-width: 280px;
         }
-        #roadmap-tag-menu .option-count {
+        #release-tag-menu .option-count,
+        #roadmap-tag-menu .option-count,
+        #customers-tag-menu .option-count {
             margin-left: auto;
             font-size: 0.7rem;
             color: var(--text-muted);
@@ -2370,6 +2375,92 @@
             opacity: 0.8;
         }
 
+        /* Enhancement Request Prioritization Summary Section */
+        .er-prioritization-section {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        .er-prioritization-section.collapsible .er-prioritization-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .er-prioritization-section.collapsible .er-prioritization-header:hover {
+            background: rgba(34, 211, 238, 0.05);
+            margin: -0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .er-prioritization-section.collapsible .collapse-indicator {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .er-prioritization-section.collapsible.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+        .er-prioritization-section.collapsible .er-section-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            max-height: 2000px;
+            opacity: 1;
+        }
+        .er-prioritization-section.collapsible.collapsed .er-section-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .er-prioritization-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .er-prioritization-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .strategy-summary-table .er-col {
+            width: calc((100% - 100px) / 3);
+        }
+
+        .strategy-summary-table .er-col-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .strategy-summary-table .er-col-subtitle {
+            font-weight: 400;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        .er-untagged-note {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .er-untagged-note.clickable {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .er-untagged-note.clickable:hover {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+        }
+
         /* Filter search input in header */
         .filter-search-input {
             padding: 0.4rem 0.75rem;
@@ -3421,7 +3512,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v89</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v90</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>
@@ -3502,6 +3593,17 @@
                 </div>
                 <div class="filter-dropdown-menu" id="release-state-header-menu">
                     <!-- Populated dynamically by generic State filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="release-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('release-tag-dropdown')">
+                    <span id="release-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="release-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
                 </div>
             </div>
 
@@ -3623,6 +3725,17 @@
                 </div>
             </div>
 
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="roadmap-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
+                    <span id="roadmap-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
             <span class="filter-row-label">Team:</span>
             <div class="filter-dropdown" id="roadmap-team-dropdown">
                 <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-team-dropdown')">
@@ -3641,17 +3754,6 @@
                     <span class="arrow">▼</span>
                 </div>
                 <div class="filter-dropdown-menu" id="roadmap-iteration-menu">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <span class="filter-row-label">Tag:</span>
-            <div class="filter-dropdown" id="roadmap-tag-dropdown">
-                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
-                    <span id="roadmap-tag-display">All Tags</span>
-                    <span class="arrow">▼</span>
-                </div>
-                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
                     <!-- Populated dynamically -->
                 </div>
             </div>
@@ -3725,6 +3827,17 @@
                 </div>
                 <div class="filter-dropdown-menu" id="customers-state-menu">
                     <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="customers-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-tag-dropdown')">
+                    <span id="customers-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
                 </div>
             </div>
 
@@ -4073,6 +4186,42 @@
         <div class="dashboard-view" id="view-customers">
             <div class="stats-grid" id="customer-stats"></div>
             <div class="insights-panel insights-horizontal" id="customer-insights"></div>
+
+            <!-- Enhancement Request Prioritization Summary (Collapsible) -->
+            <div class="er-prioritization-section collapsible" id="er-prioritization-section">
+                <div class="er-prioritization-header" onclick="toggleERPrioritizationSummary()">
+                    <span class="er-prioritization-title">Enhancement Request Prioritization Summary</span>
+                    <span class="collapse-indicator">▼</span>
+                </div>
+                <div class="er-section-content">
+                    <table class="strategy-summary-table" id="er-prioritization-table">
+                        <thead>
+                            <tr>
+                                <th class="row-label"></th>
+                                <th class="strategy-col er-col">
+                                    <div class="er-col-title">CS: High Value</div>
+                                    <div class="er-col-subtitle">&gt; 3 customers have asked, aligns with OKRs, all customers can benefit</div>
+                                </th>
+                                <th class="strategy-col er-col">
+                                    <div class="er-col-title">CS: Low Value</div>
+                                    <div class="er-col-subtitle">&lt;3 customers have asked, nice to have, not mission critical</div>
+                                </th>
+                                <th class="strategy-col er-col">
+                                    <div class="er-col-title">CS: Strategic</div>
+                                    <div class="er-col-subtitle">Tier 1 customer ask</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="er-prioritization-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                    <div class="strategy-summary-footer">
+                        <span class="er-untagged-note clickable" id="er-untagged-note"></span>
+                    </div>
+                </div>
+            </div>
+
             <div class="aging-histogram-section" id="customer-aging-histogram"></div>
             <div id="customer-issues-table"></div>
         </div>
