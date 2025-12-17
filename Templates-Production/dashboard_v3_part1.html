@@ -877,6 +877,9 @@
         .aging-Older { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); }
         .aging-TBD { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
 
+        /* Bug Type missing styling */
+        .bugtype-missing { color: var(--accent-red); font-style: italic; }
+
         /* Category badges for Customers table */
         .category-badge {
             display: inline-block;
@@ -1022,6 +1025,12 @@
         
         .stat-card.clickable:hover {
             box-shadow: 0 4px 20px rgba(34, 211, 238, 0.15);
+        }
+
+        .stat-card.clickable.active {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.3), 0 4px 20px rgba(34, 211, 238, 0.2);
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(34, 211, 238, 0.05) 100%);
         }
 
         .stat-card.non-clickable {
@@ -2633,6 +2642,7 @@
         .col-created { width: 90px; min-width: 80px; }
         .col-closed { width: 90px; min-width: 80px; }
         .col-aging { width: 75px; min-width: 60px; }
+        .col-bugtype { width: 140px; min-width: 100px; }
         .col-tags { width: 120px; min-width: 80px; }
         .col-customers { width: 120px; min-width: 80px; }
         .col-csowner { width: 100px; min-width: 70px; }
@@ -3578,7 +3588,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v92</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v93</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>
@@ -4404,6 +4414,7 @@
             <div class="aging-histogram-section" id="bugs-aging-histogram"></div>
 
             <!-- Bug Trend Section -->
+            <div class="stats-grid" id="bugs-trend-stats"></div>
             <div class="chart-card full-width" id="bugs-trend-chart-container">
                 <div class="chart-title">Bug Trend by Week (Past Quarter)</div>
                 <div class="chart-container tall"><canvas id="bugs-trend-chart"></canvas></div>

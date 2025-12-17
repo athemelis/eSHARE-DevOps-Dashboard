@@ -52,9 +52,11 @@
                 bugsFilters: typeof bugsFilters !== 'undefined' ? bugsFilters : null,
                 bugsChartFilters: typeof bugsChartFilters !== 'undefined' ? bugsChartFilters : null,
                 bugTrendFilters: typeof bugTrendFilters !== 'undefined' ? bugTrendFilters : null,
+                bugTrendFilter: typeof bugTrendFilter !== 'undefined' ? bugTrendFilter : null, // Trend stat card filter
                 selectedBugDateRange: typeof selectedBugDateRange !== 'undefined' ? selectedBugDateRange : 'quarter',
                 bugTrendStartDate: (document.getElementById('bugs-trend-start-inline') || document.getElementById('bug-trend-start'))?.value || '',
                 bugTrendEndDate: (document.getElementById('bugs-trend-end-inline') || document.getElementById('bug-trend-end'))?.value || '',
+                bugsColumnWidths: typeof bugsColumnWidths !== 'undefined' ? bugsColumnWidths : {},
                 // Teams view state
                 teamLeadChartFilters: typeof teamLeadChartFilters !== 'undefined' ? teamLeadChartFilters : null,
                 currentTeamDetails: typeof currentTeamDetails !== 'undefined' ? currentTeamDetails : null,
@@ -212,11 +214,18 @@
         if (state.bugTrendFilters && typeof bugTrendFilters !== 'undefined') {
             Object.assign(bugTrendFilters, state.bugTrendFilters);
         }
+        if (state.bugTrendFilter !== undefined && typeof bugTrendFilter !== 'undefined') {
+            bugTrendFilter = state.bugTrendFilter;
+        }
         if (typeof state.selectedBugDateRange !== 'undefined' && typeof selectedBugDateRange !== 'undefined') {
             selectedBugDateRange = state.selectedBugDateRange;
         }
+        // Restore Bugs table column widths
+        if (state.bugsColumnWidths && typeof bugsColumnWidths !== 'undefined') {
+            Object.assign(bugsColumnWidths, state.bugsColumnWidths);
+        }
         // Always mark as loaded if we have any bugs state
-        if (state.bugsFilters || typeof state.selectedBugDateRange !== 'undefined' || state.bugTrendFilters || typeof state.bugTrendStartDate !== 'undefined') {
+        if (state.bugsFilters || typeof state.selectedBugDateRange !== 'undefined' || state.bugTrendFilters || typeof state.bugTrendStartDate !== 'undefined' || state.bugTrendFilter !== undefined || state.bugsColumnWidths) {
             bugsStateWasLoaded = true;
         }
 

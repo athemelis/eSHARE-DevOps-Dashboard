@@ -152,6 +152,9 @@
         bugsFilters.bugTypes = [];
         bugsFilters.aging = [];
 
+        // Clear trend stat card filter
+        bugTrendFilter = null;
+
         // Update all display texts
         updateGenericReleaseDisplay('bugs');
         updateGenericCustomerDisplay('bugs');
@@ -2629,9 +2632,9 @@
     function renderBugStats() {
         const stats = document.getElementById('bugs-stats');
         const insights = document.getElementById('bugs-insights');
-        
-        // Use 'active' filter - bugs that were active during the selected period
-        const bugs = getFilteredBugs('active');
+
+        // Use trend filter if active (for opened/closed in quarter), otherwise use regular filter
+        const bugs = (bugTrendFilter === 'opened' || bugTrendFilter === 'closed') ? getBugsForTrendFilter() : getFilteredBugs('active');
         const allBugs = workItems.filter(w => w.type === 'Bug');
         const openBugs = bugs.filter(b => b.state !== 'Done' && b.state !== 'Closed' && b.state !== 'Removed');
         const blocked = bugs.filter(w => (w.tags || '').toLowerCase().includes('blocked'));
@@ -2692,21 +2695,27 @@
         // Bug insights
         const effortByTeam = sumBy(bugs, 'team', 'effort');
         const topEffortTeam = Object.entries(effortByTeam).sort((a, b) => b[1] - a[1])[0];
-        
+
         const effortByAssignee = sumBy(bugs, 'assignedTo', 'effort');
         const topEffortAssignee = Object.entries(effortByAssignee)
             .filter(e => e[0] !== '(Not Set)')
             .sort((a, b) => b[1] - a[1])[0];
-        
+
         const bugsByFeature = countBy(bugs, 'feature');
         const topBugFeature = Object.entries(bugsByFeature)
             .filter(e => e[0] !== '(Not Set)')
             .sort((a, b) => b[1] - a[1])[0];
-        
+
+        // Count bugs missing Bug Type (data quality issue)
+        const uncategorizedBugs = bugs.filter(b => !b.bugType || !b.bugType.trim() ||
+            !['Customer Related', 'Product Quality', 'Technical & Infrastructure'].includes(b.bugType));
+        const uncategorizedCount = uncategorizedBugs.length;
+
         insights.innerHTML = `
             <div class="insights-title">⚡ Bug Insights</div>
             <div class="insights-content">
                 <div class="insight-item critical"><span class="insight-icon">🐛</span> ${openBugs.length} bugs currently open</div>
+                ${uncategorizedCount > 0 ? `<div class="insight-item critical"><span class="insight-icon">❌</span> ${uncategorizedCount} bugs missing Bug Type classification</div>` : ''}
                 <div class="insight-item info"><span class="insight-icon">⏱️</span> ${totalBugEffort.toFixed(1)} total days spent on bug fixes</div>
                 ${topEffortTeam ? `<div class="insight-item warning"><span class="insight-icon">👥</span> ${topEffortTeam[0]} spent most effort on bugs (${topEffortTeam[1].toFixed(1)} days)</div>` : ''}
                 ${topEffortAssignee ? `<div class="insight-item info"><span class="insight-icon">👤</span> ${topEffortAssignee[0]} spent ${topEffortAssignee[1].toFixed(1)} days on bugs</div>` : ''}
@@ -2724,7 +2733,7 @@
         if (!histogramContainer) return;
 
         // Show filter indicator if filters are active
-        const filterNote = hasBugsActiveFilters() ? ` (${bugs.length} filtered)` : '';
+        const filterNote = (hasBugsActiveFilters() || bugTrendFilter) ? ` (${bugs.length} filtered)` : '';
 
         // Count bugs by aging bucket
         const agingCounts = {};
@@ -2777,11 +2786,11 @@
         const tableContainer = document.getElementById('bugs-table-container');
         if (!tableContainer) return;
 
-        // Get filtered bugs (no date filter applied)
-        const bugs = getBugsItemsExcludingFilter(null);
-        const isFiltered = hasBugsActiveFilters();
+        // Get filtered bugs - apply trend filter if active
+        const bugs = bugTrendFilter ? getBugsForTrendFilter() : getBugsItemsExcludingFilter(null);
+        const isFiltered = hasBugsActiveFilters() || bugTrendFilter;
 
-        // Define columns: ID, Title, State, Customers, Priority, Aging, Tags, Bug Owner, Release Version, Target Date
+        // Define columns: ID, Title, State, Customers, Priority, Aging, Bug Type, Tags, Bug Owner, Release Version, Target Date
         const bugsColumns = [
             { key: 'id', label: 'ID', class: 'col-id' },
             { key: 'title', label: 'Title', class: 'col-title' },
@@ -2789,6 +2798,7 @@
             { key: 'customers', label: 'Customers', class: 'col-customers' },
             { key: 'priority', label: 'Priority', class: 'col-priority' },
             { key: 'aging', label: 'Aging', class: 'col-aging' },
+            { key: 'bugType', label: 'Bug Type', class: 'col-bugtype' },
             { key: 'tags', label: 'Tags', class: 'col-tags' },
             { key: 'assignedTo', label: 'Bug Owner', class: 'col-owner' },
             { key: 'releaseVersion', label: 'Release', class: 'col-release' },
@@ -2828,6 +2838,11 @@
                 const bucket = calculateAgingBucket(item);
                 const agingClass = bucket === 'Older' ? 'aging-old' : (bucket === '4 weeks' ? 'aging-warn' : '');
                 return `<td class="${colClass}"><span class="${agingClass}">${bucket}</span></td>`;
+            }
+            if (key === 'bugType') {
+                const bugType = item.bugType || '';
+                const typeClass = !bugType ? 'bugtype-missing' : '';
+                return `<td class="${colClass}"><span class="${typeClass}">${bugType || '—'}</span></td>`;
             }
             if (key === 'tags') {
                 const tags = (item.tags || '').split(';').filter(t => t.trim());
@@ -3590,6 +3605,9 @@
         return null;
     }
     
+    // Bug trend filter state
+    let bugTrendFilter = null; // null = no filter, 'open' = current open, 'opened' = opened in period, 'closed' = closed in period
+
     function renderBugTrendSection() {
         // Fixed quarter date range (past 3 months)
         const endDate = new Date();
@@ -3597,35 +3615,35 @@
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - 3);
         startDate.setHours(0, 0, 0, 0);
-        
+
         // Get bugs with type/priority filters applied (not date filter - we apply that ourselves for trends)
         let bugs = getFilteredBugs(false);
-        
+
         // Calculate weekly data
         const weeklyData = {};
-        
+
         // Initialize weeks in range
         let currentWeek = getMonday(startDate);
         const endWeek = getMonday(endDate);
-        
+
         while (currentWeek <= endWeek) {
             const weekKey = currentWeek.toISOString().split('T')[0];
             weeklyData[weekKey] = { opened: 0, closed: 0, openAtEnd: 0 };
             currentWeek.setDate(currentWeek.getDate() + 7);
         }
-        
+
         // Count bugs opened and closed per week
         bugs.forEach(bug => {
             const createdDate = parseCreatedDate(bug.createdDate);
             const closedDate = getBugClosedDate(bug);
-            
+
             if (createdDate && createdDate >= startDate && createdDate <= endDate) {
                 const weekKey = getWeekKey(createdDate);
                 if (weeklyData[weekKey]) {
                     weeklyData[weekKey].opened++;
                 }
             }
-            
+
             if (closedDate && closedDate >= startDate && closedDate <= endDate) {
                 const weekKey = getWeekKey(closedDate);
                 if (weeklyData[weekKey]) {
@@ -3633,14 +3651,14 @@
                 }
             }
         });
-        
+
         // Calculate running total of open bugs
         // First, count bugs open before the start date
         let openBeforeStart = 0;
         bugs.forEach(bug => {
             const createdDate = parseCreatedDate(bug.createdDate);
             const closedDate = getBugClosedDate(bug);
-            
+
             if (createdDate && createdDate < startDate) {
                 // Bug was created before start
                 if (!closedDate || closedDate >= startDate) {
@@ -3649,18 +3667,148 @@
                 }
             }
         });
-        
+
         // Calculate cumulative open bugs per week
         let runningOpen = openBeforeStart;
         const weeks = Object.keys(weeklyData).sort();
-        
+
         weeks.forEach(week => {
             runningOpen += weeklyData[week].opened - weeklyData[week].closed;
             weeklyData[week].openAtEnd = runningOpen;
         });
 
+        // Calculate stats for cards
+        const currentOpenBugs = bugs.filter(b => b.state !== 'Done' && b.state !== 'Closed' && b.state !== 'Removed').length;
+
+        // Anchor the final data point to the actual current open bugs count
+        // This ensures the trend line ends at the correct value while preserving historical trend shape
+        if (weeks.length > 0) {
+            const lastWeek = weeks[weeks.length - 1];
+            weeklyData[lastWeek].openAtEnd = currentOpenBugs;
+        }
+
+        // Calculate this week vs last week change
+        const thisWeekKey = weeks.length > 0 ? weeks[weeks.length - 1] : null;
+        const lastWeekKey = weeks.length > 1 ? weeks[weeks.length - 2] : null;
+
+        let weekChange = 0;
+        let weekChangeText = 'N/A';
+        let weekChangeClass = 'trend-neutral';
+
+        if (thisWeekKey && lastWeekKey && weeklyData[thisWeekKey] && weeklyData[lastWeekKey]) {
+            weekChange = weeklyData[thisWeekKey].openAtEnd - weeklyData[lastWeekKey].openAtEnd;
+            if (weekChange > 0) {
+                weekChangeText = `+${weekChange}`;
+                weekChangeClass = 'trend-up';
+            } else if (weekChange < 0) {
+                weekChangeText = `${weekChange}`;
+                weekChangeClass = 'trend-down';
+            } else {
+                weekChangeText = '0';
+                weekChangeClass = 'trend-neutral';
+            }
+        }
+
+        // Calculate averages
+        const totalOpened = weeks.reduce((sum, w) => sum + weeklyData[w].opened, 0);
+        const totalClosed = weeks.reduce((sum, w) => sum + weeklyData[w].closed, 0);
+        const avgOpenedPerWeek = weeks.length > 0 ? (totalOpened / weeks.length).toFixed(1) : 0;
+        const avgClosedPerWeek = weeks.length > 0 ? (totalClosed / weeks.length).toFixed(1) : 0;
+
+        // Render stats cards
+        const trendStats = document.getElementById('bugs-trend-stats');
+        if (trendStats) {
+            trendStats.innerHTML = `
+                <div class="stat-card clickable ${bugTrendFilter === 'open' ? 'active' : ''}" onclick="filterByBugTrendStat('open')">
+                    <div class="stat-label">Current Open Bugs</div>
+                    <div class="stat-value" style="color: var(--accent-red)">${currentOpenBugs}</div>
+                    <div class="stat-subtitle">Click to filter table</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Week-over-Week Change</div>
+                    <div class="stat-value ${weekChangeClass}">${weekChangeText}</div>
+                    <div class="stat-subtitle">${weekChange > 0 ? '📈 Losing ground' : weekChange < 0 ? '📉 Gaining ground' : '➡️ Holding steady'}</div>
+                </div>
+                <div class="stat-card clickable ${bugTrendFilter === 'opened' ? 'active' : ''}" onclick="filterByBugTrendStat('opened')">
+                    <div class="stat-label">Avg Bugs Opened/Week</div>
+                    <div class="stat-value" style="color: var(--accent-orange)">${avgOpenedPerWeek}</div>
+                    <div class="stat-subtitle">${totalOpened} opened in quarter</div>
+                </div>
+                <div class="stat-card clickable ${bugTrendFilter === 'closed' ? 'active' : ''}" onclick="filterByBugTrendStat('closed')">
+                    <div class="stat-label">Avg Bugs Closed/Week</div>
+                    <div class="stat-value" style="color: var(--accent-green)">${avgClosedPerWeek}</div>
+                    <div class="stat-subtitle">${totalClosed} closed in quarter</div>
+                </div>
+            `;
+        }
+
         // Render chart
         renderBugTrendChart(weeks, weeklyData);
+    }
+
+    /**
+     * Filter bugs by clicking on trend stat cards
+     * Sets the actual filter dropdowns so all visuals update consistently
+     * @param {string} filterType - 'open', 'opened', 'closed', or null to clear
+     */
+    function filterByBugTrendStat(filterType) {
+        // Toggle filter if clicking same card
+        if (bugTrendFilter === filterType) {
+            // Clear the filter - reset state filter to empty (show all)
+            bugTrendFilter = null;
+            bugsFilters.states = [];
+        } else {
+            bugTrendFilter = filterType;
+
+            if (filterType === 'open') {
+                // Set State filter to all states EXCEPT Done, Closed, Removed
+                const openStates = ['New', 'Triaged', 'To Do', 'In Progress', 'Ready For Review'];
+                bugsFilters.states = openStates;
+            } else if (filterType === 'opened' || filterType === 'closed') {
+                // For opened/closed in quarter, clear state filter (we'll filter by date)
+                bugsFilters.states = [];
+            }
+        }
+
+        // Call applyBugFilters which updates ALL visuals and dropdowns
+        applyBugFilters();
+    }
+
+    /**
+     * Get bugs filtered by the current trend filter (for opened/closed in quarter)
+     * This applies on TOP of the regular bugsFilters
+     */
+    function getBugsForTrendFilter() {
+        // Get base filtered bugs (respects all bugsFilters including state)
+        let bugs = getBugsItemsExcludingFilter(null);
+
+        // For 'open', the state filter already handles it
+        if (!bugTrendFilter || bugTrendFilter === 'open') {
+            return bugs;
+        }
+
+        // Fixed quarter date range (past 3 months)
+        const endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 3);
+        startDate.setHours(0, 0, 0, 0);
+
+        if (bugTrendFilter === 'opened') {
+            // Bugs opened in the quarter
+            return bugs.filter(bug => {
+                const createdDate = parseCreatedDate(bug.createdDate);
+                return createdDate && createdDate >= startDate && createdDate <= endDate;
+            });
+        } else if (bugTrendFilter === 'closed') {
+            // Bugs closed in the quarter
+            return bugs.filter(bug => {
+                const closedDate = getBugClosedDate(bug);
+                return closedDate && closedDate >= startDate && closedDate <= endDate;
+            });
+        }
+
+        return bugs;
     }
     
     function renderBugTrendChart(weeks, weeklyData) {
