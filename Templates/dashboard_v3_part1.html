@@ -2925,6 +2925,35 @@
             margin-bottom: 2rem;
         }
 
+        /* Collapsible Table Section */
+        .generic-table-section.collapsible .generic-table-title-bar {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .generic-table-section.collapsible .generic-table-title-bar:hover {
+            background: rgba(34, 211, 238, 0.08);
+        }
+        .generic-table-section.collapsible .collapse-indicator {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-left: auto;
+            transition: transform 0.2s;
+        }
+        .generic-table-section.collapsible.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+        .generic-table-section .generic-table-collapsible-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            max-height: 5000px;
+            opacity: 1;
+        }
+        .generic-table-section.collapsed .generic-table-collapsible-content {
+            max-height: 0;
+            opacity: 0;
+        }
+
         /* Table Title Bar */
         .generic-table-title-bar {
             display: flex;
@@ -3270,7 +3299,593 @@
         .orphan-group {
             border-color: #6b7280;
         }
-        
+
+        /* ========== WORK LOG SUMMARY SECTION ========== */
+        .worklog-summary-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .worklog-summary-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+        .worklog-summary-header:hover {
+            background: rgba(34, 211, 238, 0.08);
+        }
+        .worklog-summary-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .worklog-summary-title .section-icon {
+            font-size: 1.1rem;
+        }
+        .worklog-summary-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .worklog-summary-header .collapse-indicator {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .worklog-summary-section.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+        .worklog-summary-content {
+            padding: 1rem;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out, padding 0.3s ease-out;
+            max-height: 3000px;
+            opacity: 1;
+        }
+        .worklog-summary-section.collapsed .worklog-summary-content {
+            max-height: 0;
+            opacity: 0;
+            padding: 0 1rem;
+        }
+        .worklog-empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        .worklog-empty-state .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        /* Team group within work log */
+        .worklog-team-group {
+            margin-bottom: 1.5rem;
+        }
+        .worklog-team-group:last-child {
+            margin-bottom: 0;
+        }
+        .worklog-team-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.75rem;
+        }
+        .worklog-team-name {
+            font-weight: 600;
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+        }
+        .worklog-team-stats {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        /* Engineer row within team */
+        .worklog-engineer-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        .worklog-engineer-row:last-child {
+            border-bottom: none;
+        }
+        .worklog-engineer-name {
+            width: 140px;
+            flex-shrink: 0;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+        .worklog-engineer-total {
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+        .worklog-tasks-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        /* Individual task entry */
+        .worklog-task-entry {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+        .worklog-task-id {
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .worklog-task-id:hover {
+            text-decoration: underline;
+        }
+        .worklog-task-title {
+            flex: 1;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .worklog-task-days {
+            font-weight: 600;
+            color: var(--accent-green);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+        .worklog-activity-badge {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        .worklog-activity-badge.coding {
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+        }
+        .worklog-activity-badge.testing {
+            background: rgba(52, 211, 153, 0.2);
+            color: #34d399;
+        }
+        .worklog-activity-badge.design {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+        }
+        .worklog-activity-badge.other {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+        .worklog-date-range {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        /* Summary stats row */
+        .worklog-stats-row {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .worklog-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+        .worklog-stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .worklog-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        /* Work Log - By Work Item section */
+        .worklog-by-workitem {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+        }
+        .worklog-by-team {
+            margin-top: 0.5rem;
+        }
+        .worklog-section-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        .worklog-workitem-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.35rem 0;
+            flex-wrap: wrap;
+        }
+        .worklog-workitem-icon {
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .worklog-workitem-type {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            min-width: 100px;
+        }
+        .worklog-workitem-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        .worklog-workitem-link {
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            background: rgba(34, 211, 238, 0.1);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .worklog-workitem-link:hover {
+            background: rgba(34, 211, 238, 0.2);
+            text-decoration: underline;
+        }
+        .worklog-more {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .worklog-no-items {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        /* Orphan warning in By Work Item section */
+        .worklog-orphan-warning {
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 4px;
+            padding: 0.5rem 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .worklog-orphan-text {
+            font-size: 0.8rem;
+            color: #f87171;
+            font-weight: 500;
+        }
+        /* Data inconsistency warning banner */
+        .worklog-data-warning {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px dashed rgba(251, 191, 36, 0.5);
+            border-radius: 6px;
+            padding: 0.6rem 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .worklog-data-warning .warning-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .worklog-data-warning .warning-text {
+            font-size: 0.75rem;
+            color: #fbbf24;
+            line-height: 1.4;
+        }
+        .worklog-data-warning .warning-text strong {
+            color: #fcd34d;
+        }
+        /* Parent badge on task entries */
+        .worklog-parent-badge {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 500;
+            text-decoration: none;
+            flex-shrink: 0;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        .worklog-parent-badge.feature {
+            background: rgba(167, 139, 250, 0.2);
+            color: #a78bfa;
+        }
+        .worklog-parent-badge.bug {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+        }
+        .worklog-parent-badge.issue {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+        }
+        .worklog-parent-badge.delivery-slice {
+            background: rgba(34, 211, 238, 0.2);
+            color: #22d3ee;
+        }
+        .worklog-parent-badge.orphan {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            font-weight: 600;
+            animation: pulse-warning 2s infinite;
+        }
+        .worklog-parent-badge:hover:not(.orphan) {
+            filter: brightness(1.2);
+        }
+        /* Orphan task entry styling */
+        .worklog-task-entry.orphan-task {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 2px solid #f87171;
+        }
+        @keyframes pulse-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Work Log Gantt Timeline */
+        .worklog-timeline {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .worklog-timeline-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .worklog-timeline-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .worklog-gantt-container {
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 0.75rem;
+            overflow-x: auto;
+        }
+        .worklog-gantt {
+            min-width: 600px;
+        }
+        /* Day headers row */
+        .worklog-gantt-days {
+            display: flex;
+            margin-left: 150px; /* Space for engineer names */
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.35rem;
+        }
+        .worklog-gantt-day {
+            flex: 1;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .worklog-gantt-day.today {
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+        .worklog-gantt-day.weekend {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+        /* Team section */
+        .worklog-gantt-team {
+            margin-bottom: 0.75rem;
+        }
+        .worklog-gantt-team:last-child {
+            margin-bottom: 0;
+        }
+        .worklog-gantt-team-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 0.35rem;
+            padding-left: 0.25rem;
+        }
+        /* Engineer row */
+        .worklog-gantt-row {
+            display: flex;
+            align-items: center;
+            min-height: 28px;
+            margin-bottom: 0.25rem;
+        }
+        .worklog-gantt-engineer {
+            width: 150px;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            padding-right: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .worklog-gantt-bars {
+            flex: 1;
+            display: flex;
+            position: relative;
+            height: 22px;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 3px;
+        }
+        /* Grid lines for days */
+        .worklog-gantt-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            pointer-events: none;
+        }
+        .worklog-gantt-grid-cell {
+            flex: 1;
+            border-right: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        .worklog-gantt-grid-cell:last-child {
+            border-right: none;
+        }
+        .worklog-gantt-grid-cell.weekend {
+            background: rgba(51, 65, 85, 0.3);
+        }
+        /* Individual task bar */
+        .worklog-gantt-bar {
+            position: absolute;
+            height: 16px;
+            top: 3px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: filter 0.15s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            min-width: 8px;
+        }
+        .worklog-gantt-bar:hover {
+            filter: brightness(1.2);
+            transform: scaleY(1.1);
+            z-index: 10;
+        }
+        .worklog-gantt-bar-label {
+            font-size: 0.6rem;
+            color: white;
+            font-weight: 500;
+            padding: 0 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        /* Activity type colors */
+        .worklog-gantt-bar.coding {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+        .worklog-gantt-bar.testing {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
+        .worklog-gantt-bar.design {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+        }
+        .worklog-gantt-bar.other {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+        }
+        /* Orphan task bar */
+        .worklog-gantt-bar.orphan {
+            border: 2px solid #f87171;
+            box-shadow: 0 0 4px rgba(248, 113, 113, 0.5);
+        }
+        /* Data inconsistency bar (effort > date range) */
+        .worklog-gantt-bar.inconsistent {
+            border: 2px dashed #fbbf24;
+            box-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
+        }
+        .worklog-gantt-bar.inconsistent::after {
+            content: '⚠';
+            position: absolute;
+            right: -2px;
+            top: -8px;
+            font-size: 10px;
+        }
+        /* Parent type accent (left border) */
+        .worklog-gantt-bar.parent-feature {
+            border-left: 3px solid #a78bfa;
+        }
+        .worklog-gantt-bar.parent-bug {
+            border-left: 3px solid #f87171;
+        }
+        .worklog-gantt-bar.parent-issue {
+            border-left: 3px solid #fb923c;
+        }
+        .worklog-gantt-bar.parent-delivery-slice {
+            border-left: 3px solid #22d3ee;
+        }
+        /* Tooltip */
+        .worklog-gantt-tooltip {
+            position: fixed;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            pointer-events: none;
+            max-width: 280px;
+        }
+        .worklog-gantt-tooltip-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .worklog-gantt-tooltip-meta {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+        /* Legend */
+        .worklog-gantt-legend {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .worklog-gantt-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .worklog-gantt-legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        .worklog-gantt-legend-color.coding {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+        .worklog-gantt-legend-color.testing {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
+        .worklog-gantt-legend-color.design {
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+        }
+        .worklog-gantt-legend-color.other {
+            background: linear-gradient(135deg, #6b7280, #9ca3af);
+        }
+
         /* Divergence styling */
         .divergence-value {
             font-weight: 600;
@@ -3840,7 +4455,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v95</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v96</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>
@@ -4856,7 +5471,10 @@
                     </select>
                 </div>
             </div>
-            
+
+            <!-- Work Log Summary Section (Past Week) -->
+            <div id="tasks-worklog-summary-container"></div>
+
             <!-- Task Overview Section -->
             <div id="tasks-overview-section">
                 <div class="stats-grid" id="tasks-stats"></div>
@@ -4865,7 +5483,7 @@
                 <div class="table-container" id="tasks-table-container"></div>
             </div>
         </div>
-        
+
         <!-- Validation View -->
         <div class="dashboard-view" id="view-validation">
             <div class="filter-bar" id="validation-filters">

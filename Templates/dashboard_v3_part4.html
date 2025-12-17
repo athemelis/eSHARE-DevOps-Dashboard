@@ -5000,6 +5000,26 @@
     let releaseIssuesColumnWidths = {};
     let releaseCustomerBugsColumnWidths = {};
     let releaseInternalBugsColumnWidths = {};
+
+    // Collapse states for Release tables (Issues collapsed by default, others expanded)
+    let releaseFeaturesCollapsed = false;
+    let releaseIssuesCollapsed = true;
+    let releaseCustomerBugsCollapsed = false;
+    let releaseInternalBugsCollapsed = false;
+
+    // Toggle collapse handlers for Release tables
+    function handleReleaseTableCollapseToggle(tableId, isCollapsed) {
+        if (tableId === 'release-features-table') {
+            releaseFeaturesCollapsed = isCollapsed;
+        } else if (tableId === 'release-issues-table') {
+            releaseIssuesCollapsed = isCollapsed;
+        } else if (tableId === 'release-customerbugs-table') {
+            releaseCustomerBugsCollapsed = isCollapsed;
+        } else if (tableId === 'release-internalbugs-table') {
+            releaseInternalBugsCollapsed = isCollapsed;
+        }
+        saveStateToStorage();
+    }
     
     function filterReleaseTablesByState(state) {
         if (releaseTableData.activeFilter === `state:${state}`) {
@@ -5075,13 +5095,16 @@
         const customerBugsContainer = document.getElementById('release-customerbugs-table-container');
         const internalBugsContainer = document.getElementById('release-internalbugs-table-container');
 
-        // Features table
+        // Features table (collapsible, expanded by default)
         if (features.length > 0 && featuresContainer) {
             buildGenericTable({
                 containerId: 'release-features-table-container',
                 tableId: 'release-features-table',
                 icon: '⭐',
                 title: 'Features',
+                collapsible: true,
+                collapsed: releaseFeaturesCollapsed,
+                onToggleCollapse: handleReleaseTableCollapseToggle,
                 columns: [
                     { key: 'id', label: 'ID' },
                     { key: 'title', label: 'Title' },
@@ -5105,13 +5128,16 @@
             featuresContainer.innerHTML = '';
         }
 
-        // Issues table
+        // Issues table (collapsible, collapsed by default)
         if (issues.length > 0 && issuesContainer) {
             buildGenericTable({
                 containerId: 'release-issues-table-container',
                 tableId: 'release-issues-table',
                 icon: '🎫',
                 title: 'Issues',
+                collapsible: true,
+                collapsed: releaseIssuesCollapsed,
+                onToggleCollapse: handleReleaseTableCollapseToggle,
                 columns: [
                     { key: 'id', label: 'ID' },
                     { key: 'title', label: 'Title' },
@@ -5135,13 +5161,16 @@
             issuesContainer.innerHTML = '';
         }
 
-        // Customer Bugs table
+        // Customer Bugs table (collapsible, expanded by default)
         if (customerBugs.length > 0 && customerBugsContainer) {
             buildGenericTable({
                 containerId: 'release-customerbugs-table-container',
                 tableId: 'release-customerbugs-table',
                 icon: '👤',
                 title: 'Customer Bugs',
+                collapsible: true,
+                collapsed: releaseCustomerBugsCollapsed,
+                onToggleCollapse: handleReleaseTableCollapseToggle,
                 columns: [
                     { key: 'id', label: 'ID' },
                     { key: 'title', label: 'Title' },
@@ -5166,13 +5195,16 @@
             customerBugsContainer.innerHTML = '';
         }
 
-        // Internal Bugs table
+        // Internal Bugs table (collapsible, expanded by default)
         if (internalBugs.length > 0 && internalBugsContainer) {
             buildGenericTable({
                 containerId: 'release-internalbugs-table-container',
                 tableId: 'release-internalbugs-table',
                 icon: '🔧',
                 title: 'Internal Bugs',
+                collapsible: true,
+                collapsed: releaseInternalBugsCollapsed,
+                onToggleCollapse: handleReleaseTableCollapseToggle,
                 columns: [
                     { key: 'id', label: 'ID' },
                     { key: 'title', label: 'Title' },
@@ -6227,13 +6259,649 @@
         }
         
         tasksData.filtered = filtered;
-        
+
+        renderTasksWorkLogSummary();
         renderTasksStats(filtered);
         renderTasksInsights(filtered);
         renderTasksCharts(filtered);
         renderTasksTable(filtered);
     }
-    
+
+    // ========== WORK LOG SUMMARY SECTION ==========
+    // Parses workLogData from tasks and displays a summary grouped by team and engineer
+    // showing work logged in the past week
+
+    let worklogSummaryCollapsed = false;
+
+    function toggleWorklogSummary() {
+        const section = document.getElementById('tasks-worklog-summary');
+        if (section) {
+            section.classList.toggle('collapsed');
+            worklogSummaryCollapsed = section.classList.contains('collapsed');
+            saveStateToStorage();
+        }
+    }
+
+    function parseWorkLogData(workLogDataStr) {
+        // WorkLogData is HTML-encoded JSON - decode and parse
+        if (!workLogDataStr) return [];
+        try {
+            // Decode HTML entities
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = workLogDataStr;
+            const decoded = textarea.value;
+            return JSON.parse(decoded);
+        } catch (e) {
+            console.warn('Failed to parse workLogData:', e);
+            return [];
+        }
+    }
+
+    // Parse date string as local date (ignore timezone to avoid UTC offset issues)
+    // Input: "2025-12-15T00:00:00.000Z" -> Output: Date for Dec 15 local time
+    function parseWorkLogDateAsLocal(dateStr) {
+        if (!dateStr) return null;
+        // Extract just the date portion (YYYY-MM-DD) and parse as local
+        const datePart = dateStr.substring(0, 10); // "2025-12-15"
+        const [year, month, day] = datePart.split('-').map(Number);
+        return new Date(year, month - 1, day); // month is 0-indexed
+    }
+
+    // Check if effort is inconsistent with date range
+    function hasEffortDateInconsistency(startDate, endDate, daysSpent) {
+        if (!startDate || !endDate || daysSpent === undefined) return false;
+        const start = startDate instanceof Date ? startDate : parseWorkLogDateAsLocal(startDate);
+        const end = endDate instanceof Date ? endDate : parseWorkLogDateAsLocal(endDate);
+        if (!start || !end) return false;
+
+        const dateRangeDays = Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1;
+        return daysSpent > dateRangeDays;
+    }
+
+    // Resolve the "meaningful parent" for a task:
+    // - Task → Bug → return Bug
+    // - Task → Delivery Slice → Feature → return Feature
+    // - Task → Feature → return Feature
+    // - Task → Issue → return Issue
+    // - Task → Task → keep traversing up
+    // - Orphan → return null
+    function resolveMeaningfulParent(taskId, parentMap) {
+        const task = parentMap[taskId];
+        if (!task || !task.parentId) return null;
+
+        let current = parentMap[task.parentId];
+        const visited = new Set([taskId]); // Prevent infinite loops
+
+        while (current && !visited.has(current.id)) {
+            visited.add(current.id);
+
+            // These are "meaningful" parent types - stop here
+            if (['Bug', 'Feature', 'Issue'].includes(current.type)) {
+                return current;
+            }
+
+            // Delivery Slice - go up one more level to find Feature
+            if (current.type === 'Delivery Slice') {
+                if (current.parentId && parentMap[current.parentId]) {
+                    const dsParent = parentMap[current.parentId];
+                    if (dsParent.type === 'Feature') {
+                        return dsParent;
+                    }
+                }
+                // If DS doesn't have a Feature parent, return the DS itself
+                return current;
+            }
+
+            // Task parent - keep going up
+            if (current.type === 'Task' && current.parentId) {
+                current = parentMap[current.parentId];
+                continue;
+            }
+
+            // Unknown type or no parent - return what we have
+            return current;
+        }
+
+        return null;
+    }
+
+    function renderTasksWorkLogSummary() {
+        const container = document.getElementById('tasks-worklog-summary-container');
+        if (!container) return;
+
+        // Get all tasks (not filtered - we want to see all work logged)
+        const allTasks = tasksData.all || [];
+        const parentMap = tasksData.parentMap || {};
+
+        // Calculate date range for "past week" (last 7 days from today)
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        const oneWeekAgo = new Date(today);
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        oneWeekAgo.setHours(0, 0, 0, 0);
+
+        // Collect work log entries from the past week with parent info
+        const workLogEntries = [];
+
+        allTasks.forEach(task => {
+            if (!task.workLogData) return;
+
+            const entries = parseWorkLogData(task.workLogData);
+            const meaningfulParent = resolveMeaningfulParent(task.id, parentMap);
+
+            entries.forEach(entry => {
+                // Parse dates as local to avoid timezone offset issues
+                const startDate = parseWorkLogDateAsLocal(entry.startDate);
+                const endDate = parseWorkLogDateAsLocal(entry.endDate);
+
+                if (!startDate || !endDate) return;
+
+                // Include if any part of the work period overlaps with past week
+                if (endDate >= oneWeekAgo && startDate <= today) {
+                    // Check for data inconsistency (effort > date range)
+                    const hasInconsistency = hasEffortDateInconsistency(startDate, endDate, entry.daysSpent);
+
+                    workLogEntries.push({
+                        taskId: task.id,
+                        taskTitle: task.title,
+                        taskUrl: task.url,
+                        taskParentId: task.parentId,
+                        assignedTo: task.assignedTo || 'Unassigned',
+                        team: task.team || 'No Team',
+                        activityType: entry.activityType || 'Other',
+                        startDate: entry.startDate,
+                        endDate: entry.endDate,
+                        startDateLocal: startDate,  // Pre-parsed local date
+                        endDateLocal: endDate,      // Pre-parsed local date
+                        daysSpent: entry.daysSpent || 0,
+                        // Meaningful parent info
+                        meaningfulParent: meaningfulParent,
+                        isOrphan: !task.parentId,
+                        // Data validation
+                        hasInconsistency: hasInconsistency
+                    });
+                }
+            });
+        });
+
+        // If no work logs in the past week, show empty state
+        if (workLogEntries.length === 0) {
+            container.innerHTML = `
+                <div class="worklog-summary-section" id="tasks-worklog-summary">
+                    <div class="worklog-summary-header" onclick="toggleWorklogSummary()">
+                        <div class="worklog-summary-title">
+                            <span class="section-icon">📋</span>
+                            <span>Work Log Summary</span>
+                            <span class="worklog-summary-subtitle">(Past 7 Days)</span>
+                        </div>
+                        <span class="collapse-indicator">▼</span>
+                    </div>
+                    <div class="worklog-summary-content">
+                        <div class="worklog-empty-state">
+                            <div class="empty-icon">📭</div>
+                            <div>No work logged in the past 7 days</div>
+                            <div style="font-size: 0.8rem; margin-top: 0.5rem;">
+                                Work logs can be added to Tasks in Azure DevOps
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Aggregate by meaningful parent for the "By Work Item" summary
+        const byWorkItem = {
+            features: {},    // id -> { item, days }
+            bugs: {},        // id -> { item, days }
+            issues: {},      // id -> { item, days }
+            deliverySlices: {}, // id -> { item, days } (for DS without Feature parent)
+            orphans: { count: 0, days: 0, taskIds: [] }
+        };
+
+        // Group by team, then by engineer (for the detailed view)
+        const byTeam = {};
+        let totalDays = 0;
+        const uniqueEngineers = new Set();
+        const uniqueTasks = new Set();
+
+        workLogEntries.forEach(entry => {
+            // Aggregate by work item
+            if (entry.isOrphan) {
+                byWorkItem.orphans.count++;
+                byWorkItem.orphans.days += entry.daysSpent;
+                if (!byWorkItem.orphans.taskIds.includes(entry.taskId)) {
+                    byWorkItem.orphans.taskIds.push(entry.taskId);
+                }
+            } else if (entry.meaningfulParent) {
+                const mp = entry.meaningfulParent;
+                const bucket = mp.type === 'Feature' ? byWorkItem.features
+                    : mp.type === 'Bug' ? byWorkItem.bugs
+                    : mp.type === 'Issue' ? byWorkItem.issues
+                    : byWorkItem.deliverySlices;
+
+                if (!bucket[mp.id]) {
+                    bucket[mp.id] = { item: mp, days: 0 };
+                }
+                bucket[mp.id].days += entry.daysSpent;
+            }
+
+            // Group by team/engineer
+            if (!byTeam[entry.team]) {
+                byTeam[entry.team] = {};
+            }
+            if (!byTeam[entry.team][entry.assignedTo]) {
+                byTeam[entry.team][entry.assignedTo] = [];
+            }
+            byTeam[entry.team][entry.assignedTo].push(entry);
+            totalDays += entry.daysSpent;
+            uniqueEngineers.add(entry.assignedTo);
+            uniqueTasks.add(entry.taskId);
+        });
+
+        // Build "By Work Item" summary HTML
+        const buildWorkItemList = (bucket, icon, type) => {
+            const items = Object.values(bucket).sort((a, b) => b.days - a.days);
+            if (items.length === 0) return '';
+
+            const itemsHtml = items.slice(0, 5).map(({ item, days }) => {
+                const title = item.title.length > 40 ? item.title.substring(0, 40) + '...' : item.title;
+                return `<a href="${item.url}" target="_blank" class="worklog-workitem-link" title="${item.title.replace(/"/g, '&quot;')}">
+                    ${type === 'Bug' ? '#' + item.id : title} (${days.toFixed(1)}d)
+                </a>`;
+            }).join('');
+
+            const moreCount = items.length > 5 ? ` <span class="worklog-more">+${items.length - 5} more</span>` : '';
+
+            return `
+                <div class="worklog-workitem-row">
+                    <span class="worklog-workitem-icon">${icon}</span>
+                    <span class="worklog-workitem-type">${type}s:</span>
+                    <span class="worklog-workitem-list">${itemsHtml}${moreCount}</span>
+                </div>
+            `;
+        };
+
+        let workItemSummaryHtml = '';
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.features, '📦', 'Feature');
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.bugs, '🐛', 'Bug');
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.issues, '🎫', 'Issue');
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.deliverySlices, '📋', 'Delivery Slice');
+
+        // Orphans warning
+        if (byWorkItem.orphans.count > 0) {
+            workItemSummaryHtml += `
+                <div class="worklog-workitem-row worklog-orphan-warning">
+                    <span class="worklog-workitem-icon">⚠️</span>
+                    <span class="worklog-workitem-type">Orphans:</span>
+                    <span class="worklog-orphan-text">
+                        ${byWorkItem.orphans.taskIds.length} task${byWorkItem.orphans.taskIds.length !== 1 ? 's' : ''}
+                        (${byWorkItem.orphans.days.toFixed(1)}d) - needs parent assignment
+                    </span>
+                </div>
+            `;
+        }
+
+        // Sort teams alphabetically
+        const sortedTeams = Object.keys(byTeam).sort((a, b) => {
+            if (a === 'No Team') return 1;
+            if (b === 'No Team') return -1;
+            return a.localeCompare(b);
+        });
+
+        // Format date for display (use local parsing to avoid timezone issues)
+        const formatDateShort = (dateOrStr) => {
+            // Handle both Date objects and date strings
+            const date = dateOrStr instanceof Date ? dateOrStr : parseWorkLogDateAsLocal(dateOrStr);
+            if (!date) return String(dateOrStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        };
+
+        // Build Gantt timeline chart
+        // Helper to check if a date is a weekend
+        const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6;
+
+        // Check if any entries have work specifically logged on weekend days
+        // (single-day entries where start=end and that day is a weekend)
+        const hasWeekendWork = workLogEntries.some(entry => {
+            // Use pre-parsed local dates
+            const startDate = entry.startDateLocal;
+            const endDate = entry.endDateLocal;
+            // Single-day entry on a weekend
+            if (startDate.getTime() === endDate.getTime() && isWeekend(startDate)) {
+                return true;
+            }
+            return false;
+        });
+
+        // Count entries with data inconsistencies
+        const inconsistentEntries = workLogEntries.filter(e => e.hasInconsistency);
+
+        // Generate days array - include weekends only if there's weekend work
+        const allDays = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            d.setHours(0, 0, 0, 0);
+            allDays.push(d);
+        }
+
+        // Filter to weekdays only unless there's weekend work
+        const days = hasWeekendWork ? allDays : allDays.filter(d => !isWeekend(d));
+        const timelineLabel = hasWeekendWork ? 'TIMELINE (PAST 7 DAYS):' : 'TIMELINE (PAST 5 WEEKDAYS):';
+
+        // Helper to get day abbreviation
+        const getDayAbbrev = (date) => {
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            return dayNames[date.getDay()];
+        };
+
+        // Helper to format date for header
+        const formatDayHeader = (date) => {
+            return `${getDayAbbrev(date)} ${date.getDate()}`;
+        };
+
+        // Helper to check if a date is today
+        const isToday = (date) => {
+            const now = new Date();
+            return date.getDate() === now.getDate() &&
+                   date.getMonth() === now.getMonth() &&
+                   date.getFullYear() === now.getFullYear();
+        };
+
+        // Build Gantt HTML - using CSS class names from part1.html
+        let ganttHtml = `
+            <div class="worklog-timeline">
+                <div class="worklog-section-label">${timelineLabel}</div>
+                <div class="worklog-gantt-container">
+                    <div class="worklog-gantt">
+                        <div class="worklog-gantt-days">
+                            ${days.map(d => {
+                                const todayClass = isToday(d) ? 'today' : '';
+                                const weekendClass = isWeekend(d) ? 'weekend' : '';
+                                return `<div class="worklog-gantt-day ${todayClass} ${weekendClass}">${formatDayHeader(d)}</div>`;
+                            }).join('')}
+                        </div>
+        `;
+
+        // For each team and engineer, build rows with bars
+        sortedTeams.forEach(team => {
+            const engineers = byTeam[team];
+            const sortedEngineers = Object.keys(engineers).sort((a, b) => {
+                if (a === 'Unassigned') return 1;
+                if (b === 'Unassigned') return -1;
+                return a.localeCompare(b);
+            });
+
+            ganttHtml += `<div class="worklog-gantt-team">
+                <div class="worklog-gantt-team-name">${team}</div>`;
+
+            sortedEngineers.forEach(engineer => {
+                const entries = engineers[engineer];
+                const displayName = typeof getCommonName === 'function' ? getCommonName(engineer) : engineer;
+                const firstName = displayName.split(' ')[0];
+
+                // Build bars for this engineer
+                let barsHtml = '';
+                entries.forEach(entry => {
+                    // Use pre-parsed local dates to avoid timezone issues
+                    const startDate = entry.startDateLocal;
+                    const endDate = entry.endDateLocal;
+
+                    // Calculate position within the visible days grid
+                    const dayStartMs = days[0].getTime();
+                    const dayEndMs = days[days.length - 1].getTime() + 24 * 60 * 60 * 1000; // End of last visible day
+                    const totalMs = dayEndMs - dayStartMs;
+
+                    // For weekday-only view, we need to map entry dates to visible day positions
+                    // Find the visible start and end positions
+                    let visibleStartMs = null;
+                    let visibleEndMs = null;
+
+                    // Find which visible days this entry spans
+                    for (let i = 0; i < days.length; i++) {
+                        const dayMs = days[i].getTime();
+                        const nextDayMs = dayMs + 24 * 60 * 60 * 1000;
+
+                        // Entry starts on or before this day and ends on or after this day
+                        if (startDate.getTime() <= dayMs && endDate.getTime() >= days[i].getTime()) {
+                            if (visibleStartMs === null) visibleStartMs = dayMs;
+                            visibleEndMs = nextDayMs;
+                        }
+                        // Entry starts on this day
+                        if (startDate.getTime() === dayMs) {
+                            visibleStartMs = dayMs;
+                        }
+                        // Entry ends on this day
+                        if (endDate.getTime() === days[i].getTime()) {
+                            visibleEndMs = nextDayMs;
+                        }
+                    }
+
+                    // Skip if entry doesn't overlap any visible days
+                    if (visibleStartMs === null || visibleEndMs === null) return;
+
+                    const leftPct = ((visibleStartMs - dayStartMs) / totalMs) * 100;
+                    const widthPct = ((visibleEndMs - visibleStartMs) / totalMs) * 100;
+
+                    if (widthPct <= 0) return;
+
+                    const actClass = entry.activityType.toLowerCase().replace(/\s+/g, '-');
+                    const parentTypeClass = entry.meaningfulParent ? 'parent-' + entry.meaningfulParent.type.toLowerCase().replace(/\s+/g, '-') : '';
+                    const orphanClass = entry.isOrphan ? 'orphan' : '';
+                    const inconsistentClass = entry.hasInconsistency ? 'inconsistent' : '';
+
+                    // Build tooltip with inconsistency warning if applicable
+                    let tooltip = `#${entry.taskId}: ${entry.taskTitle.substring(0, 50)}${entry.taskTitle.length > 50 ? '...' : ''}\n${entry.activityType} · ${entry.daysSpent.toFixed(1)}d\n${formatDateShort(entry.startDate)}${entry.startDate !== entry.endDate ? ' - ' + formatDateShort(entry.endDate) : ''}`;
+                    if (entry.hasInconsistency) {
+                        tooltip += `\n⚠️ DATA ISSUE: ${entry.daysSpent}d logged for single day`;
+                    }
+
+                    barsHtml += `<div class="worklog-gantt-bar ${actClass} ${parentTypeClass} ${orphanClass} ${inconsistentClass}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${tooltip.replace(/"/g, '&quot;')}" onclick="window.open('${entry.taskUrl}', '_blank')"></div>`;
+                });
+
+                // Build grid cells with weekend styling
+                const gridCellsHtml = days.map(d => {
+                    const weekendClass = isWeekend(d) ? 'weekend' : '';
+                    return `<div class="worklog-gantt-grid-cell ${weekendClass}"></div>`;
+                }).join('');
+
+                ganttHtml += `
+                    <div class="worklog-gantt-row">
+                        <div class="worklog-gantt-engineer">${firstName}</div>
+                        <div class="worklog-gantt-bars">
+                            <div class="worklog-gantt-grid">${gridCellsHtml}</div>
+                            ${barsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            ganttHtml += `</div>`; // Close worklog-gantt-team
+        });
+
+        // Legend
+        ganttHtml += `
+                    </div>
+                    <div class="worklog-gantt-legend">
+                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color coding"></span>Coding</span>
+                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color testing"></span>Testing</span>
+                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color design"></span>Design</span>
+                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color other"></span>Other</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Helper to build parent badge
+        const buildParentBadge = (entry) => {
+            if (entry.isOrphan) {
+                return `<span class="worklog-parent-badge orphan" title="No parent assigned">⚠️ ORPHAN</span>`;
+            }
+            if (!entry.meaningfulParent) {
+                return '';
+            }
+            const mp = entry.meaningfulParent;
+            const typeClass = mp.type.toLowerCase().replace(/\s+/g, '-');
+            const icon = mp.type === 'Feature' ? '📦' : mp.type === 'Bug' ? '🐛' : mp.type === 'Issue' ? '🎫' : '📋';
+            const label = mp.type === 'Bug' ? `#${mp.id}` : mp.title.length > 20 ? mp.title.substring(0, 20) + '...' : mp.title;
+            return `<a href="${mp.url}" target="_blank" class="worklog-parent-badge ${typeClass}" title="${mp.type}: ${mp.title.replace(/"/g, '&quot;')}">${icon} ${label}</a>`;
+        };
+
+        // Build HTML for teams
+        let teamsHtml = '';
+
+        sortedTeams.forEach(team => {
+            const engineers = byTeam[team];
+            const sortedEngineers = Object.keys(engineers).sort((a, b) => {
+                if (a === 'Unassigned') return 1;
+                if (b === 'Unassigned') return -1;
+                return a.localeCompare(b);
+            });
+
+            // Calculate team totals
+            let teamDays = 0;
+            sortedEngineers.forEach(eng => {
+                engineers[eng].forEach(e => teamDays += e.daysSpent);
+            });
+
+            let engineersHtml = '';
+            sortedEngineers.forEach(engineer => {
+                const entries = engineers[engineer];
+                // Sum days for this engineer
+                const engDays = entries.reduce((sum, e) => sum + e.daysSpent, 0);
+
+                // Group entries by task (a task can have multiple activity entries)
+                const byTask = {};
+                entries.forEach(e => {
+                    if (!byTask[e.taskId]) {
+                        byTask[e.taskId] = {
+                            taskId: e.taskId,
+                            taskTitle: e.taskTitle,
+                            taskUrl: e.taskUrl,
+                            activities: [],
+                            meaningfulParent: e.meaningfulParent,
+                            isOrphan: e.isOrphan
+                        };
+                    }
+                    byTask[e.taskId].activities.push(e);
+                });
+
+                let tasksHtml = '';
+                Object.values(byTask).forEach(task => {
+                    const taskDays = task.activities.reduce((sum, a) => sum + a.daysSpent, 0);
+                    const activities = task.activities.map(a => {
+                        const actClass = a.activityType.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="worklog-activity-badge ${actClass}">${a.activityType}</span>`;
+                    }).join('');
+
+                    // Get date range
+                    const dates = task.activities.map(a => new Date(a.startDate));
+                    const endDates = task.activities.map(a => new Date(a.endDate));
+                    const minDate = new Date(Math.min(...dates));
+                    const maxDate = new Date(Math.max(...endDates));
+                    const dateRange = minDate.getTime() === maxDate.getTime()
+                        ? formatDateShort(minDate)
+                        : `${formatDateShort(minDate)} - ${formatDateShort(maxDate)}`;
+
+                    // Build parent badge
+                    const parentBadge = buildParentBadge(task);
+                    const orphanClass = task.isOrphan ? 'orphan-task' : '';
+
+                    tasksHtml += `
+                        <div class="worklog-task-entry ${orphanClass}">
+                            ${parentBadge}
+                            <a href="${task.taskUrl}" target="_blank" class="worklog-task-id">#${task.taskId}</a>
+                            <span class="worklog-task-title" title="${task.taskTitle.replace(/"/g, '&quot;')}">${task.taskTitle}</span>
+                            ${activities}
+                            <span class="worklog-date-range">${dateRange}</span>
+                            <span class="worklog-task-days">${taskDays.toFixed(1)}d</span>
+                        </div>
+                    `;
+                });
+
+                // Get common name for display
+                const displayName = typeof getCommonName === 'function' ? getCommonName(engineer) : engineer;
+                const firstName = displayName.split(' ')[0];
+
+                engineersHtml += `
+                    <div class="worklog-engineer-row">
+                        <div class="worklog-engineer-name">
+                            <div>${firstName}</div>
+                            <div class="worklog-engineer-total">${engDays.toFixed(1)}d logged</div>
+                        </div>
+                        <div class="worklog-tasks-container">
+                            ${tasksHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            teamsHtml += `
+                <div class="worklog-team-group">
+                    <div class="worklog-team-header">
+                        <span class="worklog-team-name">${team}</span>
+                        <span class="worklog-team-stats">${sortedEngineers.length} engineer${sortedEngineers.length !== 1 ? 's' : ''} · ${teamDays.toFixed(1)} days</span>
+                    </div>
+                    ${engineersHtml}
+                </div>
+            `;
+        });
+
+        const collapsedClass = worklogSummaryCollapsed ? 'collapsed' : '';
+
+        container.innerHTML = `
+            <div class="worklog-summary-section ${collapsedClass}" id="tasks-worklog-summary">
+                <div class="worklog-summary-header" onclick="toggleWorklogSummary()">
+                    <div class="worklog-summary-title">
+                        <span class="section-icon">📋</span>
+                        <span>Work Log Summary</span>
+                        <span class="worklog-summary-subtitle">(Past 7 Days)</span>
+                    </div>
+                    <span class="collapse-indicator">▼</span>
+                </div>
+                <div class="worklog-summary-content">
+                    <div class="worklog-stats-row">
+                        <div class="worklog-stat">
+                            <span class="worklog-stat-value">${totalDays.toFixed(1)}d</span>
+                            <span class="worklog-stat-label">Total Logged</span>
+                        </div>
+                        <div class="worklog-stat">
+                            <span class="worklog-stat-value">${uniqueEngineers.size}</span>
+                            <span class="worklog-stat-label">Engineers</span>
+                        </div>
+                        <div class="worklog-stat">
+                            <span class="worklog-stat-value">${uniqueTasks.size}</span>
+                            <span class="worklog-stat-label">Tasks</span>
+                        </div>
+                        <div class="worklog-stat">
+                            <span class="worklog-stat-value">${workLogEntries.length}</span>
+                            <span class="worklog-stat-label">Entries</span>
+                        </div>
+                    </div>
+                    ${inconsistentEntries.length > 0 ? `
+                    <div class="worklog-data-warning">
+                        <span class="warning-icon">⚠️</span>
+                        <span class="warning-text">
+                            <strong>Data Issue:</strong> ${inconsistentEntries.length} ${inconsistentEntries.length === 1 ? 'entry has' : 'entries have'} effort > date range
+                            (likely hours entered as days). Tasks: ${[...new Set(inconsistentEntries.map(e => '#' + e.taskId))].join(', ')}
+                        </span>
+                    </div>
+                    ` : ''}
+                    <div class="worklog-by-workitem">
+                        <div class="worklog-section-label">BY WORK ITEM:</div>
+                        ${workItemSummaryHtml || '<div class="worklog-no-items">No parent work items found</div>'}
+                    </div>
+                    ${ganttHtml}
+                    <div class="worklog-by-team">
+                        <div class="worklog-section-label">BY TEAM:</div>
+                        ${teamsHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     function renderTasksStats(tasks) {
         const container = document.getElementById('tasks-stats');
         if (!container) return;

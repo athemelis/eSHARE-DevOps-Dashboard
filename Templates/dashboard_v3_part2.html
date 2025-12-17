@@ -39,6 +39,11 @@
                 releaseIssuesColumnWidths: typeof releaseIssuesColumnWidths !== 'undefined' ? releaseIssuesColumnWidths : {},
                 releaseCustomerBugsColumnWidths: typeof releaseCustomerBugsColumnWidths !== 'undefined' ? releaseCustomerBugsColumnWidths : {},
                 releaseInternalBugsColumnWidths: typeof releaseInternalBugsColumnWidths !== 'undefined' ? releaseInternalBugsColumnWidths : {},
+                // Releases table collapse states (Issues collapsed by default, others expanded)
+                releaseFeaturesCollapsed: typeof releaseFeaturesCollapsed !== 'undefined' ? releaseFeaturesCollapsed : false,
+                releaseIssuesCollapsed: typeof releaseIssuesCollapsed !== 'undefined' ? releaseIssuesCollapsed : true,
+                releaseCustomerBugsCollapsed: typeof releaseCustomerBugsCollapsed !== 'undefined' ? releaseCustomerBugsCollapsed : false,
+                releaseInternalBugsCollapsed: typeof releaseInternalBugsCollapsed !== 'undefined' ? releaseInternalBugsCollapsed : false,
                 // Executive view state
                 execChartFilters: typeof execChartFilters !== 'undefined' ? execChartFilters : null,
                 execTeamFilter: document.getElementById('exec-team-filter')?.value || 'all',
@@ -67,6 +72,7 @@
                 tasksParentTypeFilter: document.getElementById('tasks-parent-type-filter')?.value || 'all',
                 tasksTeamFilter: document.getElementById('tasks-team-filter')?.value || 'all',
                 tasksStateFilter: typeof getSelectedTasksStates !== 'undefined' ? getSelectedTasksStates() : [],
+                worklogSummaryCollapsed: typeof worklogSummaryCollapsed !== 'undefined' ? worklogSummaryCollapsed : false,
                 // Details view state
                 detailsTypeFilter: document.getElementById('details-type-filter')?.value || 'all',
                 detailsTeamFilter: document.getElementById('details-team-filter')?.value || 'all',
@@ -175,6 +181,19 @@
         if (state.releaseInternalBugsColumnWidths && typeof releaseInternalBugsColumnWidths !== 'undefined') {
             Object.assign(releaseInternalBugsColumnWidths, state.releaseInternalBugsColumnWidths);
         }
+        // Restore Releases table collapse states
+        if (typeof state.releaseFeaturesCollapsed !== 'undefined' && typeof releaseFeaturesCollapsed !== 'undefined') {
+            releaseFeaturesCollapsed = state.releaseFeaturesCollapsed;
+        }
+        if (typeof state.releaseIssuesCollapsed !== 'undefined' && typeof releaseIssuesCollapsed !== 'undefined') {
+            releaseIssuesCollapsed = state.releaseIssuesCollapsed;
+        }
+        if (typeof state.releaseCustomerBugsCollapsed !== 'undefined' && typeof releaseCustomerBugsCollapsed !== 'undefined') {
+            releaseCustomerBugsCollapsed = state.releaseCustomerBugsCollapsed;
+        }
+        if (typeof state.releaseInternalBugsCollapsed !== 'undefined' && typeof releaseInternalBugsCollapsed !== 'undefined') {
+            releaseInternalBugsCollapsed = state.releaseInternalBugsCollapsed;
+        }
 
         // Restore Executive view state
         if (state.execChartFilters && typeof execChartFilters !== 'undefined') {
@@ -253,6 +272,10 @@
         // Mark Tasks view state for restoration - always if we have any tasks state
         if (typeof state.tasksParentTypeFilter !== 'undefined' || typeof state.tasksTeamFilter !== 'undefined' || state.tasksStateFilter) {
             tasksStateWasLoaded = true;
+        }
+        // Restore worklog summary collapsed state
+        if (typeof state.worklogSummaryCollapsed !== 'undefined' && typeof worklogSummaryCollapsed !== 'undefined') {
+            worklogSummaryCollapsed = state.worklogSummaryCollapsed;
         }
 
         // Mark Details view state for restoration - always if we have any details state
@@ -4991,6 +5014,9 @@
             icon = '📋',
             title,
             hideTitleBar = false,  // If true, don't render title bar (for cases where title is in section header)
+            collapsible = false,   // If true, table can be collapsed by clicking title bar
+            collapsed = false,     // Initial collapse state (only used if collapsible=true)
+            onToggleCollapse,      // Callback when collapse state changes: (tableId, isCollapsed) => void
             adoLink,
             adoLinkText = 'Open in ADO',
             columns,
@@ -5037,14 +5063,17 @@
             sortedItems = genericTableSortItems(sortedItems, defaultSort.column, defaultSort.direction, effortMap);
         }
 
-        // Build title bar (icon, title, count)
+        // Build title bar (icon, title, count) - with optional collapsible support
+        const collapseIndicator = collapsible ? '<span class="collapse-indicator">▼</span>' : '';
+        const titleBarClickHandler = collapsible ? `onclick="genericTableToggleCollapse('${tableId}')"` : '';
         const titleBarHtml = `
-            <div class="generic-table-title-bar">
+            <div class="generic-table-title-bar" ${titleBarClickHandler}>
                 <div class="generic-table-title">
                     <span class="table-icon">${icon}</span>
                     <span>${title}</span>
                     <span class="table-count">(${items.length})</span>
                 </div>
+                ${collapseIndicator}
             </div>
         `;
 
@@ -5130,21 +5159,25 @@
             `;
         }
 
-        // Assemble full HTML
+        // Assemble full HTML - with optional collapsible wrapper
+        const collapsibleClass = collapsible ? 'collapsible' : '';
+        const collapsedClass = collapsible && collapsed ? 'collapsed' : '';
         container.innerHTML = `
-            <div class="generic-table-section">
+            <div class="generic-table-section ${collapsibleClass} ${collapsedClass}" data-table-id="${tableId}">
                 ${hideTitleBar ? '' : titleBarHtml}
-                ${headerBarHtml}
-                <div class="generic-table-scroll-container">
-                    <table class="generic-table resizable-table" id="${tableId}">
-                        <thead>
-                            <tr>${headerCellsHtml}</tr>
-                        </thead>
-                        <tbody>
-                            ${bodyRowsHtml}
-                            ${totalRowHtml}
-                        </tbody>
-                    </table>
+                <div class="generic-table-collapsible-content">
+                    ${headerBarHtml}
+                    <div class="generic-table-scroll-container">
+                        <table class="generic-table resizable-table" id="${tableId}">
+                            <thead>
+                                <tr>${headerCellsHtml}</tr>
+                            </thead>
+                            <tbody>
+                                ${bodyRowsHtml}
+                                ${totalRowHtml}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         `;
@@ -5152,6 +5185,21 @@
         // Set up click handler delegation if needed
         if (onRowClick) {
             setupGenericTableClickHandler(tableId, onRowClick);
+        }
+    }
+
+    // Toggle collapse state for a generic table
+    function genericTableToggleCollapse(tableId) {
+        const section = document.querySelector(`.generic-table-section[data-table-id="${tableId}"]`);
+        if (!section) return;
+
+        section.classList.toggle('collapsed');
+        const isCollapsed = section.classList.contains('collapsed');
+
+        // Call the callback if registered
+        const state = genericTableState[tableId];
+        if (state && state.config && state.config.onToggleCollapse) {
+            state.config.onToggleCollapse(tableId, isCollapsed);
         }
     }
 
