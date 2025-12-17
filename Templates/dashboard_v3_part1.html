@@ -1384,7 +1384,7 @@
         .arch-diagram {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.6rem;
         }
         /* Top layer: User Interface row */
         .arch-layer {
@@ -1399,7 +1399,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
-            min-width: 100px;
+            min-width: 110px;
         }
         .arch-section {
             border: 1px solid var(--border-color);
@@ -1408,35 +1408,36 @@
             background: rgba(30, 41, 59, 0.5);
         }
         .arch-section-header {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             font-weight: 600;
-            color: var(--text-secondary);
+            color: var(--text-primary);
             text-align: center;
-            padding: 0.25rem 0.5rem;
+            padding: 0.3rem 0.5rem;
             background: var(--bg-secondary);
             border-radius: 4px;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.02em;
         }
         .arch-boxes {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.35rem;
+            gap: 0.4rem;
             justify-content: flex-start;
         }
         .arch-box {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 0.3rem 0.5rem;
-            font-size: 0.65rem;
-            color: var(--text-secondary);
+            border-radius: 5px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
+            color: var(--text-primary);
             text-align: center;
-            min-width: 70px;
+            min-width: 80px;
             flex: 0 1 auto;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.15rem;
+            gap: 0.2rem;
             transition: all 0.2s ease;
             cursor: pointer;
         }
@@ -1445,27 +1446,38 @@
             border-color: var(--accent-cyan);
         }
         .arch-box .box-label {
-            font-size: 0.6rem;
-            line-height: 1.2;
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1.25;
             word-break: break-word;
+            color: var(--text-primary);
         }
         .arch-box .bug-count {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             font-weight: 700;
             color: var(--accent-cyan);
         }
         .arch-box.has-bugs {
             border-color: var(--accent-cyan);
-            background: rgba(34, 211, 238, 0.1);
+            background: rgba(34, 211, 238, 0.15);
+        }
+        .arch-box.has-bugs .box-label {
+            color: var(--text-primary);
         }
         .arch-box.has-bugs .bug-count {
             color: var(--accent-cyan);
         }
         .arch-box.no-bugs {
-            opacity: 0.5;
+            opacity: 1;
+            background: var(--bg-secondary);
+            border-color: rgba(100, 116, 139, 0.5);
+        }
+        .arch-box.no-bugs .box-label {
+            color: var(--text-secondary);
         }
         .arch-box.no-bugs .bug-count {
             color: var(--text-muted);
+            font-size: 0.75rem;
         }
         /* Middle layer: CWP, SCG, ESG in a row */
         .arch-middle-layer {
@@ -1480,30 +1492,30 @@
         .arch-section-cwp .arch-boxes {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 0.35rem;
+            gap: 0.4rem;
         }
         .arch-section-scg .arch-boxes,
         .arch-section-esg .arch-boxes {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 0.35rem;
+            gap: 0.4rem;
         }
         /* Standalone boxes (Power BI, Analytics, Data Pipelines) */
         .arch-standalone {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 0.4rem 0.6rem;
-            font-size: 0.65rem;
-            color: var(--text-secondary);
+            padding: 0.5rem 0.6rem;
+            font-size: 0.75rem;
+            color: var(--text-primary);
             text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.15rem;
+            gap: 0.2rem;
             transition: all 0.2s ease;
             cursor: pointer;
-            min-height: 50px;
+            min-height: 52px;
             justify-content: center;
         }
         .arch-standalone:hover {
@@ -1512,22 +1524,30 @@
         }
         .arch-standalone.has-bugs {
             border-color: var(--accent-cyan);
-            background: rgba(34, 211, 238, 0.1);
+            background: rgba(34, 211, 238, 0.15);
         }
         .arch-standalone .box-label {
-            font-size: 0.6rem;
-            line-height: 1.2;
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1.25;
+            color: var(--text-primary);
         }
         .arch-standalone .bug-count {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             font-weight: 700;
             color: var(--accent-cyan);
         }
         .arch-standalone.no-bugs {
-            opacity: 0.5;
+            opacity: 1;
+            background: var(--bg-secondary);
+            border-color: rgba(100, 116, 139, 0.5);
+        }
+        .arch-standalone.no-bugs .box-label {
+            color: var(--text-secondary);
         }
         .arch-standalone.no-bugs .bug-count {
             color: var(--text-muted);
+            font-size: 0.75rem;
         }
         /* Infrastructure layer */
         .arch-infra-layer {
@@ -1540,41 +1560,41 @@
         .arch-section-infra .arch-boxes {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.35rem;
+            gap: 0.4rem;
         }
         .arch-azure-box {
             width: 100%;
-            margin-top: 0.35rem;
+            margin-top: 0.4rem;
         }
         /* Color coding for different sections */
-        .arch-section-ui .arch-section-header { background: rgba(96, 165, 250, 0.2); color: var(--accent-blue); }
-        .arch-section-cwp .arch-section-header { background: rgba(167, 139, 250, 0.2); color: var(--accent-purple); }
-        .arch-section-scg .arch-section-header { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); }
-        .arch-section-esg .arch-section-header { background: rgba(251, 146, 60, 0.2); color: var(--accent-orange); }
-        .arch-section-infra .arch-section-header { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+        .arch-section-ui .arch-section-header { background: rgba(96, 165, 250, 0.25); color: var(--accent-blue); }
+        .arch-section-cwp .arch-section-header { background: rgba(167, 139, 250, 0.25); color: var(--accent-purple); }
+        .arch-section-scg .arch-section-header { background: rgba(52, 211, 153, 0.25); color: var(--accent-green); }
+        .arch-section-esg .arch-section-header { background: rgba(251, 146, 60, 0.25); color: var(--accent-orange); }
+        .arch-section-infra .arch-section-header { background: rgba(148, 163, 184, 0.25); color: var(--text-primary); }
         /* Totals row */
         .arch-totals {
             display: flex;
             justify-content: flex-end;
             gap: 1rem;
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
+            margin-top: 0.6rem;
+            padding-top: 0.6rem;
             border-top: 1px solid var(--border-color);
-            font-size: 0.7rem;
-            color: var(--text-muted);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
         }
         .arch-totals .total-item {
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.3rem;
         }
         .arch-totals .total-count {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--accent-cyan);
         }
         .arch-totals .total-item.clickable {
             cursor: pointer;
-            padding: 0.2rem 0.4rem;
+            padding: 0.25rem 0.5rem;
             border-radius: 4px;
             transition: all 0.2s ease;
         }
@@ -3820,7 +3840,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v94</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v95</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>

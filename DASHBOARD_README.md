@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v94
+## Current Version: v95
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v95 | 12/17/2025 | **Bugs Dashboard - Architecture Diagram Readability:** Improved visibility of architecture component boxes. Increased font sizes (labels from 0.6rem to 0.75rem, section headers from 0.7rem to 0.8rem, bug counts from 0.75rem to 0.85rem). Changed text colors from muted gray to bright white for better contrast. Added font-weight 500 to labels. Increased padding and gaps between boxes. Zero-bug boxes now fully visible (opacity 1) with darker background and gray text instead of being heavily dimmed, making them readable while still distinguishable from active cyan-highlighted boxes. |
 | v94 | 12/17/2025 | **Bugs Dashboard - Architecture Diagram:** Added visual architecture diagram below Bug Insights showing bug counts per component. Layout mirrors eShare logical architecture: User Interface (top row with Portal, Admin, M365 App, etc.), CWP/SCG/ESG (middle layer), standalone components (Power BI, Analytics, Data Pipelines on right), and Infrastructure (bottom). Each box shows bug count based on tags (e.g., `UI: Portal`, `CWP: Cloud Provider`, `ESG: PEP Engine`). Boxes with bugs highlighted in cyan, empty boxes dimmed. **Click filtering:** Click any component box to filter by that tag. **Untagged filter:** "Untagged: X" count at bottom is clickable to show bugs without architecture component tags (toggle on/off). Filter state shown with cyan highlight when active. All filters (Type, Priority, State, etc.) apply to the diagram. Bugs can appear in multiple boxes if they have multiple architecture tags. |
 | v93 | 12/17/2025 | **Bugs Dashboard Enhancements:** Restored stat cards above Bug Trend chart (Current Open Bugs, Week-over-Week Change, Avg Bugs Opened/Week, Avg Bugs Closed/Week). Clicking "Current Open Bugs" filters to open states and updates all visuals. Added data discrepancy insight with red ❌ for bugs missing Bug Type classification. Fixed trend chart to anchor final data point to actual current open bugs count. Added Bug Type column to Bug Details table (after Aging). **Column Resize Persistence:** Added `bugsColumnWidths` to localStorage state saving/loading. All table column widths now persist across refreshes for Releases, Roadmap, Customers, and Bugs dashboards. |
 | v92 | 12/17/2025 | **Date Timezone Fix:** Fixed date display issue where dates appeared 1 day earlier in US timezones. Created `parseLocalDate()` function that parses date-only strings (`YYYY-MM-DD`) as local dates instead of UTC midnight, preventing timezone shift. Updated `formatDate()` to use `parseLocalDate()` internally. Applied fix to all date parsing functions across dashboards: `getBugClosedDateForTable()`, `getWorkItemClosedDate()`, `getBugClosedDate()`, `parseCreatedDate()`. All tables (Releases, Roadmap, Customers, Bugs, Teams) now display dates correctly regardless of browser timezone. Example: Target Date "12/20/2025" in ADO now correctly shows as "Dec 20, 2025" instead of "Dec 19, 2025". |
