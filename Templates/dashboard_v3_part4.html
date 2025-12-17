@@ -15,9 +15,11 @@
         states: [],
         tags: [],
         tagsLogicMode: 'or',
+        tagsExclusionMode: false,
         teams: [],
         bugTypes: [],
-        aging: []
+        aging: [],
+        showUntaggedArchOnly: false  // Special filter for bugs without architecture component tags
     };
     // Note: bugsStateWasLoaded is declared in part2.html with other state flags
 
@@ -118,6 +120,16 @@
             });
         }
 
+        // Untagged architecture filter - show only bugs WITHOUT any architecture component tags
+        if (excludeFilter !== 'untaggedArch' && bugsFilters.showUntaggedArchOnly) {
+            const archTags = getAllArchitectureTags().map(t => t.toLowerCase());
+            bugs = bugs.filter(bug => {
+                const bugTags = (bug.tags || '').split(';').map(t => t.trim().toLowerCase());
+                // Keep only bugs that don't have any architecture tags
+                return !bugTags.some(bt => archTags.some(at => bt === at));
+            });
+        }
+
         return bugs;
     }
 
@@ -134,6 +146,7 @@
         if (bugsFilters.teams.length > 0) return true;
         if (bugsFilters.bugTypes.length > 0) return true;
         if (bugsFilters.aging.length > 0) return true;
+        if (bugsFilters.showUntaggedArchOnly) return true;
         return false;
     }
 
@@ -148,9 +161,11 @@
         bugsFilters.states = [];
         bugsFilters.tags = [];
         bugsFilters.tagsLogicMode = 'or';
+        bugsFilters.tagsExclusionMode = false;
         bugsFilters.teams = [];
         bugsFilters.bugTypes = [];
         bugsFilters.aging = [];
+        bugsFilters.showUntaggedArchOnly = false;
 
         // Clear trend stat card filter
         bugTrendFilter = null;
@@ -2726,6 +2741,9 @@
 
         // Render Bug Aging Distribution histogram
         renderBugAgingHistogram(bugs);
+
+        // Render Architecture Diagram
+        renderArchitectureDiagram(bugs);
     }
 
     function renderBugAgingHistogram(bugs) {
@@ -2776,6 +2794,273 @@
                 </div>
             </div>
         `;
+    }
+
+    // Architecture component definitions - matching the diagram structure
+    const ARCHITECTURE_COMPONENTS = {
+        // User Interface layer
+        ui: {
+            name: 'User Interface',
+            components: [
+                { id: 'portal', label: 'Portal (User/Guest)', tags: ['UI: Portal'] },
+                { id: 'admin', label: 'Admin', tags: ['UI: Admin', 'CWP: Admin'] },
+                { id: 'm365app', label: 'M365 App', tags: ['UI: M365 App'] },
+                { id: 'outlookaddins', label: 'Outlook Addins', tags: ['UI: Outlook Add-Ins'] },
+                { id: 'filehandler', label: 'File Handler', tags: ['UI: File Handler'] },
+                { id: 'sharepointapp', label: 'Sharepoint App', tags: ['UI: Sharepoint App'] },
+                { id: 'teamscollab', label: 'Teams External User Collaboration', tags: ['UI: Teams Collaboration'] },
+                { id: 'securityattrs', label: 'Security Attributes', tags: ['UI: Security Attributes'] },
+                { id: 'sftp', label: 'SFTP', tags: ['UI: SFTP'] }
+            ]
+        },
+        // CWP layer
+        cwp: {
+            name: 'CWP',
+            components: [
+                { id: 'trustedsharing', label: 'Trusted Sharing', tags: ['CWP: Trusted Sharing'] },
+                { id: 'cloudprovider', label: 'Cloud Provider', tags: ['CWP: Cloud Provider'] },
+                { id: 'secureconvo', label: 'Secure Conversation', tags: ['CWP: Secure Conversation'] },
+                { id: 'pdfsupport', label: 'PDF Support', tags: ['CWP: PDF Support'] },
+                { id: 'officeonline', label: 'Office Online', tags: ['CWP: Office Online'] },
+                { id: 'labels', label: 'Labels', tags: ['CWP: Labels'] },
+                { id: 'dlp', label: 'DLP', tags: ['CWP: DLP'] },
+                { id: 'abac', label: 'ABAC', tags: ['CWP: ABAC'] },
+                { id: 'auditing', label: 'Auditing', tags: ['CWP: Auditing'] },
+                { id: 'sharingpolicies', label: 'Sharing Policies', tags: ['CWP: Sharing Policies'] },
+                { id: 'authentication', label: 'Authentication', tags: ['CWP: Authentication'] },
+                { id: 'multimedia', label: 'Multimedia Support', tags: ['CWP: Multimedia Support'] },
+                { id: 'branding', label: 'Branding Templates', tags: ['CWP: Branding Templates'] },
+                { id: 'api', label: 'API', tags: ['CWP: API'] }
+            ]
+        },
+        // SCG layer
+        scg: {
+            name: 'SCG',
+            components: [
+                { id: 'securemessaging', label: 'Secure Messaging', tags: ['SCG: Secure Messaging'] },
+                { id: 'mdr', label: 'MDR', tags: ['SCG: MDR'] },
+                { id: 'orchestrator', label: 'Orchestrator', tags: ['SCG: Orchestrator'] },
+                { id: 'ooo', label: 'OOO', tags: ['SCG: OOO'] },
+                { id: 'text', label: 'Text', tags: ['SCG: Text'] }
+            ]
+        },
+        // ESG layer
+        esg: {
+            name: 'ESG',
+            components: [
+                { id: 'pepengine', label: 'Pep Engine', tags: ['ESG: PEP Engine', 'ESG: Pep Engine'] },
+                { id: 'tenantscanner', label: 'Tenant Scanner', tags: ['ESG: Tenant Scanner'] },
+                { id: 'dlpengine', label: 'DLP Engine', tags: ['ESG: DLP Engine'] },
+                { id: 'authservice', label: 'Auth Service', tags: ['ESG: Auth Service'] }
+            ]
+        },
+        // Standalone components
+        standalone: {
+            name: 'Standalone',
+            components: [
+                { id: 'powerbi', label: 'Power BI Reporting', tags: ['Power BI', 'PowerBI'] },
+                { id: 'analytics', label: 'Analytics (Data Bricks)', tags: ['Analytics', 'DataBricks', 'Data Bricks'] },
+                { id: 'datapipelines', label: 'Data Pipelines', tags: ['Data Pipelines', 'DataPipelines'] }
+            ]
+        },
+        // Infrastructure layer
+        infra: {
+            name: 'Infrastructure',
+            components: [
+                { id: 'notifications', label: 'Notification Engine', tags: ['CWP: Notifications', 'Infra: Notifications'] },
+                { id: 'tsmetadata', label: 'TS Metadata Database', tags: ['Infra: TS Metadata', 'TS Metadata'] },
+                { id: 'auditingdata', label: 'Auditing Data (Mongo)', tags: ['Infra: Auditing Data', 'Auditing Data'] },
+                { id: 'emailproviders', label: 'Email Providers', tags: ['Infra: Email Providers', 'Email Providers'] },
+                { id: 'azureinfra', label: 'Azure Infrastructure', tags: ['Infra: Azure', 'Azure Infrastructure'] }
+            ]
+        }
+    };
+
+    // Count bugs for a specific component based on its tags
+    function countBugsForComponent(bugs, componentTags) {
+        return bugs.filter(bug => {
+            const bugTags = (bug.tags || '').split(';').map(t => t.trim().toLowerCase());
+            return componentTags.some(tag => bugTags.some(bt => bt === tag.toLowerCase()));
+        }).length;
+    }
+
+    // Get bugs that match any tag for a component (for click filtering)
+    function getBugsForComponent(bugs, componentTags) {
+        return bugs.filter(bug => {
+            const bugTags = (bug.tags || '').split(';').map(t => t.trim().toLowerCase());
+            return componentTags.some(tag => bugTags.some(bt => bt === tag.toLowerCase()));
+        });
+    }
+
+    // Render architecture diagram with bug counts
+    function renderArchitectureDiagram(bugs) {
+        const container = document.getElementById('bugs-architecture-diagram');
+        if (!container) return;
+
+        const isFiltered = hasBugsActiveFilters() || bugTrendFilter;
+        const filterNote = isFiltered ? ` <span class="filter-note">(${bugs.length} filtered bugs)</span>` : '';
+
+        // Count bugs for each component
+        const componentCounts = {};
+        let totalTaggedBugs = 0;
+        const taggedBugIds = new Set();
+
+        Object.keys(ARCHITECTURE_COMPONENTS).forEach(layerKey => {
+            const layer = ARCHITECTURE_COMPONENTS[layerKey];
+            layer.components.forEach(comp => {
+                const count = countBugsForComponent(bugs, comp.tags);
+                componentCounts[comp.id] = count;
+                // Track unique bugs that have any architecture tag
+                getBugsForComponent(bugs, comp.tags).forEach(b => taggedBugIds.add(b.id));
+            });
+        });
+        totalTaggedBugs = taggedBugIds.size;
+        const untaggedBugs = bugs.length - totalTaggedBugs;
+
+        // Helper to render a box
+        const renderBox = (comp, isStandalone = false) => {
+            const count = componentCounts[comp.id] || 0;
+            const hasBugs = count > 0;
+            const cssClass = isStandalone
+                ? `arch-standalone ${hasBugs ? 'has-bugs' : 'no-bugs'}`
+                : `arch-box ${hasBugs ? 'has-bugs' : 'no-bugs'}`;
+            const tagFilter = comp.tags[0]; // Use first tag for filtering
+            return `
+                <div class="${cssClass}" onclick="filterBugsByArchComponent('${tagFilter}')" title="${comp.label}: ${count} bugs">
+                    <span class="box-label">${comp.label}</span>
+                    <span class="bug-count">${count}</span>
+                </div>
+            `;
+        };
+
+        // Build the diagram HTML
+        const ui = ARCHITECTURE_COMPONENTS.ui;
+        const cwp = ARCHITECTURE_COMPONENTS.cwp;
+        const scg = ARCHITECTURE_COMPONENTS.scg;
+        const esg = ARCHITECTURE_COMPONENTS.esg;
+        const standalone = ARCHITECTURE_COMPONENTS.standalone;
+        const infra = ARCHITECTURE_COMPONENTS.infra;
+
+        container.innerHTML = `
+            <div class="architecture-diagram-title">🏗️ Bugs by Architecture Component${filterNote}</div>
+            <div class="arch-diagram">
+                <!-- Top layer: User Interface + Power BI -->
+                <div class="arch-layer">
+                    <div class="arch-layer-main">
+                        <div class="arch-section arch-section-ui">
+                            <div class="arch-section-header">${ui.name}</div>
+                            <div class="arch-boxes">
+                                ${ui.components.map(c => renderBox(c)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="arch-layer-side">
+                        ${renderBox(standalone.components.find(c => c.id === 'powerbi'), true)}
+                    </div>
+                </div>
+
+                <!-- Middle layer: CWP, SCG, ESG + Analytics -->
+                <div class="arch-layer">
+                    <div class="arch-layer-main arch-middle-layer">
+                        <div class="arch-section arch-section-cwp">
+                            <div class="arch-section-header">${cwp.name}</div>
+                            <div class="arch-boxes">
+                                ${cwp.components.map(c => renderBox(c)).join('')}
+                            </div>
+                        </div>
+                        <div class="arch-section arch-section-scg">
+                            <div class="arch-section-header">${scg.name}</div>
+                            <div class="arch-boxes">
+                                ${scg.components.map(c => renderBox(c)).join('')}
+                            </div>
+                        </div>
+                        <div class="arch-section arch-section-esg">
+                            <div class="arch-section-header">${esg.name}</div>
+                            <div class="arch-boxes">
+                                ${esg.components.map(c => renderBox(c)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="arch-layer-side">
+                        ${renderBox(standalone.components.find(c => c.id === 'analytics'), true)}
+                        ${renderBox(standalone.components.find(c => c.id === 'datapipelines'), true)}
+                    </div>
+                </div>
+
+                <!-- Infrastructure layer -->
+                <div class="arch-layer arch-infra-layer">
+                    <div class="arch-layer-main">
+                        <div class="arch-section arch-section-infra">
+                            <div class="arch-section-header">${infra.name}</div>
+                            <div class="arch-boxes">
+                                ${infra.components.filter(c => c.id !== 'azureinfra').map(c => renderBox(c)).join('')}
+                            </div>
+                            <div class="arch-boxes arch-azure-box">
+                                ${renderBox(infra.components.find(c => c.id === 'azureinfra'))}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="arch-layer-side"></div>
+                </div>
+
+                <!-- Totals -->
+                <div class="arch-totals">
+                    <div class="total-item">
+                        <span>Tagged bugs:</span>
+                        <span class="total-count">${totalTaggedBugs}</span>
+                    </div>
+                    <div class="total-item clickable ${bugsFilters.showUntaggedArchOnly ? 'active' : ''}" onclick="filterBugsByUntaggedArch()" title="${bugsFilters.showUntaggedArchOnly ? 'Click to clear filter' : 'Click to show bugs without architecture tags'}">
+                        <span>Untagged:</span>
+                        <span class="total-count">${untaggedBugs}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Get all architecture component tags for filtering
+    function getAllArchitectureTags() {
+        const allTags = [];
+        Object.keys(ARCHITECTURE_COMPONENTS).forEach(layerKey => {
+            const layer = ARCHITECTURE_COMPONENTS[layerKey];
+            layer.components.forEach(comp => {
+                allTags.push(...comp.tags);
+            });
+        });
+        return allTags;
+    }
+
+    // Filter to show only bugs WITHOUT any architecture component tags
+    function filterBugsByUntaggedArch() {
+        // Toggle the untagged architecture filter
+        bugsFilters.showUntaggedArchOnly = !bugsFilters.showUntaggedArchOnly;
+
+        // If enabling, clear any tag filters to avoid confusion
+        if (bugsFilters.showUntaggedArchOnly) {
+            bugsFilters.tags = [];
+            bugsFilters.tagsExclusionMode = false;
+            updateGenericTagDisplay('bugs');
+        }
+
+        // Apply filters to refresh all visuals
+        applyBugFilters();
+    }
+
+    // Filter bugs by architecture component tag
+    function filterBugsByArchComponent(tag) {
+        // Clear the untagged filter if it was active
+        bugsFilters.showUntaggedArchOnly = false;
+
+        // Set the tag filter to show only bugs with this tag
+        bugsFilters.tags = [tag];
+        bugsFilters.tagsLogicMode = 'or';
+        bugsFilters.tagsExclusionMode = false;
+
+        // Update the tag filter display
+        updateGenericTagDisplay('bugs');
+
+        // Apply filters to refresh all visuals
+        applyBugFilters();
     }
 
     // Bugs table state
