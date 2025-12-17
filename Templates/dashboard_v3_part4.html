@@ -4,140 +4,320 @@
     let bugCategorizationCharts = {};
     let bugEffortCharts = {};
     let selectedBugDateRange = 'quarter'; // week, month, quarter, custom
-    let bugTrendFilters = { state: [], type: [], priority: [] }; // State for bug trend filters
+    let bugTrendFilters = { state: [], type: [], priority: [] }; // Legacy state (kept for backward compatibility)
+
+    // New bugs filter state (for sticky header filters)
+    let bugsFilters = {
+        search: '',
+        releases: [],
+        customers: [],
+        priorities: [],
+        states: [],
+        tags: [],
+        tagsLogicMode: 'or',
+        teams: [],
+        bugTypes: [],
+        aging: []
+    };
+    // Note: bugsStateWasLoaded is declared in part2.html with other state flags
 
     // Team details state
     let currentTeamDetails = null;
     let teamDetailCharts = {};
     
-    // State dropdown functions
-    function toggleStateDropdown() {
-        const options = document.getElementById('state-options');
-        // Close bug type and priority dropdowns
-        ['type', 'priority'].forEach(ft => {
-            const other = document.getElementById(`bug-${ft}-options`);
-            if (other) other.classList.remove('show');
-        });
-        options.classList.toggle('show');
-    }
-    
-    function toggleAllStates(checked) {
-        const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
-        checkboxes.forEach(cb => cb.checked = checked);
-        bugTrendFilters.state = checked ? Array.from(checkboxes).map(cb => cb.value) : [];
-        updateStateFilterDisplay();
-        saveStateToStorage();
-        applyBugFilters();
-    }
-
-    function updateStateFilter() {
-        const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
-        bugTrendFilters.state = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        updateStateFilterDisplay();
-        saveStateToStorage();
-        applyBugFilters();
-    }
-
-    function updateStateFilterDisplay() {
-        const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
-        const selected = bugTrendFilters.state;
-        const displayText = document.getElementById('state-display-text');
-        const selectAllCheckbox = document.getElementById('state-select-all');
-
-        // Update Select All checkbox state
-        if (selectAllCheckbox) {
-            selectAllCheckbox.checked = selected.length === checkboxes.length;
-            selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
-        }
-
-        // If all selected, show "All States" (same as if none selected)
-        if (selected.length === 0 || selected.length === checkboxes.length) {
-            displayText.textContent = 'All States';
-        } else {
-            displayText.textContent = formatFilterDisplay(selected, 'All States', 'states');
-        }
-    }
-    
+    // Legacy getters for backward compatibility (redirect to new bugsFilters)
     function getSelectedStates() {
-        const checkboxes = document.querySelectorAll('#state-options input[type="checkbox"]:not(#state-select-all)');
-        return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-    }
-    
-    // Bug Type and Priority dropdown functions
-    function toggleBugDropdown(filterType) {
-        const options = document.getElementById(`bug-${filterType}-options`);
-        // Close other bug dropdowns
-        ['type', 'priority'].forEach(ft => {
-            if (ft !== filterType) {
-                const other = document.getElementById(`bug-${ft}-options`);
-                if (other) other.classList.remove('show');
-            }
-        });
-        // Also close state dropdown
-        const stateOptions = document.getElementById('state-options');
-        if (stateOptions) stateOptions.classList.remove('show');
-        options.classList.toggle('show');
-    }
-    
-    function toggleAllBugFilter(filterType, checked) {
-        const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
-        checkboxes.forEach(cb => cb.checked = checked);
-        bugTrendFilters[filterType] = checked ? Array.from(checkboxes).map(cb => cb.value) : [];
-        updateBugFilterDisplay(filterType);
-        saveStateToStorage();
-        applyBugFilters();
-    }
-
-    function updateBugFilter(filterType) {
-        const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
-        bugTrendFilters[filterType] = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        updateBugFilterDisplay(filterType);
-        saveStateToStorage();
-        applyBugFilters();
-    }
-
-    function updateBugFilterDisplay(filterType) {
-        const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
-        const selected = bugTrendFilters[filterType];
-        const displayText = document.getElementById(`bug-${filterType}-display`);
-        const selectAllCheckbox = document.getElementById(`bug-${filterType}-select-all`);
-
-        // Update Select All checkbox state
-        if (selectAllCheckbox) {
-            selectAllCheckbox.checked = selected.length === checkboxes.length;
-            selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
-        }
-
-        const filterConfig = {
-            type: { allLabel: 'All Types', plural: 'types' },
-            priority: { allLabel: 'All Priorities', plural: 'priorities' }
-        };
-        const config = filterConfig[filterType];
-
-        // If all selected, show "All X" (same as if none selected)
-        if (selected.length === 0 || selected.length === checkboxes.length) {
-            displayText.textContent = config.allLabel;
-        } else if (selected.length === 1) {
-            // For priority, show nice label
-            if (filterType === 'priority') {
-                const labels = { '1': '1 - Critical', '2': '2 - High', '3': '3 - Medium', '4': '4 - Low' };
-                displayText.textContent = labels[selected[0]] || selected[0];
-            } else {
-                displayText.textContent = selected[0];
-            }
-        } else {
-            displayText.textContent = formatFilterDisplay(selected, config.allLabel, config.plural);
-        }
+        return bugsFilters.states;
     }
 
     function getSelectedBugTypes() {
-        return bugTrendFilters.type;
+        return bugsFilters.bugTypes;
     }
 
     function getSelectedPriorities() {
-        return bugTrendFilters.priority;
+        return bugsFilters.priorities;
     }
-    
+
+    // ==================== BUGS DASHBOARD FILTER FUNCTIONS ====================
+
+    /**
+     * Get bugs filtered by all filters EXCEPT the specified one (for cross-filtering)
+     */
+    function getBugsItemsExcludingFilter(excludeFilter) {
+        let bugs = workItems.filter(w => w.type === 'Bug');
+
+        // Always apply search filter (never excluded)
+        bugs = applyGenericSearchFilter(bugs, bugsFilters.search);
+
+        // Release filter
+        if (excludeFilter !== 'release' && bugsFilters.releases.length > 0) {
+            bugs = bugs.filter(item => {
+                const releaseCategory = item.releaseVersion?.trim() ? item.releaseVersion.trim() :
+                                        (item.targetDate ? '(Needs Release)' : '(No Release)');
+                return bugsFilters.releases.includes(releaseCategory);
+            });
+        }
+
+        // Customer filter
+        if (excludeFilter !== 'customer' && bugsFilters.customers.length > 0) {
+            bugs = bugs.filter(item => {
+                if (bugsFilters.customers.includes('(No Customer)') && !item.customers) return true;
+                if (!item.customers) return false;
+                const itemCustomers = item.customers.split(';').map(c => c.trim()).filter(c => c);
+                return itemCustomers.some(c => bugsFilters.customers.includes(c));
+            });
+        }
+
+        // Priority filter
+        if (excludeFilter !== 'priority' && bugsFilters.priorities.length > 0) {
+            bugs = bugs.filter(item => {
+                const priority = item.priority ? 'P' + item.priority : '(No Priority)';
+                return bugsFilters.priorities.includes(priority);
+            });
+        }
+
+        // State filter
+        if (excludeFilter !== 'state' && bugsFilters.states.length > 0) {
+            bugs = bugs.filter(item => bugsFilters.states.includes(item.state));
+        }
+
+        // Tag filter
+        if (excludeFilter !== 'tag' && bugsFilters.tags.length > 0) {
+            bugs = bugs.filter(item => {
+                if (!item.tags) return false;
+                const itemTags = item.tags.split(';').map(t => t.trim()).filter(t => t);
+                if (bugsFilters.tagsLogicMode === 'and') {
+                    return bugsFilters.tags.every(tag => itemTags.includes(tag));
+                } else {
+                    return bugsFilters.tags.some(tag => itemTags.includes(tag));
+                }
+            });
+        }
+
+        // Team filter
+        if (excludeFilter !== 'team' && bugsFilters.teams.length > 0) {
+            bugs = bugs.filter(item => {
+                const team = item.team || '(No Team)';
+                return bugsFilters.teams.includes(team);
+            });
+        }
+
+        // Bug Type filter
+        if (excludeFilter !== 'bugtype' && bugsFilters.bugTypes.length > 0) {
+            bugs = bugs.filter(item => {
+                if (bugsFilters.bugTypes.includes('(No Bug Type)') && (!item.bugType || !item.bugType.trim())) return true;
+                return bugsFilters.bugTypes.includes(item.bugType);
+            });
+        }
+
+        // Aging filter
+        if (excludeFilter !== 'aging' && bugsFilters.aging.length > 0) {
+            bugs = bugs.filter(item => {
+                const aging = calculateAgingBucket(item);
+                return bugsFilters.aging.includes(aging);
+            });
+        }
+
+        return bugs;
+    }
+
+    /**
+     * Check if any Bugs filters are active
+     */
+    function hasBugsActiveFilters() {
+        if (hasGenericSearchFilter('bugs')) return true;
+        if (bugsFilters.releases.length > 0) return true;
+        if (bugsFilters.customers.length > 0) return true;
+        if (bugsFilters.priorities.length > 0) return true;
+        if (bugsFilters.states.length > 0) return true;
+        if (bugsFilters.tags.length > 0) return true;
+        if (bugsFilters.teams.length > 0) return true;
+        if (bugsFilters.bugTypes.length > 0) return true;
+        if (bugsFilters.aging.length > 0) return true;
+        return false;
+    }
+
+    /**
+     * Clear all Bugs filters
+     */
+    function clearAllBugsFilters() {
+        clearGenericSearch('bugs');
+        bugsFilters.releases = [];
+        bugsFilters.customers = [];
+        bugsFilters.priorities = [];
+        bugsFilters.states = [];
+        bugsFilters.tags = [];
+        bugsFilters.tagsLogicMode = 'or';
+        bugsFilters.teams = [];
+        bugsFilters.bugTypes = [];
+        bugsFilters.aging = [];
+
+        // Update all display texts
+        updateGenericReleaseDisplay('bugs');
+        updateGenericCustomerDisplay('bugs');
+        updateGenericPriorityDisplay('bugs');
+        updateGenericStateDisplay('bugs');
+        updateGenericTagDisplay('bugs');
+        updateGenericTeamDisplay('bugs');
+        updateGenericBugTypeDisplay('bugs');
+        updateGenericAgingDisplay('bugs');
+
+        saveStateToStorage();
+        applyBugFilters();
+    }
+
+    /**
+     * Toggle the Archive Views section collapse state
+     */
+    function toggleBugsArchiveSection() {
+        const section = document.getElementById('bugs-archive-section');
+        if (section) {
+            section.classList.toggle('collapsed');
+            saveStateToStorage();
+        }
+    }
+
+    /**
+     * Populate all Bugs filter dropdowns with cross-filter aware data
+     */
+    function populateBugsFilterDropdowns() {
+        const bugs = workItems.filter(w => w.type === 'Bug');
+
+        // Release filter
+        const releaseMenu = document.getElementById('bugs-release-menu');
+        if (releaseMenu) {
+            const releaseFilteredItems = getBugsItemsExcludingFilter('release');
+            releaseMenu.innerHTML = buildReleaseFilterDropdown({
+                dashboardId: 'bugs',
+                items: releaseFilteredItems,
+                selectedReleases: bugsFilters.releases
+            });
+        }
+
+        // Customer filter
+        const customerMenu = document.getElementById('bugs-customer-menu');
+        if (customerMenu) {
+            const customerFilteredItems = getBugsItemsExcludingFilter('customer');
+            customerMenu.innerHTML = buildCustomerFilterDropdown({
+                dashboardId: 'bugs',
+                items: customerFilteredItems,
+                selectedCustomers: bugsFilters.customers
+            });
+        }
+
+        // Priority filter
+        const priorityMenu = document.getElementById('bugs-priority-menu');
+        if (priorityMenu) {
+            const priorityFilteredItems = getBugsItemsExcludingFilter('priority');
+            priorityMenu.innerHTML = buildPriorityFilterDropdown({
+                dashboardId: 'bugs',
+                items: priorityFilteredItems,
+                selectedPriorities: bugsFilters.priorities
+            });
+        }
+
+        // State filter
+        const stateMenu = document.getElementById('bugs-state-menu');
+        if (stateMenu) {
+            const stateFilteredItems = getBugsItemsExcludingFilter('state');
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'bugs',
+                items: stateFilteredItems,
+                selectedStates: bugsFilters.states
+            });
+        }
+
+        // Tag filter
+        const tagMenu = document.getElementById('bugs-tag-menu');
+        if (tagMenu) {
+            const tagFilteredItems = getBugsItemsExcludingFilter('tag');
+            tagMenu.innerHTML = buildTagFilterDropdown({
+                dashboardId: 'bugs',
+                items: tagFilteredItems,
+                selectedTags: bugsFilters.tags,
+                logicMode: bugsFilters.tagsLogicMode
+            });
+        }
+
+        // Team filter
+        const teamMenu = document.getElementById('bugs-team-menu');
+        if (teamMenu) {
+            const teamFilteredItems = getBugsItemsExcludingFilter('team');
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'bugs',
+                items: teamFilteredItems,
+                selectedTeams: bugsFilters.teams
+            });
+        }
+
+        // Bug Type filter
+        const bugtypeMenu = document.getElementById('bugs-bugtype-menu');
+        if (bugtypeMenu) {
+            const bugtypeFilteredItems = getBugsItemsExcludingFilter('bugtype');
+            bugtypeMenu.innerHTML = buildBugTypeFilterDropdown({
+                dashboardId: 'bugs',
+                items: bugtypeFilteredItems,
+                selectedBugTypes: bugsFilters.bugTypes
+            });
+        }
+
+        // Aging filter
+        const agingMenu = document.getElementById('bugs-aging-menu');
+        if (agingMenu) {
+            const agingFilteredItems = getBugsItemsExcludingFilter('aging');
+            agingMenu.innerHTML = buildAgingFilterDropdown({
+                dashboardId: 'bugs',
+                items: agingFilteredItems,
+                selectedAgingBuckets: bugsFilters.aging
+            });
+        }
+
+        // Update Clear All button visibility
+        const clearBtn = document.getElementById('bugs-clear-filters-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !hasBugsActiveFilters());
+        }
+    }
+
+    /**
+     * Filter bugs by clicking on stat cards
+     * @param {string} filterType - 'all', 'customer', 'internal', 'closedNoCode', 'blocked'
+     */
+    function filterBugsByCard(filterType) {
+        // Clear bug type filter first
+        bugsFilters.bugTypes = [];
+        bugsFilters.states = [];
+        bugsFilters.tags = [];
+
+        switch(filterType) {
+            case 'all':
+                // No filter - show all bugs
+                break;
+            case 'customer':
+                bugsFilters.bugTypes = ['Customer Related'];
+                break;
+            case 'internal':
+                bugsFilters.bugTypes = ['Product Quality', 'Technical & Infrastructure'];
+                break;
+            case 'closedNoCode':
+                bugsFilters.states = ['Closed'];
+                break;
+            case 'blocked':
+                bugsFilters.tags = ['Blocked'];
+                bugsFilters.tagsLogicMode = 'or';
+                break;
+        }
+
+        // Update filter display texts
+        updateGenericBugTypeDisplay('bugs');
+        updateGenericStateDisplay('bugs');
+        updateGenericTagDisplay('bugs');
+
+        // Save state and re-render
+        saveStateToStorage();
+        applyBugFilters();
+    }
+
     // ==================== CUSTOMERS VIEW STATE FILTER ====================
     function toggleCustomerStateDropdown() {
         const options = document.getElementById('customer-state-options');
@@ -427,6 +607,9 @@
         const displayText = document.getElementById(`bugs-chart-${filterType}-display`);
         const selectAllCheckbox = document.getElementById(`bugs-chart-${filterType}-select-all`);
 
+        // Guard against elements not existing yet
+        if (!displayText) return;
+
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = selected.length === checkboxes.length && checkboxes.length > 0;
             selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
@@ -462,28 +645,26 @@
     }
 
     // Sync Bugs view state from localStorage
+    // NOTE: This function is defined twice; the first one at line ~251 is for the new sticky header filters
+    // This second definition adds legacy chart filter syncing
     function syncBugsFilterState() {
-        // Restore bug trend filter checkboxes (state, type, priority)
-        ['state'].forEach(filterType => {
-            const checkboxes = document.querySelectorAll(`#${filterType}-options input[type="checkbox"]:not(#${filterType}-select-all)`);
-            checkboxes.forEach(cb => {
-                cb.checked = bugTrendFilters[filterType].includes(cb.value);
-            });
-        });
-        updateStateFilterDisplay();
+        // ===== NEW STICKY HEADER FILTERS (generic components) =====
+        // Sync search input
+        syncGenericSearchFilter('bugs');
 
-        ['type', 'priority'].forEach(filterType => {
-            const checkboxes = document.querySelectorAll(`#bug-${filterType}-options input[type="checkbox"]:not(#bug-${filterType}-select-all)`);
-            checkboxes.forEach(cb => {
-                cb.checked = bugTrendFilters[filterType].includes(cb.value);
-            });
-            updateBugFilterDisplay(filterType);
-        });
+        // Display updates for generic filter dropdowns
+        updateGenericReleaseDisplay('bugs');
+        updateGenericCustomerDisplay('bugs');
+        updateGenericPriorityDisplay('bugs');
+        updateGenericStateDisplay('bugs');
+        updateGenericTagDisplay('bugs');
+        updateGenericTeamDisplay('bugs');
+        updateGenericBugTypeDisplay('bugs');
+        updateGenericAgingDisplay('bugs');
 
-        // Restore bugs chart filter checkboxes
+        // ===== LEGACY CHART FILTERS =====
+        // Restore bugs chart filter checkboxes (for categorization charts)
         restoreBugsChartFilterStates();
-
-        // Note: Date range is already restored by initBugTrendDates() during render
     }
 
     // Sync Executive view state from localStorage
@@ -2249,36 +2430,93 @@
     // Get filtered bugs based on current filter settings
     // dateFilterType: 'none', 'created' (for trend), 'closed' (for effort), 'active' (for stats)
     function getFilteredBugs(dateFilterType = 'none') {
-        const selectedBugTypes = getSelectedBugTypes();
-        const selectedPriorities = getSelectedPriorities();
-        const selectedStates = getSelectedStates();
-        const startDateInput = document.getElementById('bug-trend-start')?.value;
-        const endDateInput = document.getElementById('bug-trend-end')?.value;
-        
+        // Get date inputs from sticky header (new) or fall back to old IDs
+        const startDateInput = document.getElementById('bugs-daterange-start')?.value ||
+                               document.getElementById('bug-trend-start')?.value;
+        const endDateInput = document.getElementById('bugs-daterange-end')?.value ||
+                             document.getElementById('bug-trend-end')?.value;
+
         let bugs = workItems.filter(w => w.type === 'Bug');
-        
-        // Apply bug type filter (multi-select)
-        if (selectedBugTypes.length > 0) {
-            bugs = bugs.filter(b => selectedBugTypes.includes(b.bugType));
+
+        // Apply search filter
+        bugs = applyGenericSearchFilter(bugs, bugsFilters.search);
+
+        // Apply release filter
+        if (bugsFilters.releases.length > 0) {
+            bugs = bugs.filter(item => {
+                const releaseCategory = item.releaseVersion?.trim() ? item.releaseVersion.trim() :
+                                        (item.targetDate ? '(Needs Release)' : '(No Release)');
+                return bugsFilters.releases.includes(releaseCategory);
+            });
         }
-        
-        // Apply priority filter (multi-select)
-        if (selectedPriorities.length > 0) {
-            bugs = bugs.filter(b => selectedPriorities.includes(String(b.priority)));
+
+        // Apply customer filter
+        if (bugsFilters.customers.length > 0) {
+            bugs = bugs.filter(item => {
+                if (bugsFilters.customers.includes('(No Customer)') && !item.customers) return true;
+                if (!item.customers) return false;
+                const itemCustomers = item.customers.split(';').map(c => c.trim()).filter(c => c);
+                return itemCustomers.some(c => bugsFilters.customers.includes(c));
+            });
         }
-        
-        // Apply state filter (multi-select)
-        if (selectedStates.length > 0) {
-            bugs = bugs.filter(b => selectedStates.includes(b.state));
+
+        // Apply priority filter (use P1/P2/etc format from generic component)
+        if (bugsFilters.priorities.length > 0) {
+            bugs = bugs.filter(b => {
+                const priority = b.priority ? 'P' + b.priority : '(No Priority)';
+                return bugsFilters.priorities.includes(priority);
+            });
         }
-        
+
+        // Apply state filter
+        if (bugsFilters.states.length > 0) {
+            bugs = bugs.filter(b => bugsFilters.states.includes(b.state));
+        }
+
+        // Apply tag filter
+        if (bugsFilters.tags.length > 0) {
+            bugs = bugs.filter(item => {
+                if (!item.tags) return false;
+                const itemTags = item.tags.split(';').map(t => t.trim()).filter(t => t);
+                if (bugsFilters.tagsLogicMode === 'and') {
+                    return bugsFilters.tags.every(tag => itemTags.includes(tag));
+                } else {
+                    return bugsFilters.tags.some(tag => itemTags.includes(tag));
+                }
+            });
+        }
+
+        // Apply team filter
+        if (bugsFilters.teams.length > 0) {
+            bugs = bugs.filter(item => {
+                const team = item.team || '(No Team)';
+                return bugsFilters.teams.includes(team);
+            });
+        }
+
+        // Apply bug type filter
+        if (bugsFilters.bugTypes.length > 0) {
+            bugs = bugs.filter(b => {
+                if (bugsFilters.bugTypes.includes('(No Bug Type)') && (!b.bugType || !b.bugType.trim())) return true;
+                return bugsFilters.bugTypes.includes(b.bugType);
+            });
+        }
+
+        // Apply aging filter
+        if (bugsFilters.aging.length > 0) {
+            bugs = bugs.filter(b => {
+                const aging = calculateAgingBucket(b);
+                return bugsFilters.aging.includes(aging);
+            });
+        }
+
         // Apply date range filter based on type
         if (dateFilterType !== 'none' && startDateInput && endDateInput) {
             const startDate = new Date(startDateInput);
             startDate.setHours(0, 0, 0, 0);
             const endDate = new Date(endDateInput);
             endDate.setHours(23, 59, 59, 999);
-            
+
             if (dateFilterType === 'created') {
                 // Filter by created date (for trend chart)
                 bugs = bugs.filter(b => {
@@ -2301,34 +2539,35 @@
                     const created = new Date(b.createdDate);
                     // Must be created before or during the period
                     if (created > endDate) return false;
-                    
+
                     // Check if closed before the period started
                     const closedDate = getBugClosedDate(b);
                     if (closedDate && closedDate < startDate) return false;
-                    
+
                     return true;
                 });
             }
         }
-        
+
         return bugs;
     }
     
-    // Set bug date range from buttons
+    // Set bug date range from buttons (works with both old and new sticky header)
     function setBugDateRange(range) {
         selectedBugDateRange = range;
 
-        // Update button states
-        document.querySelectorAll('.date-range-buttons .time-btn').forEach(btn => {
+        // Update button states (both old filter bar and new sticky header)
+        document.querySelectorAll('.date-range-buttons .time-btn, .bugs-date-range-inline .time-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.range === range);
         });
 
-        // Show/hide custom date inputs
-        const dateInputs = document.getElementById('bug-date-inputs');
-        if (range === 'custom') {
-            dateInputs.style.display = 'flex';
-        } else {
-            dateInputs.style.display = 'none';
+        // Show/hide custom date inputs (new sticky header)
+        const dateInputsInline = document.getElementById('bugs-date-inputs-inline');
+        if (dateInputsInline) {
+            dateInputsInline.style.display = range === 'custom' ? 'flex' : 'none';
+        }
+
+        if (range !== 'custom') {
             // Set dates based on range
             const endDate = new Date();
             const startDate = new Date();
@@ -2341,31 +2580,46 @@
                 startDate.setMonth(startDate.getMonth() - 3);
             }
 
-            document.getElementById('bug-trend-start').value = startDate.toISOString().split('T')[0];
-            document.getElementById('bug-trend-end').value = endDate.toISOString().split('T')[0];
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = endDate.toISOString().split('T')[0];
+
+            // Set values in new sticky header inputs
+            const startInline = document.getElementById('bugs-daterange-start');
+            const endInline = document.getElementById('bugs-daterange-end');
+            if (startInline) startInline.value = startStr;
+            if (endInline) endInline.value = endStr;
         }
 
         saveStateToStorage();
         applyBugFilters();
     }
-    
+
     // Apply filters to all bug visuals
     function applyBugFilters() {
         saveStateToStorage();
+        populateBugsFilterDropdowns(); // Update dropdown options with cross-filter data
         renderBugStats();
         renderBugTrendSection();
+        renderBugsTable();
         renderBugCategorizationCharts();
         renderBugEffortCharts();
     }
-    
+
     // Bugs View (renamed from Quality)
     function renderBugsView() {
-        // Initialize bug trend dates first
-        initBugTrendDates();
-        
+        // Populate filter dropdowns first
+        populateBugsFilterDropdowns();
+
+        // Sync filter state if loaded from localStorage
+        if (bugsStateWasLoaded) {
+            syncBugsFilterState();
+            bugsStateWasLoaded = false;
+        }
+
         // Render all sections
         renderBugStats();
         renderBugTrendSection();
+        renderBugsTable();
         renderBugCategorizationCharts();
         renderBugEffortCharts();
     }
@@ -2394,34 +2648,34 @@
         const selectedBugTypes = getSelectedBugTypes();
         const selectedPriorities = getSelectedPriorities();
         const selectedStates = getSelectedStates();
-        const startDate = document.getElementById('bug-trend-start')?.value;
-        const endDate = document.getElementById('bug-trend-end')?.value;
+        const startDate = (document.getElementById('bugs-daterange-start') || document.getElementById('bug-trend-start'))?.value;
+        const endDate = (document.getElementById('bugs-daterange-end') || document.getElementById('bug-trend-end'))?.value;
         const hasDateFilter = startDate && endDate;
         const hasOtherFilters = selectedBugTypes.length > 0 || selectedPriorities.length > 0 || selectedStates.length > 0;
         const filterNote = (hasDateFilter || hasOtherFilters) ? ` (${bugs.length} filtered)` : '';
         
         stats.innerHTML = `
-            <div class="stat-card clickable" onclick="drilldownBugs('allBugs')">
+            <div class="stat-card clickable" onclick="filterBugsByCard('all')">
                 <div class="stat-label">Total Bugs${filterNote}</div>
                 <div class="stat-value" style="color: var(--accent-red)">${bugs.length}</div>
                 <div class="stat-subtitle">${openBugs.length} open, ${bugs.length - openBugs.length} resolved</div>
             </div>
-            <div class="stat-card clickable" onclick="drilldownBugs('customerBugs')">
+            <div class="stat-card clickable" onclick="filterBugsByCard('customer')">
                 <div class="stat-label">Customer Bugs</div>
                 <div class="stat-value" style="color: var(--accent-orange)">${customerBugs.length}</div>
                 <div class="stat-subtitle">${customerBugs.filter(b => b.state !== 'Done' && b.state !== 'Closed').length} open</div>
             </div>
-            <div class="stat-card clickable" onclick="drilldownBugs('internalBugs')">
+            <div class="stat-card clickable" onclick="filterBugsByCard('internal')">
                 <div class="stat-label">Internal Bugs</div>
                 <div class="stat-value" style="color: var(--accent-purple)">${internalBugs.length}</div>
                 <div class="stat-subtitle">${internalBugs.filter(b => b.state !== 'Done' && b.state !== 'Closed').length} open</div>
             </div>
-            <div class="stat-card clickable" onclick="drilldownBugs('closedNoCode')">
+            <div class="stat-card clickable" onclick="filterBugsByCard('closedNoCode')">
                 <div class="stat-label">Closed (No Code Change)</div>
                 <div class="stat-value" style="color: var(--accent-cyan)">${closedBugs.length}</div>
                 <div class="stat-subtitle">${closedBugsEffort.toFixed(1)} days investigating</div>
             </div>
-            <div class="stat-card clickable" onclick="drilldownBugs('blocked')">
+            <div class="stat-card clickable" onclick="filterBugsByCard('blocked')">
                 <div class="stat-label">Blocked Items</div>
                 <div class="stat-value" style="color: var(--accent-orange)">${blocked.length}</div>
                 <div class="stat-subtitle">Need attention</div>
@@ -2449,15 +2703,186 @@
         
         insights.innerHTML = `
             <div class="insights-title">⚡ Bug Insights</div>
-            <div class="insight-item critical"><span class="insight-icon">🐛</span> ${openBugs.length} bugs currently open</div>
-            <div class="insight-item info"><span class="insight-icon">⏱️</span> ${totalBugEffort.toFixed(1)} total days spent on bug fixes</div>
-            ${topEffortTeam ? `<div class="insight-item warning"><span class="insight-icon">👥</span> ${topEffortTeam[0]} spent most effort on bugs (${topEffortTeam[1].toFixed(1)} days)</div>` : ''}
-            ${topEffortAssignee ? `<div class="insight-item info"><span class="insight-icon">👤</span> ${topEffortAssignee[0]} spent ${topEffortAssignee[1].toFixed(1)} days on bugs</div>` : ''}
-            ${topBugFeature ? `<div class="insight-item warning"><span class="insight-icon">📦</span> "${topBugFeature[0]}" has most bugs (${topBugFeature[1]})</div>` : ''}
-            <div class="insight-item info"><span class="insight-icon">🔍</span> ${closedBugs.length} bugs closed without code changes (${closedBugsEffort.toFixed(1)} days investigating)</div>
+            <div class="insights-content">
+                <div class="insight-item critical"><span class="insight-icon">🐛</span> ${openBugs.length} bugs currently open</div>
+                <div class="insight-item info"><span class="insight-icon">⏱️</span> ${totalBugEffort.toFixed(1)} total days spent on bug fixes</div>
+                ${topEffortTeam ? `<div class="insight-item warning"><span class="insight-icon">👥</span> ${topEffortTeam[0]} spent most effort on bugs (${topEffortTeam[1].toFixed(1)} days)</div>` : ''}
+                ${topEffortAssignee ? `<div class="insight-item info"><span class="insight-icon">👤</span> ${topEffortAssignee[0]} spent ${topEffortAssignee[1].toFixed(1)} days on bugs</div>` : ''}
+                ${topBugFeature ? `<div class="insight-item warning"><span class="insight-icon">📦</span> "${topBugFeature[0]}" has most bugs (${topBugFeature[1]})</div>` : ''}
+                <div class="insight-item info"><span class="insight-icon">🔍</span> ${closedBugs.length} bugs closed without code changes (${closedBugsEffort.toFixed(1)} days investigating)</div>
+            </div>
+        `;
+
+        // Render Bug Aging Distribution histogram
+        renderBugAgingHistogram(bugs);
+    }
+
+    function renderBugAgingHistogram(bugs) {
+        const histogramContainer = document.getElementById('bugs-aging-histogram');
+        if (!histogramContainer) return;
+
+        // Show filter indicator if filters are active
+        const filterNote = hasBugsActiveFilters() ? ` (${bugs.length} filtered)` : '';
+
+        // Count bugs by aging bucket
+        const agingCounts = {};
+        AGING_BUCKETS.forEach(bucket => agingCounts[bucket] = 0);
+        bugs.forEach(bug => {
+            const bucket = calculateAgingBucket(bug);
+            agingCounts[bucket]++;
+        });
+        const maxCount = Math.max(...Object.values(agingCounts), 1);
+
+        // Calculate nice Y-axis tick values
+        const yAxisTicks = [];
+        const tickCount = 4;
+        const tickStep = Math.ceil(maxCount / tickCount);
+        for (let i = tickCount; i >= 0; i--) {
+            yAxisTicks.push(Math.min(i * tickStep, maxCount));
+        }
+
+        histogramContainer.innerHTML = `
+            <div class="aging-histogram-title">📊 Bug Aging Distribution${filterNote}</div>
+            <div class="aging-histogram-wrapper">
+                <div class="aging-histogram-yaxis">
+                    ${yAxisTicks.map(tick => `<span class="aging-yaxis-label">${tick}</span>`).join('')}
+                </div>
+                <div class="aging-histogram-chart">
+                    <div class="aging-histogram-bars">
+                        ${AGING_BUCKETS.map(bucket => {
+                            const count = agingCounts[bucket];
+                            const heightPct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                            const barClass = 'bar-' + bucket.replace(/\s+/g, '-');
+                            return `
+                                <div class="aging-bar-container">
+                                    <div class="aging-bar-count">${count}</div>
+                                    <div class="aging-bar ${barClass}" style="height: ${Math.max(heightPct, 2)}%" onclick="filterByAgingBucket('bugs', '${bucket}')" title="${bucket}: ${count} bugs"></div>
+                                    <div class="aging-bar-label">${bucket}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
         `;
     }
-    
+
+    // Bugs table state
+    let bugsSortState = { column: 'aging', direction: 'asc' };
+    let bugsColumnWidths = {};
+
+    function renderBugsTable() {
+        const tableContainer = document.getElementById('bugs-table-container');
+        if (!tableContainer) return;
+
+        // Get filtered bugs (no date filter applied)
+        const bugs = getBugsItemsExcludingFilter(null);
+        const isFiltered = hasBugsActiveFilters();
+
+        // Define columns: ID, Title, State, Customers, Priority, Aging, Tags, Bug Owner, Release Version, Target Date
+        const bugsColumns = [
+            { key: 'id', label: 'ID', class: 'col-id' },
+            { key: 'title', label: 'Title', class: 'col-title' },
+            { key: 'state', label: 'State', class: 'col-state' },
+            { key: 'customers', label: 'Customers', class: 'col-customers' },
+            { key: 'priority', label: 'Priority', class: 'col-priority' },
+            { key: 'aging', label: 'Aging', class: 'col-aging' },
+            { key: 'tags', label: 'Tags', class: 'col-tags' },
+            { key: 'assignedTo', label: 'Bug Owner', class: 'col-owner' },
+            { key: 'releaseVersion', label: 'Release', class: 'col-release' },
+            { key: 'targetDate', label: 'Target Date', class: 'col-date' }
+        ];
+
+        // Custom cell renderer for Bugs-specific columns
+        const bugsRenderCell = (item, col) => {
+            const key = col.key;
+            const colClass = col.class || `col-${key}`;
+
+            if (key === 'id') {
+                return `<td class="${colClass}"><a href="${item.url}" target="_blank" class="work-item-link" onclick="event.stopPropagation()">${item.id}</a></td>`;
+            }
+            if (key === 'title') {
+                return `<td class="${colClass}" title="${(item.title || '').replace(/"/g, '&quot;')}">
+                    <span class="title-text">${item.title || ''}</span>
+                    <span class="rel-pills">${buildRelationshipPills(item.id)}</span>
+                </td>`;
+            }
+            if (key === 'state') {
+                const stateClass = getStateClass(item.state);
+                return `<td class="${colClass}"><span class="state-badge ${stateClass}">${item.state || ''}</span></td>`;
+            }
+            if (key === 'customers') {
+                const customers = item.customers || '';
+                const customerList = customers.split(';').filter(c => c.trim());
+                const display = customerList.length > 1 ? `${customerList[0]} +${customerList.length - 1}` : (customerList[0] || '—');
+                return `<td class="${colClass}" title="${customers}">${display}</td>`;
+            }
+            if (key === 'priority') {
+                const prio = item.priority ? `P${item.priority}` : '—';
+                const prioClass = item.priority === 1 ? 'priority-1' : (item.priority === 2 ? 'priority-2' : '');
+                return `<td class="${colClass}"><span class="${prioClass}">${prio}</span></td>`;
+            }
+            if (key === 'aging') {
+                const bucket = calculateAgingBucket(item);
+                const agingClass = bucket === 'Older' ? 'aging-old' : (bucket === '4 weeks' ? 'aging-warn' : '');
+                return `<td class="${colClass}"><span class="${agingClass}">${bucket}</span></td>`;
+            }
+            if (key === 'tags') {
+                const tags = (item.tags || '').split(';').filter(t => t.trim());
+                const display = tags.length > 2 ? `${tags.slice(0, 2).join(', ')} +${tags.length - 2}` : tags.join(', ');
+                return `<td class="${colClass}" title="${item.tags || ''}">${display || '—'}</td>`;
+            }
+            if (key === 'assignedTo') {
+                const owner = item.assignedTo || '—';
+                const shortName = owner.includes('<') ? owner.split('<')[0].trim() : owner;
+                return `<td class="${colClass}" title="${owner}">${shortName}</td>`;
+            }
+            if (key === 'releaseVersion') {
+                return `<td class="${colClass}">${item.releaseVersion || '—'}</td>`;
+            }
+            if (key === 'targetDate') {
+                const date = item.targetDate ? item.targetDate.split('T')[0] : '—';
+                return `<td class="${colClass}">${date}</td>`;
+            }
+            return `<td class="${colClass}">${item[key] || '—'}</td>`;
+        };
+
+        // Handle sort changes
+        const handleBugSortChange = (newSortState) => {
+            bugsSortState = newSortState;
+            saveStateToStorage();
+            renderBugsTable();
+        };
+
+        // Handle row click - show work item details modal with relationships
+        const handleBugRowClick = (bug) => {
+            showWorkItemDetailsModal(bug);
+        };
+
+        // Handle column resize
+        const handleBugColumnResize = (colKey, newWidth) => {
+            bugsColumnWidths[colKey] = newWidth;
+            saveStateToStorage();
+        };
+
+        // Build the table using generic table component
+        buildGenericTable({
+            containerId: 'bugs-table-container',
+            tableId: 'bugs-table',
+            icon: '🐛',
+            title: 'Bug Details',
+            columns: bugsColumns,
+            items: bugs,
+            sortState: bugsSortState,
+            defaultSort: { column: 'aging', direction: 'asc' },
+            onSort: handleBugSortChange,
+            onRowClick: handleBugRowClick,
+            rowClickHint: 'Click on a row to view relationships',
+            columnWidths: bugsColumnWidths,
+            onColumnResize: handleBugColumnResize,
+            renderCell: bugsRenderCell
+        });
+    }
     function renderBugCategorizationCharts() {
         const charts = document.getElementById('bugs-categorization-charts');
         const bugs = getFilteredBugs('active');
@@ -2595,8 +3020,8 @@
         const charts = document.getElementById('bugs-effort-charts');
         
         // Get date range
-        const startDateInput = document.getElementById('bug-trend-start')?.value;
-        const endDateInput = document.getElementById('bug-trend-end')?.value;
+        const startDateInput = (document.getElementById('bugs-daterange-start') || document.getElementById('bug-trend-start'))?.value;
+        const endDateInput = (document.getElementById('bugs-daterange-end') || document.getElementById('bug-trend-end'))?.value;
         
         if (!startDateInput || !endDateInput) {
             charts.innerHTML = '<div class="insight-item info">Select a date range to view effort distribution</div>';
@@ -3127,64 +3552,6 @@
     }
     
     // Bug Trend Functions
-    function initBugTrendDates() {
-        // If state was loaded from localStorage, use the cached state to set dates
-        if (bugsStateWasLoaded && loadedStateCache) {
-            // Use the restored date range
-            const range = selectedBugDateRange;
-
-            // Update button state
-            document.querySelectorAll('.date-range-buttons .time-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.range === range);
-            });
-
-            // Show/hide custom date inputs
-            const dateInputs = document.getElementById('bug-date-inputs');
-            if (dateInputs) {
-                dateInputs.style.display = range === 'custom' ? 'flex' : 'none';
-            }
-
-            // Set dates based on range
-            if (range === 'custom' && loadedStateCache.bugTrendStartDate && loadedStateCache.bugTrendEndDate) {
-                // Use saved custom dates
-                document.getElementById('bug-trend-start').value = loadedStateCache.bugTrendStartDate;
-                document.getElementById('bug-trend-end').value = loadedStateCache.bugTrendEndDate;
-            } else {
-                // Calculate dates for preset range
-                const endDate = new Date();
-                let startDate = new Date();
-
-                switch(range) {
-                    case 'week':
-                        startDate.setDate(endDate.getDate() - 7);
-                        break;
-                    case 'month':
-                        startDate.setMonth(endDate.getMonth() - 1);
-                        break;
-                    case 'quarter':
-                    default:
-                        startDate.setMonth(endDate.getMonth() - 3);
-                        break;
-                }
-
-                document.getElementById('bug-trend-start').value = startDate.toISOString().split('T')[0];
-                document.getElementById('bug-trend-end').value = endDate.toISOString().split('T')[0];
-            }
-            return;
-        }
-
-        // Set initial dates for quarter (default)
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 3);
-
-        document.getElementById('bug-trend-start').value = startDate.toISOString().split('T')[0];
-        document.getElementById('bug-trend-end').value = endDate.toISOString().split('T')[0];
-
-        // Set initial button state
-        selectedBugDateRange = 'quarter';
-    }
-    
     function getMonday(date) {
         // Get Monday of the week (ISO week starts Monday)
         const d = new Date(date);
@@ -3229,14 +3596,12 @@
     }
     
     function renderBugTrendSection() {
-        const startDateInput = document.getElementById('bug-trend-start').value;
-        const endDateInput = document.getElementById('bug-trend-end').value;
-        
-        // Parse dates - set to start/end of day
-        const startDate = new Date(startDateInput);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(endDateInput);
+        // Fixed quarter date range (past 3 months)
+        const endDate = new Date();
         endDate.setHours(23, 59, 59, 999);
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 3);
+        startDate.setHours(0, 0, 0, 0);
         
         // Get bugs with type/priority filters applied (not date filter - we apply that ourselves for trends)
         let bugs = getFilteredBugs(false);
@@ -3298,63 +3663,7 @@
             runningOpen += weeklyData[week].opened - weeklyData[week].closed;
             weeklyData[week].openAtEnd = runningOpen;
         });
-        
-        // Get current stats (filtered)
-        const currentOpenBugs = bugs.filter(b => b.state !== 'Done' && b.state !== 'Closed' && b.state !== 'Removed').length;
-        
-        // Calculate this week vs last week change
-        const thisWeekKey = weeks.length > 0 ? weeks[weeks.length - 1] : null;
-        const lastWeekKey = weeks.length > 1 ? weeks[weeks.length - 2] : null;
-        
-        let weekChange = 0;
-        let weekChangeText = 'N/A';
-        let weekChangeClass = 'trend-neutral';
-        
-        if (thisWeekKey && lastWeekKey && weeklyData[thisWeekKey] && weeklyData[lastWeekKey]) {
-            weekChange = weeklyData[thisWeekKey].openAtEnd - weeklyData[lastWeekKey].openAtEnd;
-            if (weekChange > 0) {
-                weekChangeText = `+${weekChange}`;
-                weekChangeClass = 'trend-up';
-            } else if (weekChange < 0) {
-                weekChangeText = `${weekChange}`;
-                weekChangeClass = 'trend-down';
-            } else {
-                weekChangeText = '0';
-                weekChangeClass = 'trend-neutral';
-            }
-        }
-        
-        // Calculate averages
-        const totalOpened = weeks.reduce((sum, w) => sum + weeklyData[w].opened, 0);
-        const totalClosed = weeks.reduce((sum, w) => sum + weeklyData[w].closed, 0);
-        const avgOpenedPerWeek = weeks.length > 0 ? (totalOpened / weeks.length).toFixed(1) : 0;
-        const avgClosedPerWeek = weeks.length > 0 ? (totalClosed / weeks.length).toFixed(1) : 0;
-        
-        // Render stats
-        const trendStats = document.getElementById('bugs-trend-stats');
-        trendStats.innerHTML = `
-            <div class="stat-card">
-                <div class="stat-label">Current Open Bugs</div>
-                <div class="stat-value" style="color: var(--accent-red)">${currentOpenBugs}</div>
-                <div class="stat-subtitle">Matching filters</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Week-over-Week Change</div>
-                <div class="stat-value ${weekChangeClass}">${weekChangeText}</div>
-                <div class="stat-subtitle">${weekChange > 0 ? '📈 Losing ground' : weekChange < 0 ? '📉 Gaining ground' : '➡️ Holding steady'}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Bugs Opened/Week</div>
-                <div class="stat-value" style="color: var(--accent-orange)">${avgOpenedPerWeek}</div>
-                <div class="stat-subtitle">${totalOpened} total in period</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Avg Bugs Closed/Week</div>
-                <div class="stat-value" style="color: var(--accent-green)">${avgClosedPerWeek}</div>
-                <div class="stat-subtitle">${totalClosed} total in period</div>
-            </div>
-        `;
-        
+
         // Render chart
         renderBugTrendChart(weeks, weeklyData);
     }

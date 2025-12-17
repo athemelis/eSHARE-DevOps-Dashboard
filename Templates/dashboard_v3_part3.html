@@ -687,57 +687,8 @@
         sortCustomersTable(column);
     }
 
-    // Aging buckets in display order
-    const AGING_BUCKETS = ['1 day', '1 week', '2 weeks', '4 weeks', 'Older', 'TBD'];
-
-    // Helper to parse date string to midnight local time (strips time component)
-    function parseToLocalDate(dateStr) {
-        if (!dateStr) return null;
-        // Extract just the date part (YYYY-MM-DD) regardless of format
-        const datePart = dateStr.split('T')[0];
-        // Parse as local date at midnight
-        const [year, month, day] = datePart.split('-').map(Number);
-        return new Date(year, month - 1, day);
-    }
-
-    // Calculate aging bucket for an issue (based on DAX logic)
-    function calculateAgingBucket(issue) {
-        const state = issue.state;
-        const createdDate = issue.createdDate;
-        const closedDate = issue.closedDate;
-
-        // Check for null/missing values
-        const hasError = !state || !createdDate ||
-            ((state === 'Closed' || state === 'Done') && !closedDate);
-
-        if (hasError) return 'TBD';
-
-        // Calculate age in days
-        let ageDays;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (state === 'New' || state === 'To Do' || state === 'In Progress' || state === 'Triaged' || state === 'Ready For Review') {
-            // Open states: days since created
-            const created = parseToLocalDate(createdDate);
-            ageDays = Math.floor((today - created) / (1000 * 60 * 60 * 24));
-        } else if (state === 'Closed' || state === 'Done') {
-            // Closed states: days from created to closed
-            const created = parseToLocalDate(createdDate);
-            const closed = parseToLocalDate(closedDate);
-            ageDays = Math.floor((closed - created) / (1000 * 60 * 60 * 24));
-        } else {
-            // Unexpected state (Removed, etc.)
-            return 'TBD';
-        }
-
-        // Return the appropriate bucket
-        if (ageDays <= 1) return '1 day';
-        if (ageDays <= 7) return '1 week';
-        if (ageDays <= 14) return '2 weeks';
-        if (ageDays <= 28) return '4 weeks';
-        return 'Older';
-    }
+    // Note: AGING_BUCKETS, parseToLocalDate, and calculateAgingBucket are now
+    // defined in part2.html as part of the generic Aging filter component
 
     // Calculate age in days for sorting
     function calculateAgeDays(issue) {
@@ -1269,50 +1220,15 @@
             });
         }
 
-        // Build Aging dropdown (cross-filter aware with counts)
+        // Build Aging dropdown using generic component (cross-filter aware with counts)
         const agingMenu = document.getElementById('customers-aging-menu');
         if (agingMenu) {
             const agingFilteredIssues = getCustomersIssuesExcludingFilter('aging');
-
-            // Count issues by aging bucket
-            const agingCounts = {};
-            agingFilteredIssues.forEach(i => {
-                const bucket = calculateAgingBucket(i);
-                agingCounts[bucket] = (agingCounts[bucket] || 0) + 1;
+            agingMenu.innerHTML = buildAgingFilterDropdown({
+                dashboardId: 'customers',
+                items: agingFilteredIssues,
+                selectedAgingBuckets: customersFilters.aging
             });
-
-            // Use AGING_BUCKETS order but only show those with counts
-            const availableBuckets = AGING_BUCKETS.filter(b => agingCounts[b] > 0);
-
-            let agingHtml = `
-                <div class="filter-dropdown-search">
-                    <input type="text" placeholder="Search aging..."
-                           oninput="filterCustomersDropdownOptions(this, 'customers-aging-menu')"
-                           onclick="event.stopPropagation();">
-                </div>
-                <div class="filter-dropdown-options" id="customers-aging-menu-options">
-            `;
-
-            availableBuckets.forEach(b => {
-                const isChecked = customersFilters.aging.includes(b);
-                const escapedValue = b.replace(/"/g, '&quot;').replace(/'/g, "\\'");
-                agingHtml += `
-                    <label class="filter-dropdown-option" data-search-value="${b.toLowerCase()}" onclick="event.stopPropagation();">
-                        <input type="checkbox" value="${escapedValue}" ${isChecked ? 'checked' : ''} onchange="updateCustomersFilter('aging')">
-                        <span class="option-label">${b}</span>
-                        <span class="option-count">${agingCounts[b]}</span>
-                    </label>
-                `;
-            });
-
-            agingHtml += `</div>`;
-            agingHtml += `
-                <div class="filter-dropdown-actions">
-                    <button class="filter-btn-primary" onclick="selectAllCustomersFilter('aging', event)">Select All</button>
-                    <button class="filter-btn-secondary" onclick="clearCustomersFilter('aging', event)">Clear</button>
-                </div>
-            `;
-            agingMenu.innerHTML = agingHtml;
         }
 
         // Update display text for all filters
@@ -1322,8 +1238,9 @@
         updateGenericReleaseDisplay('customers');
         updateGenericStateDisplay('customers');
         updateGenericTagDisplay('customers');
+        updateGenericAgingDisplay('customers');
         // Dashboard-specific filters
-        ['categories', 'aging'].forEach(ft => {
+        ['categories'].forEach(ft => {
             updateCustomersFilterDisplay(ft);
         });
     }
@@ -1413,17 +1330,6 @@
         renderCustomersView();
         populateCustomersFilterDropdowns();
     }
-
-    // Filter by aging bucket click (from histogram)
-    function filterByAgingBucket(bucket) {
-        // Set aging filter to the clicked bucket
-        customersFilters.aging = [bucket];
-        saveStateToStorage();
-        renderCustomersView();
-        populateCustomersFilterDropdowns();
-        updateCustomersClearButton();
-    }
-
     // Filter by state click (from Insights)
     function filterCustomersByState(stateOrType) {
         if (stateOrType === 'open') {
@@ -1670,54 +1576,8 @@
                customersSortState.direction !== defaultCustomersSortState.direction;
     }
 
-    // Helper to count relationships for a work item (for displaying pills in table)
-    function countRelationshipsForWorkItem(workItemId) {
-        let childrenCount = 0;
-        let relatedCount = 0;
-        let hasParent = false;
-
-        // Count links where this item is the source (children, related-forward)
-        workItemLinks.forEach(link => {
-            if (link.source === workItemId) {
-                if (link.type === 'Child') {
-                    childrenCount++;
-                } else if (link.type === 'Related') {
-                    relatedCount++;
-                }
-            }
-            // Check if this item is a target of a Child link (meaning source is parent)
-            if (link.target === workItemId && link.type === 'Child') {
-                hasParent = true;
-            }
-        });
-
-        return { childrenCount, relatedCount, hasParent };
-    }
-
-    // Build relationship pills HTML for a work item
-    function buildRelationshipPills(workItemId) {
-        const counts = countRelationshipsForWorkItem(workItemId);
-        const pills = [];
-
-        if (counts.hasParent) {
-            pills.push('<span class="rel-pill rel-pill-parent">has parent</span>');
-        }
-        if (counts.childrenCount > 0) {
-            pills.push(`<span class="rel-pill rel-pill-children">${counts.childrenCount} ${counts.childrenCount === 1 ? 'child' : 'children'}</span>`);
-        }
-        if (counts.relatedCount > 0) {
-            pills.push(`<span class="rel-pill rel-pill-related">${counts.relatedCount} related</span>`);
-        }
-
-        // If no relationships, show "no links" pill
-        if (pills.length === 0) {
-            pills.push('<span class="rel-pill rel-pill-none">no links</span>');
-        }
-
-        return pills.join('');
-    }
-
     // Customers View
+    // Note: countRelationshipsForWorkItem() and buildRelationshipPills() are now in part2.html as generic functions
     function renderCustomersView() {
         const stats = document.getElementById('customer-stats');
         const insights = document.getElementById('customer-insights');
@@ -1810,7 +1670,7 @@
                             return `
                                 <div class="aging-bar-container">
                                     <div class="aging-bar-count">${count}</div>
-                                    <div class="aging-bar ${barClass}" style="height: ${Math.max(heightPct, 2)}%" onclick="filterByAgingBucket('${bucket}')" title="${bucket}: ${count} issues"></div>
+                                    <div class="aging-bar ${barClass}" style="height: ${Math.max(heightPct, 2)}%" onclick="filterByAgingBucket('customers', '${bucket}')" title="${bucket}: ${count} issues"></div>
                                     <div class="aging-bar-label">${bucket}</div>
                                 </div>
                             `;
@@ -2682,7 +2542,10 @@
                         badges += `<span class="iteration-count-badge" title="${[...iterationSet].join(', ')}">${iterationSet.size} iterations</span>`;
                     }
                 }
-                return `<td class="${colClass}" title="${(item.title || '').replace(/"/g, '&quot;')}">${item.title || ''} ${badges}</td>`;
+                return `<td class="${colClass}" title="${(item.title || '').replace(/"/g, '&quot;')}">
+                    <span class="title-text">${item.title || ''} ${badges}</span>
+                    <span class="rel-pills">${buildRelationshipPills(item.id)}</span>
+                </td>`;
             }
             if (key === 'state') {
                 return `<td class="${colClass}"><span class="state-badge ${getStateClass(item.state)}">${item.state || ''}</span></td>`;
