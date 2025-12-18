@@ -6511,8 +6511,9 @@
 
         tasksData.filtered = filtered;
 
-        renderTasksWorkLogSummary();
+        // Render in order: stats, worklog (computes warnings), insights (uses warnings), charts, table
         renderTasksStats(filtered);
+        renderTasksWorkLogSummary();  // Must run before insights - computes worklogWarnings
         renderTasksInsights(filtered);
         renderTasksCharts(filtered);
         renderTasksTable(filtered);
@@ -6541,6 +6542,13 @@
     // showing work logged in the past week
 
     let worklogSummaryCollapsed = false;
+
+    // Shared worklog warnings data (computed in renderTasksWorkLogSummary, displayed in renderTasksInsights)
+    let worklogWarnings = {
+        inconsistentEntries: [],  // Work log entries with effort > date range
+        orphanTaskIds: [],        // Task IDs with work logged but no parent
+        orphanDays: 0             // Total days logged on orphan tasks
+    };
 
     function toggleWorklogSummary() {
         const section = document.getElementById('tasks-worklog-summary');
@@ -6693,8 +6701,11 @@
             });
         });
 
-        // If no work logs in the past week, show empty state
+        // If no work logs in the past week, reset warnings and show empty state
         if (workLogEntries.length === 0) {
+            worklogWarnings.inconsistentEntries = [];
+            worklogWarnings.orphanTaskIds = [];
+            worklogWarnings.orphanDays = 0;
             container.innerHTML = `
                 <div class="worklog-summary-section" id="tasks-worklog-summary">
                     <div class="worklog-summary-header" onclick="toggleWorklogSummary()">
@@ -6797,19 +6808,9 @@
         workItemSummaryHtml += buildWorkItemList(byWorkItem.issues, '🎫', 'Issue');
         workItemSummaryHtml += buildWorkItemList(byWorkItem.deliverySlices, '📋', 'Delivery Slice');
 
-        // Orphans warning
-        if (byWorkItem.orphans.count > 0) {
-            workItemSummaryHtml += `
-                <div class="worklog-workitem-row worklog-orphan-warning">
-                    <span class="worklog-workitem-icon">⚠️</span>
-                    <span class="worklog-workitem-type">Orphans:</span>
-                    <span class="worklog-orphan-text">
-                        ${byWorkItem.orphans.taskIds.length} task${byWorkItem.orphans.taskIds.length !== 1 ? 's' : ''}
-                        (${byWorkItem.orphans.days.toFixed(1)}d) - needs parent assignment
-                    </span>
-                </div>
-            `;
-        }
+        // Store orphan data for Task Insights (warnings moved there)
+        worklogWarnings.orphanTaskIds = byWorkItem.orphans.taskIds;
+        worklogWarnings.orphanDays = byWorkItem.orphans.days;
 
         // Sort teams alphabetically
         const sortedTeams = Object.keys(byTeam).sort((a, b) => {
@@ -6843,8 +6844,9 @@
             return false;
         });
 
-        // Count entries with data inconsistencies
+        // Count entries with data inconsistencies and store for Task Insights
         const inconsistentEntries = workLogEntries.filter(e => e.hasInconsistency);
+        worklogWarnings.inconsistentEntries = inconsistentEntries;
 
         // Generate days array - include weekends only if there's weekend work
         const allDays = [];
@@ -7148,15 +7150,6 @@
                             <span class="worklog-stat-label">Entries</span>
                         </div>
                     </div>
-                    ${inconsistentEntries.length > 0 ? `
-                    <div class="worklog-data-warning">
-                        <span class="warning-icon">⚠️</span>
-                        <span class="warning-text">
-                            <strong>Data Issue:</strong> ${inconsistentEntries.length} ${inconsistentEntries.length === 1 ? 'entry has' : 'entries have'} effort > date range
-                            (likely hours entered as days). Tasks: ${[...new Set(inconsistentEntries.map(e => '#' + e.taskId))].join(', ')}
-                        </span>
-                    </div>
-                    ` : ''}
                     <div class="worklog-by-workitem">
                         <div class="worklog-section-label">BY WORK ITEM:</div>
                         ${workItemSummaryHtml || '<div class="worklog-no-items">No parent work items found</div>'}
@@ -7210,9 +7203,9 @@
     function renderTasksInsights(tasks) {
         const container = document.getElementById('tasks-insights');
         if (!container) return;
-        
+
         const insights = [];
-        
+
         // Parent type breakdown
         const parentTypes = {};
         let orphanCount = 0;
@@ -7225,16 +7218,16 @@
                 parentTypes[pType] = (parentTypes[pType] || 0) + 1;
             }
         });
-        
+
         const parentBreakdown = Object.entries(parentTypes)
             .sort((a, b) => b[1] - a[1])
             .map(([type, count]) => `${count} under ${type}`)
             .join(', ');
-        
+
         if (parentBreakdown) {
-            insights.push({ type: 'info', text: `Parent breakdown: ${parentBreakdown}${orphanCount > 0 ? `, ${orphanCount} orphans` : ''}` });
+            insights.push({ type: 'info', text: `<strong>Parent breakdown:</strong> ${parentBreakdown}${orphanCount > 0 ? `, ${orphanCount} orphans` : ''}` });
         }
-        
+
         // Open tasks by assignee
         const openTasks = tasks.filter(t => !['Done', 'Closed', 'Removed'].includes(t.state));
         const openByAssignee = {};
@@ -7242,26 +7235,57 @@
             const assignee = t.assignedTo || '(Unassigned)';
             openByAssignee[assignee] = (openByAssignee[assignee] || 0) + 1;
         });
-        
+
         const topAssignees = Object.entries(openByAssignee)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([name, count]) => `${name.split(' ')[0]}: ${count}`)
             .join(', ');
-        
+
         if (topAssignees) {
-            insights.push({ type: 'info', text: `Open tasks by assignee: ${topAssignees}` });
+            insights.push({ type: 'info', text: `<strong>Open tasks by assignee:</strong> ${topAssignees}` });
         }
-        
+
         // Tasks without effort
         const noEffort = tasks.filter(t => !t.effort && !['Done', 'Closed', 'Removed'].includes(t.state));
         if (noEffort.length > 0) {
-            insights.push({ type: 'warning', text: `${noEffort.length} open tasks have no effort estimate` });
+            insights.push({ type: 'warning', text: `<strong>${noEffort.length} open tasks</strong> have no effort estimate` });
         }
-        
-        container.innerHTML = insights.length > 0 
-            ? insights.map(i => `<div class="insight-item ${i.type}">${i.text}</div>`).join('')
-            : '<div class="insight-item info">No insights to display</div>';
+
+        // Worklog orphan warning (from past week work logs)
+        if (worklogWarnings.orphanTaskIds.length > 0) {
+            insights.push({
+                type: 'warning',
+                text: `<strong>Work logged on orphans:</strong> ${worklogWarnings.orphanTaskIds.length} task${worklogWarnings.orphanTaskIds.length !== 1 ? 's' : ''} (${worklogWarnings.orphanDays.toFixed(1)}d) need parent assignment`
+            });
+        }
+
+        // Data inconsistency warning (effort > date range)
+        if (worklogWarnings.inconsistentEntries.length > 0) {
+            const taskIds = [...new Set(worklogWarnings.inconsistentEntries.map(e => '#' + e.taskId))].join(', ');
+            insights.push({
+                type: 'warning',
+                text: `<strong>Data issue:</strong> ${worklogWarnings.inconsistentEntries.length} ${worklogWarnings.inconsistentEntries.length === 1 ? 'entry has' : 'entries have'} effort > date range (likely hours entered as days). Tasks: ${taskIds}`
+            });
+        }
+
+        // Build HTML with title and horizontal layout
+        let html = `
+            <div class="tasks-insights-header">
+                <span class="tasks-insights-icon">📋</span>
+                <span class="tasks-insights-title">Task Insights</span>
+            </div>
+            <div class="tasks-insights-items">
+        `;
+
+        if (insights.length > 0) {
+            html += insights.map(i => `<div class="insight-item ${i.type}">${i.text}</div>`).join('');
+        } else {
+            html += '<div class="insight-item info">No insights to display</div>';
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
     }
     
     function renderTasksCharts(tasks) {

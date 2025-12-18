@@ -1304,7 +1304,35 @@
             opacity: 0.7;
             text-decoration: underline;
         }
-        
+
+        /* Task Insights - horizontal layout */
+        .tasks-insights-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .tasks-insights-icon {
+            font-size: 1rem;
+        }
+        .tasks-insights-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+        .tasks-insights-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.5rem;
+        }
+        .tasks-insights-items .insight-item {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        #tasks-insights {
+            padding: 0.75rem 1rem;
+        }
+
         .insights-grid .insights-title {
             margin-bottom: 0.75rem;
         }
@@ -5603,16 +5631,15 @@
 
         <!-- Tasks View -->
         <div class="dashboard-view" id="view-tasks">
+            <!-- Stats Cards (top) -->
+            <div class="stats-grid" id="tasks-stats"></div>
+            <!-- Insights Panel (below stats) -->
+            <div class="insights-panel" id="tasks-insights"></div>
             <!-- Work Log Summary Section (Past Week) -->
             <div id="tasks-worklog-summary-container"></div>
-
-            <!-- Task Overview Section -->
-            <div id="tasks-overview-section">
-                <div class="stats-grid" id="tasks-stats"></div>
-                <div class="insights-panel" id="tasks-insights"></div>
-                <div class="charts-grid" id="tasks-charts"></div>
-                <div class="table-container" id="tasks-table-container"></div>
-            </div>
+            <!-- Charts and Table -->
+            <div class="charts-grid" id="tasks-charts"></div>
+            <div class="table-container" id="tasks-table-container"></div>
         </div>
 
         <!-- Validation View -->

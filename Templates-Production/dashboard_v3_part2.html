@@ -68,10 +68,9 @@
                 selectedTimePeriod: typeof selectedTimePeriod !== 'undefined' ? selectedTimePeriod : 'all',
                 engFilters: typeof engFilters !== 'undefined' ? engFilters : null,
                 selectedEngineers: typeof selectedEngineers !== 'undefined' ? selectedEngineers : [],
-                // Tasks view state
-                tasksParentTypeFilter: document.getElementById('tasks-parent-type-filter')?.value || 'all',
-                tasksTeamFilter: document.getElementById('tasks-team-filter')?.value || 'all',
-                tasksStateFilter: typeof getSelectedTasksStates !== 'undefined' ? getSelectedTasksStates() : [],
+                // Tasks view state (v97: generic filter components)
+                tasksFilters: typeof tasksFilters !== 'undefined' ? tasksFilters : null,
+                tasksColumnWidths: typeof tasksColumnWidths !== 'undefined' ? tasksColumnWidths : {},
                 worklogSummaryCollapsed: typeof worklogSummaryCollapsed !== 'undefined' ? worklogSummaryCollapsed : false,
                 // Details view state
                 detailsTypeFilter: document.getElementById('details-type-filter')?.value || 'all',
@@ -269,9 +268,14 @@
             teamsStateWasLoaded = true;
         }
 
-        // Mark Tasks view state for restoration - always if we have any tasks state
-        if (typeof state.tasksParentTypeFilter !== 'undefined' || typeof state.tasksTeamFilter !== 'undefined' || state.tasksStateFilter) {
+        // Restore Tasks view state (v97: generic filter components)
+        if (state.tasksFilters && typeof tasksFilters !== 'undefined') {
+            Object.assign(tasksFilters, state.tasksFilters);
             tasksStateWasLoaded = true;
+        }
+        // Restore Tasks table column widths
+        if (state.tasksColumnWidths && typeof tasksColumnWidths !== 'undefined') {
+            Object.assign(tasksColumnWidths, state.tasksColumnWidths);
         }
         // Restore worklog summary collapsed state
         if (typeof state.worklogSummaryCollapsed !== 'undefined' && typeof worklogSummaryCollapsed !== 'undefined') {
@@ -1217,7 +1221,7 @@
 
     /**
      * Handle search input change for a dashboard
-     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', or 'bugs'
+     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', 'bugs', or 'tasks'
      */
     function handleGenericSearchChange(dashboardId) {
         const inputId = `${dashboardId}-search-input`;
@@ -1243,12 +1247,17 @@
             bugsFilters.search = searchValue;
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.search = searchValue;
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
     }
 
     /**
      * Clear search filter for a dashboard
-     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', or 'bugs'
+     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', 'bugs', or 'tasks'
      */
     function clearGenericSearch(dashboardId) {
         const inputId = `${dashboardId}-search-input`;
@@ -1264,12 +1273,14 @@
             customersFilters.search = '';
         } else if (dashboardId === 'bugs') {
             bugsFilters.search = '';
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.search = '';
         }
     }
 
     /**
      * Get current search value for a dashboard
-     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', or 'bugs'
+     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', 'bugs', or 'tasks'
      * @returns {string} Current search value
      */
     function getGenericSearchValue(dashboardId) {
@@ -1281,13 +1292,15 @@
             return customersFilters.search || '';
         } else if (dashboardId === 'bugs') {
             return bugsFilters.search || '';
+        } else if (dashboardId === 'tasks') {
+            return tasksFilters.search || '';
         }
         return '';
     }
 
     /**
      * Sync search input with current state (after loading from localStorage)
-     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', or 'bugs'
+     * @param {string} dashboardId - 'releases', 'roadmap', 'customers', 'bugs', or 'tasks'
      */
     function syncGenericSearchFilter(dashboardId) {
         const inputId = `${dashboardId}-search-input`;
@@ -1811,6 +1824,19 @@
             updateGenericPriorityDisplay(dashboardId);
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-priority-dropdown';
+            if (checked) {
+                if (!tasksFilters.priorities.includes(priority)) {
+                    tasksFilters.priorities.push(priority);
+                }
+            } else {
+                tasksFilters.priorities = tasksFilters.priorities.filter(p => p !== priority);
+            }
+            updateGenericPriorityDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         // Re-open dropdown and restore scroll position
@@ -1860,6 +1886,12 @@
             updateGenericPriorityDisplay(dashboardId);
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.priorities = allPriorities;
+            updateGenericPriorityDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
     }
 
@@ -1895,6 +1927,12 @@
             updateGenericPriorityDisplay(dashboardId);
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.priorities = [];
+            updateGenericPriorityDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
     }
 
@@ -1916,6 +1954,9 @@
         } else if (dashboardId === 'bugs') {
             displayId = 'bugs-priority-display';
             selectedPriorities = bugsFilters.priorities;
+        } else if (dashboardId === 'tasks') {
+            displayId = 'tasks-priority-display';
+            selectedPriorities = tasksFilters.priorities;
         } else {
             return;
         }
@@ -1940,6 +1981,8 @@
             selectedPriorities = customersFilters.priorities;
         } else if (dashboardId === 'bugs') {
             selectedPriorities = bugsFilters.priorities;
+        } else if (dashboardId === 'tasks') {
+            selectedPriorities = tasksFilters.priorities;
         } else {
             return;
         }
@@ -2122,6 +2165,17 @@
             selectedStates = bugsFilters.states;
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-state-dropdown';
+            if (checked) {
+                if (!tasksFilters.states.includes(state)) tasksFilters.states.push(state);
+            } else {
+                tasksFilters.states = tasksFilters.states.filter(s => s !== state);
+            }
+            selectedStates = tasksFilters.states;
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         } else {
             return;
         }
@@ -2173,6 +2227,11 @@
             bugsFilters.states = allStates;
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.states = allStates;
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         updateGenericStateDisplay(dashboardId);
@@ -2206,6 +2265,11 @@
             bugsFilters.states = [];
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.states = [];
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         updateGenericStateDisplay(dashboardId);
@@ -2229,6 +2293,9 @@
         } else if (dashboardId === 'bugs') {
             displayId = 'bugs-state-display';
             selectedStates = bugsFilters.states;
+        } else if (dashboardId === 'tasks') {
+            displayId = 'tasks-state-display';
+            selectedStates = tasksFilters.states;
         } else {
             return;
         }
@@ -2253,6 +2320,8 @@
             selectedStates = customersFilters.states;
         } else if (dashboardId === 'bugs') {
             selectedStates = bugsFilters.states;
+        } else if (dashboardId === 'tasks') {
+            selectedStates = tasksFilters.states;
         } else {
             return;
         }
@@ -2436,6 +2505,18 @@
             }
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-team-dropdown';
+            if (checked) {
+                if (!tasksFilters.teams.includes(team)) {
+                    tasksFilters.teams.push(team);
+                }
+            } else {
+                tasksFilters.teams = tasksFilters.teams.filter(t => t !== team);
+            }
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         // Keep dropdown open and restore scroll position
@@ -2487,6 +2568,12 @@
             bugsFilters.teams = allTeams;
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-team-dropdown';
+            tasksFilters.teams = allTeams;
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         if (openDropdownId) {
@@ -2533,6 +2620,12 @@
             bugsFilters.teams = [];
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-team-dropdown';
+            tasksFilters.teams = [];
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         if (openDropdownId) {
@@ -2563,6 +2656,9 @@
         } else if (dashboardId === 'bugs') {
             displayId = 'bugs-team-display';
             selectedTeams = bugsFilters.teams;
+        } else if (dashboardId === 'tasks') {
+            displayId = 'tasks-team-display';
+            selectedTeams = tasksFilters.teams;
         } else {
             return;
         }
@@ -2587,6 +2683,8 @@
             selectedTeams = customersFilters.teams;
         } else if (dashboardId === 'bugs') {
             selectedTeams = bugsFilters.teams;
+        } else if (dashboardId === 'tasks') {
+            selectedTeams = tasksFilters.teams;
         } else {
             return;
         }
@@ -2788,6 +2886,23 @@
             updateGenericTagDisplay('bugs');
             applyBugFilters();
             saveStateToStorage();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-tag-dropdown';
+            if (checked) {
+                if (!tasksFilters.tags.includes(value)) {
+                    tasksFilters.tags.push(value);
+                }
+            } else {
+                tasksFilters.tags = tasksFilters.tags.filter(v => v !== value);
+                // Reset exclusion mode if all tags are unchecked
+                if (tasksFilters.tags.length === 0) {
+                    tasksFilters.tagsExclusionMode = false;
+                }
+            }
+            updateGenericTagDisplay('tasks');
+            renderTasksView();
+            updateTasksClearButton();
+            saveStateToStorage();
         }
 
         // Restore scroll position after re-render
@@ -2823,6 +2938,10 @@
         } else if (dashboardId === 'bugs') {
             bugsFilters.tagsLogicMode = mode;
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.tagsLogicMode = mode;
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         // Update button states
@@ -2890,6 +3009,13 @@
             bugsFilters.tagsExclusionMode = true;
             updateGenericTagDisplay('bugs');
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-tag-dropdown';
+            tasksFilters.tags = values;
+            tasksFilters.tagsExclusionMode = true;
+            updateGenericTagDisplay('tasks');
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         saveStateToStorage();
@@ -2941,6 +3067,13 @@
             bugsFilters.tagsExclusionMode = false;
             updateGenericTagDisplay('bugs');
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-tag-dropdown';
+            tasksFilters.tags = [];
+            tasksFilters.tagsExclusionMode = false;
+            updateGenericTagDisplay('tasks');
+            renderTasksView();
+            updateTasksClearButton();
         }
 
         saveStateToStorage();
@@ -2972,6 +3105,9 @@
         } else if (dashboardId === 'bugs') {
             displayId = 'bugs-tag-display';
             selectedTags = bugsFilters.tags;
+        } else if (dashboardId === 'tasks') {
+            displayId = 'tasks-tag-display';
+            selectedTags = tasksFilters.tags;
         } else {
             return;
         }
@@ -3000,6 +3136,9 @@
         } else if (dashboardId === 'bugs') {
             selectedTags = bugsFilters.tags;
             logicMode = bugsFilters.tagsLogicMode;
+        } else if (dashboardId === 'tasks') {
+            selectedTags = tasksFilters.tags;
+            logicMode = tasksFilters.tagsLogicMode;
         } else {
             return;
         }
@@ -3548,6 +3687,17 @@
             }
             selectedAgingBuckets = bugsFilters.aging;
             renderFn = () => applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-aging-dropdown';
+            if (checked) {
+                if (!tasksFilters.aging.includes(value)) {
+                    tasksFilters.aging.push(value);
+                }
+            } else {
+                tasksFilters.aging = tasksFilters.aging.filter(b => b !== value);
+            }
+            selectedAgingBuckets = tasksFilters.aging;
+            renderFn = () => { renderTasksView(); updateTasksClearButton(); };
         }
 
         // Save scroll position
@@ -3592,6 +3742,12 @@
             updateGenericAgingDisplay(dashboardId);
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.aging = allValues;
+            updateGenericAgingDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
     }
 
@@ -3615,6 +3771,12 @@
             updateGenericAgingDisplay(dashboardId);
             saveStateToStorage();
             applyBugFilters();
+        } else if (dashboardId === 'tasks') {
+            tasksFilters.aging = [];
+            updateGenericAgingDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
         }
     }
 
@@ -3630,6 +3792,9 @@
         } else if (dashboardId === 'bugs') {
             displayId = 'bugs-aging-display';
             selectedAgingBuckets = bugsFilters.aging;
+        } else if (dashboardId === 'tasks') {
+            displayId = 'tasks-aging-display';
+            selectedAgingBuckets = tasksFilters.aging;
         }
 
         const displayEl = document.getElementById(displayId);
@@ -3650,6 +3815,9 @@
         } else if (dashboardId === 'bugs') {
             optionsId = 'bugs-aging-options';
             selectedAgingBuckets = bugsFilters.aging;
+        } else if (dashboardId === 'tasks') {
+            optionsId = 'tasks-aging-options';
+            selectedAgingBuckets = tasksFilters.aging;
         }
 
         const optionsContainer = document.getElementById(optionsId);
@@ -3680,6 +3848,669 @@
     }
 
     // ==================== END GENERIC AGING FILTER COMPONENT ====================
+
+    // ==================== GENERIC TASK TYPE FILTER COMPONENT ====================
+    // Used by: Tasks Dashboard
+    // Features: search box, item counts, Select All / Clear buttons
+
+    /**
+     * Compute task type information from a list of items
+     * @param {Array} items - Array of work items (Tasks)
+     * @returns {Object} { taskTypes: [], taskTypeInfo: {} }
+     */
+    function computeTaskTypeInfo(items) {
+        const taskTypeInfo = {};
+        let noTaskTypeCount = 0;
+
+        items.forEach(item => {
+            const taskType = item.taskType || '(No Task Type)';
+            if (taskType === '(No Task Type)') {
+                noTaskTypeCount++;
+            } else {
+                taskTypeInfo[taskType] = (taskTypeInfo[taskType] || 0) + 1;
+            }
+        });
+
+        // Sort task types alphabetically
+        const taskTypes = Object.keys(taskTypeInfo).sort((a, b) => a.localeCompare(b));
+
+        return { taskTypes, taskTypeInfo, noTaskTypeCount };
+    }
+
+    /**
+     * Build Task Type filter dropdown HTML
+     */
+    function buildTaskTypeFilterDropdown(config) {
+        const { dashboardId, items, selectedTaskTypes } = config;
+        const { taskTypes, taskTypeInfo, noTaskTypeCount } = computeTaskTypeInfo(items);
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search task types..."
+                       oninput="filterGenericTaskTypeOptions('${dashboardId}-tasktype-options', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${dashboardId}-tasktype-options">
+        `;
+
+        // Add regular task types
+        taskTypes.forEach(tt => {
+            const isChecked = selectedTaskTypes.includes(tt);
+            const escapedValue = tt.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${tt.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${tt.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericTaskTypeChange('${dashboardId}', '${escapedValue}', this.checked, event)">
+                    <span class="option-label">${tt}</span>
+                    <span class="option-count">${taskTypeInfo[tt]}</span>
+                </label>
+            `;
+        });
+
+        // Add "(No Task Type)" option if there are items without task type
+        if (noTaskTypeCount > 0) {
+            const isChecked = selectedTaskTypes.includes('(No Task Type)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(no task type)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Task Type)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericTaskTypeChange('${dashboardId}', '(No Task Type)', this.checked, event)">
+                    <span class="option-label">(No Task Type)</span>
+                    <span class="option-count">${noTaskTypeCount}</span>
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericTaskType('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericTaskType('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function filterGenericTaskTypeOptions(optionsId, searchText) {
+        const container = document.getElementById(optionsId);
+        if (!container) return;
+        const query = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(query) ? '' : 'none';
+        });
+    }
+
+    function handleGenericTaskTypeChange(dashboardId, value, checked, event) {
+        if (event) event.stopPropagation();
+
+        const optionsContainer = document.getElementById(`${dashboardId}-tasktype-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-tasktype-dropdown';
+            if (checked) {
+                if (!tasksFilters.taskTypes.includes(value)) {
+                    tasksFilters.taskTypes.push(value);
+                }
+            } else {
+                tasksFilters.taskTypes = tasksFilters.taskTypes.filter(t => t !== value);
+            }
+            updateGenericTaskTypeDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        // Keep dropdown open and restore scroll position
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(`${dashboardId}-tasktype-options`);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }, 0);
+        }
+    }
+
+    function selectAllGenericTaskType(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsContainer = document.getElementById(`${dashboardId}-tasktype-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        const checkboxes = document.querySelectorAll(`#${dashboardId}-tasktype-options input[type="checkbox"]`);
+        const allTaskTypes = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            allTaskTypes.push(cb.value);
+        });
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-tasktype-dropdown';
+            tasksFilters.taskTypes = allTaskTypes;
+            updateGenericTaskTypeDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(`${dashboardId}-tasktype-options`);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }, 0);
+        }
+    }
+
+    function clearGenericTaskType(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const checkboxes = document.querySelectorAll(`#${dashboardId}-tasktype-options input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-tasktype-dropdown';
+            tasksFilters.taskTypes = [];
+            updateGenericTaskTypeDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+            }, 0);
+        }
+    }
+
+    function updateGenericTaskTypeDisplay(dashboardId) {
+        let displayId, selectedTaskTypes;
+
+        if (dashboardId === 'tasks') {
+            displayId = 'tasks-tasktype-display';
+            selectedTaskTypes = tasksFilters.taskTypes;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        display.textContent = formatFilterDisplay(selectedTaskTypes, 'All Task Types', 'task types');
+    }
+
+    function syncGenericTaskTypeFilter(dashboardId) {
+        let selectedTaskTypes;
+
+        if (dashboardId === 'tasks') {
+            selectedTaskTypes = tasksFilters.taskTypes;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-tasktype-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedTaskTypes.includes(cb.value);
+        });
+
+        updateGenericTaskTypeDisplay(dashboardId);
+    }
+
+    // ==================== END GENERIC TASK TYPE FILTER COMPONENT ====================
+
+    // ==================== GENERIC ITERATION FILTER COMPONENT ====================
+    // Used by: Tasks Dashboard
+    // Features: search box, item counts, Select All / Clear buttons
+
+    /**
+     * Compute iteration information from a list of items
+     * @param {Array} items - Array of work items
+     * @returns {Object} { iterations: [], iterationInfo: {}, noIterationCount: number }
+     */
+    function computeIterationInfo(items) {
+        const iterationInfo = {};
+        let noIterationCount = 0;
+
+        items.forEach(item => {
+            const iteration = item.iterationPath ? getLastPathSegment(item.iterationPath) : '(No Iteration)';
+            if (iteration === '(No Iteration)') {
+                noIterationCount++;
+            } else {
+                iterationInfo[iteration] = (iterationInfo[iteration] || 0) + 1;
+            }
+        });
+
+        // Sort iterations alphabetically
+        const iterations = Object.keys(iterationInfo).sort((a, b) => a.localeCompare(b));
+
+        return { iterations, iterationInfo, noIterationCount };
+    }
+
+    /**
+     * Build Iteration filter dropdown HTML
+     */
+    function buildIterationFilterDropdown(config) {
+        const { dashboardId, items, selectedIterations } = config;
+        const { iterations, iterationInfo, noIterationCount } = computeIterationInfo(items);
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search iterations..."
+                       oninput="filterGenericIterationOptions('${dashboardId}-iteration-options', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${dashboardId}-iteration-options">
+        `;
+
+        // Add regular iterations
+        iterations.forEach(iter => {
+            const isChecked = selectedIterations.includes(iter);
+            const escapedValue = iter.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${iter.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${iter.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericIterationChange('${dashboardId}', '${escapedValue}', this.checked, event)">
+                    <span class="option-label">${iter}</span>
+                    <span class="option-count">${iterationInfo[iter]}</span>
+                </label>
+            `;
+        });
+
+        // Add "(No Iteration)" option if there are items without iteration
+        if (noIterationCount > 0) {
+            const isChecked = selectedIterations.includes('(No Iteration)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(no iteration)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Iteration)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericIterationChange('${dashboardId}', '(No Iteration)', this.checked, event)">
+                    <span class="option-label">(No Iteration)</span>
+                    <span class="option-count">${noIterationCount}</span>
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericIteration('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericIteration('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function filterGenericIterationOptions(optionsId, searchText) {
+        const container = document.getElementById(optionsId);
+        if (!container) return;
+        const query = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(query) ? '' : 'none';
+        });
+    }
+
+    function handleGenericIterationChange(dashboardId, value, checked, event) {
+        if (event) event.stopPropagation();
+
+        const optionsContainer = document.getElementById(`${dashboardId}-iteration-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-iteration-dropdown';
+            if (checked) {
+                if (!tasksFilters.iterations.includes(value)) {
+                    tasksFilters.iterations.push(value);
+                }
+            } else {
+                tasksFilters.iterations = tasksFilters.iterations.filter(i => i !== value);
+            }
+            updateGenericIterationDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        // Keep dropdown open and restore scroll position
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(`${dashboardId}-iteration-options`);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }, 0);
+        }
+    }
+
+    function selectAllGenericIteration(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsContainer = document.getElementById(`${dashboardId}-iteration-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        const checkboxes = document.querySelectorAll(`#${dashboardId}-iteration-options input[type="checkbox"]`);
+        const allIterations = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            allIterations.push(cb.value);
+        });
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-iteration-dropdown';
+            tasksFilters.iterations = allIterations;
+            updateGenericIterationDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(`${dashboardId}-iteration-options`);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }, 0);
+        }
+    }
+
+    function clearGenericIteration(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const checkboxes = document.querySelectorAll(`#${dashboardId}-iteration-options input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-iteration-dropdown';
+            tasksFilters.iterations = [];
+            updateGenericIterationDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+            }, 0);
+        }
+    }
+
+    function updateGenericIterationDisplay(dashboardId) {
+        let displayId, selectedIterations;
+
+        if (dashboardId === 'tasks') {
+            displayId = 'tasks-iteration-display';
+            selectedIterations = tasksFilters.iterations;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        display.textContent = formatFilterDisplay(selectedIterations, 'All Iterations', 'iterations');
+    }
+
+    function syncGenericIterationFilter(dashboardId) {
+        let selectedIterations;
+
+        if (dashboardId === 'tasks') {
+            selectedIterations = tasksFilters.iterations;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-iteration-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedIterations.includes(cb.value);
+        });
+
+        updateGenericIterationDisplay(dashboardId);
+    }
+
+    // ==================== END GENERIC ITERATION FILTER COMPONENT ====================
+
+    // ==================== GENERIC ASSIGNEE FILTER COMPONENT ====================
+    // Used by: Tasks Dashboard
+    // Features: search box, item counts, Select All / Clear buttons
+
+    /**
+     * Compute assignee information from a list of items
+     * @param {Array} items - Array of work items
+     * @returns {Object} { assignees: [], assigneeInfo: {}, unassignedCount: number }
+     */
+    function computeAssigneeInfo(items) {
+        const assigneeInfo = {};
+        let unassignedCount = 0;
+
+        items.forEach(item => {
+            const assignee = item.assignedTo || '(Unassigned)';
+            if (assignee === '(Unassigned)') {
+                unassignedCount++;
+            } else {
+                assigneeInfo[assignee] = (assigneeInfo[assignee] || 0) + 1;
+            }
+        });
+
+        // Sort assignees alphabetically
+        const assignees = Object.keys(assigneeInfo).sort((a, b) => a.localeCompare(b));
+
+        return { assignees, assigneeInfo, unassignedCount };
+    }
+
+    /**
+     * Build Assignee filter dropdown HTML
+     */
+    function buildAssigneeFilterDropdown(config) {
+        const { dashboardId, items, selectedAssignees } = config;
+        const { assignees, assigneeInfo, unassignedCount } = computeAssigneeInfo(items);
+
+        let html = `
+            <div class="filter-dropdown-search">
+                <input type="text" placeholder="Search assignees..."
+                       oninput="filterGenericAssigneeOptions('${dashboardId}-assignee-options', this.value)"
+                       onclick="event.stopPropagation();">
+            </div>
+            <div class="filter-dropdown-options" id="${dashboardId}-assignee-options">
+        `;
+
+        // Add regular assignees
+        assignees.forEach(a => {
+            const isChecked = selectedAssignees.includes(a);
+            const escapedValue = a.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            html += `
+                <label class="filter-dropdown-option" data-search-value="${a.toLowerCase()}" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="${a.replace(/"/g, '&quot;')}" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericAssigneeChange('${dashboardId}', '${escapedValue}', this.checked, event)">
+                    <span class="option-label">${a}</span>
+                    <span class="option-count">${assigneeInfo[a]}</span>
+                </label>
+            `;
+        });
+
+        // Add "(Unassigned)" option if there are items without assignee
+        if (unassignedCount > 0) {
+            const isChecked = selectedAssignees.includes('(Unassigned)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(unassigned)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(Unassigned)" ${isChecked ? 'checked' : ''}
+                           onchange="handleGenericAssigneeChange('${dashboardId}', '(Unassigned)', this.checked, event)">
+                    <span class="option-label">(Unassigned)</span>
+                    <span class="option-count">${unassignedCount}</span>
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+        html += `
+            <div class="filter-dropdown-actions">
+                <button class="filter-btn-primary" onclick="selectAllGenericAssignee('${dashboardId}', event)">Select All</button>
+                <button class="filter-btn-secondary" onclick="clearGenericAssignee('${dashboardId}', event)">Clear</button>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function filterGenericAssigneeOptions(optionsId, searchText) {
+        const container = document.getElementById(optionsId);
+        if (!container) return;
+        const query = searchText.toLowerCase();
+        container.querySelectorAll('.filter-dropdown-option').forEach(opt => {
+            const searchValue = opt.dataset.searchValue || '';
+            opt.style.display = searchValue.includes(query) ? '' : 'none';
+        });
+    }
+
+    function handleGenericAssigneeChange(dashboardId, value, checked, event) {
+        if (event) event.stopPropagation();
+
+        const optionsContainer = document.getElementById(`${dashboardId}-assignee-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-assignee-dropdown';
+            if (checked) {
+                if (!tasksFilters.assignees.includes(value)) {
+                    tasksFilters.assignees.push(value);
+                }
+            } else {
+                tasksFilters.assignees = tasksFilters.assignees.filter(a => a !== value);
+            }
+            updateGenericAssigneeDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        // Keep dropdown open and restore scroll position
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(`${dashboardId}-assignee-options`);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }, 0);
+        }
+    }
+
+    function selectAllGenericAssignee(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const optionsContainer = document.getElementById(`${dashboardId}-assignee-options`);
+        const scrollTop = optionsContainer ? optionsContainer.scrollTop : 0;
+
+        const checkboxes = document.querySelectorAll(`#${dashboardId}-assignee-options input[type="checkbox"]`);
+        const allAssignees = [];
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            allAssignees.push(cb.value);
+        });
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-assignee-dropdown';
+            tasksFilters.assignees = allAssignees;
+            updateGenericAssigneeDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+                const newOptionsContainer = document.getElementById(`${dashboardId}-assignee-options`);
+                if (newOptionsContainer) newOptionsContainer.scrollTop = scrollTop;
+            }, 0);
+        }
+    }
+
+    function clearGenericAssignee(dashboardId, event) {
+        if (event) event.stopPropagation();
+
+        const checkboxes = document.querySelectorAll(`#${dashboardId}-assignee-options input[type="checkbox"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+
+        let openDropdownId;
+
+        if (dashboardId === 'tasks') {
+            openDropdownId = 'tasks-assignee-dropdown';
+            tasksFilters.assignees = [];
+            updateGenericAssigneeDisplay(dashboardId);
+            saveStateToStorage();
+            renderTasksView();
+            updateTasksClearButton();
+        }
+
+        if (openDropdownId) {
+            setTimeout(() => {
+                const dropdown = document.getElementById(openDropdownId);
+                if (dropdown) dropdown.classList.add('open');
+            }, 0);
+        }
+    }
+
+    function updateGenericAssigneeDisplay(dashboardId) {
+        let displayId, selectedAssignees;
+
+        if (dashboardId === 'tasks') {
+            displayId = 'tasks-assignee-display';
+            selectedAssignees = tasksFilters.assignees;
+        } else {
+            return;
+        }
+
+        const display = document.getElementById(displayId);
+        if (!display) return;
+
+        display.textContent = formatFilterDisplay(selectedAssignees, 'All Assignees', 'assignees');
+    }
+
+    function syncGenericAssigneeFilter(dashboardId) {
+        let selectedAssignees;
+
+        if (dashboardId === 'tasks') {
+            selectedAssignees = tasksFilters.assignees;
+        } else {
+            return;
+        }
+
+        const optionsId = `${dashboardId}-assignee-options`;
+        const checkboxes = document.querySelectorAll(`#${optionsId} input[type="checkbox"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = selectedAssignees.includes(cb.value);
+        });
+
+        updateGenericAssigneeDisplay(dashboardId);
+    }
+
+    // ==================== END GENERIC ASSIGNEE FILTER COMPONENT ====================
 
     // ==================== GENERIC DATE RANGE FILTER COMPONENT ====================
     // Used by: Bugs Dashboard
