@@ -6225,7 +6225,8 @@
         if (excludeFilter !== 'team' && tasksFilters.teams.length > 0) {
             items = items.filter(item => {
                 const team = item.team || '(No Team)';
-                return tasksFilters.teams.includes(team);
+                const normalizedTeam = normalizeTeamName(team);
+                return tasksFilters.teams.includes(team) || tasksFilters.teams.includes(normalizedTeam);
             });
         }
 
@@ -6469,11 +6470,13 @@
             });
         }
 
-        // Apply team filter
+        // Apply team filter (normalize team names to match team summary cards)
         if (tasksFilters.teams.length > 0) {
             filtered = filtered.filter(t => {
                 const team = t.team || '(No Team)';
-                return tasksFilters.teams.includes(team);
+                const normalizedTeam = normalizeTeamName(team);
+                // Check both raw and normalized team names
+                return tasksFilters.teams.includes(team) || tasksFilters.teams.includes(normalizedTeam);
             });
         }
 
@@ -6511,10 +6514,11 @@
 
         tasksData.filtered = filtered;
 
-        // Render in order: stats, worklog (computes warnings), insights (uses warnings), charts, table
+        // Render in order: stats, worklog (computes warnings & team data), insights (uses warnings), team summary (uses team data), charts, table
         renderTasksStats(filtered);
-        renderTasksWorkLogSummary();  // Must run before insights - computes worklogWarnings
+        renderTasksWorkLogSummary();  // Must run before insights and team summary - computes worklogWarnings and worklogTeamData
         renderTasksInsights(filtered);
+        renderTasksTeamSummary();     // Uses worklogTeamData computed in renderTasksWorkLogSummary
         renderTasksCharts(filtered);
         renderTasksTable(filtered);
     }
@@ -6548,6 +6552,13 @@
         inconsistentEntries: [],  // Work log entries with effort > date range
         orphanTaskIds: [],        // Task IDs with work logged but no parent
         orphanDays: 0             // Total days logged on orphan tasks
+    };
+
+    // Shared worklog team data (computed in renderTasksWorkLogSummary, used by renderTasksTeamSummary)
+    let worklogTeamData = {
+        byTeam: {},          // team -> assignee -> entries[]
+        totalDays: 0,
+        uniqueEngineers: new Set()
     };
 
     function toggleWorklogSummary() {
@@ -6646,9 +6657,18 @@
         const container = document.getElementById('tasks-worklog-summary-container');
         if (!container) return;
 
-        // Get all tasks (not filtered - we want to see all work logged)
-        const allTasks = tasksData.all || [];
+        // Get tasks - apply team filter if active so work log responds to team selection
+        let allTasks = tasksData.all || [];
         const parentMap = tasksData.parentMap || {};
+
+        // Apply team filter to work log summary
+        if (tasksFilters.teams.length > 0) {
+            allTasks = allTasks.filter(t => {
+                const team = t.team || '(No Team)';
+                const normalizedTeam = normalizeTeamName(team);
+                return tasksFilters.teams.includes(team) || tasksFilters.teams.includes(normalizedTeam);
+            });
+        }
 
         // Calculate date range for "past week" (last 7 days from today)
         const today = new Date();
@@ -6701,11 +6721,14 @@
             });
         });
 
-        // If no work logs in the past week, reset warnings and show empty state
+        // If no work logs in the past week, reset warnings and team data, show empty state
         if (workLogEntries.length === 0) {
             worklogWarnings.inconsistentEntries = [];
             worklogWarnings.orphanTaskIds = [];
             worklogWarnings.orphanDays = 0;
+            worklogTeamData.byTeam = {};
+            worklogTeamData.totalDays = 0;
+            worklogTeamData.uniqueEngineers = new Set();
             container.innerHTML = `
                 <div class="worklog-summary-section" id="tasks-worklog-summary">
                     <div class="worklog-summary-header" onclick="toggleWorklogSummary()">
@@ -6733,7 +6756,9 @@
         // Aggregate by meaningful parent for the "By Work Item" summary
         const byWorkItem = {
             features: {},    // id -> { item, days }
-            bugs: {},        // id -> { item, days }
+            customerBugs: {},  // id -> { item, days } - Bug Type: Customer Related
+            internalBugs: {},  // id -> { item, days } - Bug Type: Product Quality, Technical & Infrastructure
+            uncategorizedBugs: {}, // id -> { item, days } - Bug Type: empty/null
             issues: {},      // id -> { item, days }
             deliverySlices: {}, // id -> { item, days } (for DS without Feature parent)
             orphans: { count: 0, days: 0, taskIds: [] }
@@ -6755,10 +6780,24 @@
                 }
             } else if (entry.meaningfulParent) {
                 const mp = entry.meaningfulParent;
-                const bucket = mp.type === 'Feature' ? byWorkItem.features
-                    : mp.type === 'Bug' ? byWorkItem.bugs
-                    : mp.type === 'Issue' ? byWorkItem.issues
-                    : byWorkItem.deliverySlices;
+                let bucket;
+                if (mp.type === 'Feature') {
+                    bucket = byWorkItem.features;
+                } else if (mp.type === 'Bug') {
+                    // Categorize bugs by Bug Type
+                    const bugType = mp.bugType || '';
+                    if (bugType === 'Customer Related') {
+                        bucket = byWorkItem.customerBugs;
+                    } else if (bugType === 'Product Quality' || bugType === 'Technical & Infrastructure') {
+                        bucket = byWorkItem.internalBugs;
+                    } else {
+                        bucket = byWorkItem.uncategorizedBugs;
+                    }
+                } else if (mp.type === 'Issue') {
+                    bucket = byWorkItem.issues;
+                } else {
+                    bucket = byWorkItem.deliverySlices;
+                }
 
                 if (!bucket[mp.id]) {
                     bucket[mp.id] = { item: mp, days: 0 };
@@ -6779,32 +6818,40 @@
             uniqueTasks.add(entry.taskId);
         });
 
+        // Store team data for renderTasksTeamSummary
+        worklogTeamData.byTeam = byTeam;
+        worklogTeamData.totalDays = totalDays;
+        worklogTeamData.uniqueEngineers = uniqueEngineers;
+
         // Build "By Work Item" summary HTML
         const buildWorkItemList = (bucket, icon, type) => {
             const items = Object.values(bucket).sort((a, b) => b.days - a.days);
             if (items.length === 0) return '';
 
-            const itemsHtml = items.slice(0, 5).map(({ item, days }) => {
+            // Check if this is a bug type (show #id instead of title for bugs)
+            const isBugType = type.includes('Bug');
+
+            const itemsHtml = items.map(({ item, days }) => {
                 const title = item.title.length > 40 ? item.title.substring(0, 40) + '...' : item.title;
                 return `<a href="${item.url}" target="_blank" class="worklog-workitem-link" title="${item.title.replace(/"/g, '&quot;')}">
-                    ${type === 'Bug' ? '#' + item.id : title} (${days.toFixed(1)}d)
+                    ${isBugType ? '#' + item.id : title} (${days.toFixed(1)}d)
                 </a>`;
             }).join('');
-
-            const moreCount = items.length > 5 ? ` <span class="worklog-more">+${items.length - 5} more</span>` : '';
 
             return `
                 <div class="worklog-workitem-row">
                     <span class="worklog-workitem-icon">${icon}</span>
                     <span class="worklog-workitem-type">${type}s:</span>
-                    <span class="worklog-workitem-list">${itemsHtml}${moreCount}</span>
+                    <span class="worklog-workitem-list">${itemsHtml}</span>
                 </div>
             `;
         };
 
         let workItemSummaryHtml = '';
         workItemSummaryHtml += buildWorkItemList(byWorkItem.features, '📦', 'Feature');
-        workItemSummaryHtml += buildWorkItemList(byWorkItem.bugs, '🐛', 'Bug');
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.customerBugs, '🐛', 'Customer Bug');
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.internalBugs, '🔧', 'Internal Bug');
+        workItemSummaryHtml += buildWorkItemList(byWorkItem.uncategorizedBugs, '❓', 'Uncategorized Bug');
         workItemSummaryHtml += buildWorkItemList(byWorkItem.issues, '🎫', 'Issue');
         workItemSummaryHtml += buildWorkItemList(byWorkItem.deliverySlices, '📋', 'Delivery Slice');
 
@@ -7287,7 +7334,231 @@
         html += '</div>';
         container.innerHTML = html;
     }
-    
+
+    // Helper to normalize team name (remove region suffix like "(US)" or "(GR)")
+    function normalizeTeamName(teamName) {
+        if (!teamName) return teamName;
+        // Remove trailing region indicators like " (US)", " (GR)", etc.
+        return teamName.split(' (')[0].trim();
+    }
+
+    // Helper to get team member count (reuse logic from Roadmap)
+    function getTasksTeamMemberCount(teamName) {
+        if (typeof orgChartData === 'undefined') return 0;
+
+        // Normalize the incoming team name (area path may have "Frontend (US)" but org chart has "Frontend")
+        const normalizedTeamName = normalizeTeamName(teamName);
+
+        // Find the org chart entry that contains this team
+        const teamData = orgChartData.find(t => {
+            const teams = t.team.split(' & ').map(name => name.split(' (')[0].trim());
+            return teams.includes(normalizedTeamName) || t.team === normalizedTeamName;
+        });
+
+        if (!teamData) return 0;
+
+        let count = 0;
+
+        // Check if lead manages only this team (not multiple teams)
+        const leadTeams = teamData.team.split(' & ').map(name => name.split(' (')[0].trim());
+        if (leadTeams.length === 1 && leadTeams[0] === normalizedTeamName) {
+            count = 1; // Include the lead
+        }
+
+        // Count active members from this specific team
+        teamData.members.forEach(m => {
+            const memberTeam = normalizeTeamName(m.team);
+            if (m.status !== 'Former' && memberTeam === normalizedTeamName) {
+                count++;
+            }
+        });
+
+        return count;
+    }
+
+    function renderTasksTeamSummary() {
+        const container = document.getElementById('tasks-team-summary-container');
+        if (!container) return;
+
+        const { byTeam, totalDays, uniqueEngineers } = worklogTeamData;
+
+        // Group teams by normalized name (e.g., "Frontend (US)" and "Frontend (GR)" -> "Frontend")
+        const normalizedTeams = {};
+        Object.entries(byTeam).forEach(([team, engineers]) => {
+            const normalizedName = normalizeTeamName(team);
+            if (!normalizedTeams[normalizedName]) {
+                normalizedTeams[normalizedName] = {};
+            }
+            // Merge engineers from this sub-team into the normalized team
+            Object.entries(engineers).forEach(([eng, entries]) => {
+                if (!normalizedTeams[normalizedName][eng]) {
+                    normalizedTeams[normalizedName][eng] = [];
+                }
+                normalizedTeams[normalizedName][eng].push(...entries);
+            });
+        });
+
+        // Get all teams from org chart to show even teams with 0 participation
+        const allOrgTeams = new Set();
+        if (typeof orgChartData !== 'undefined') {
+            orgChartData.forEach(entry => {
+                // Split combined team names like "Analytics & Govern"
+                const teams = entry.team.split(' & ').map(name => name.split(' (')[0].trim());
+                teams.forEach(t => allOrgTeams.add(t));
+            });
+        }
+
+        // Calculate effort and participation per team (including teams with no work logged)
+        const teamStats = [];
+
+        // First add teams that have work logged
+        Object.entries(normalizedTeams).forEach(([team, engineers]) => {
+            const engineerNames = Object.keys(engineers);
+            const teamEffort = engineerNames.reduce((sum, eng) => {
+                return sum + engineers[eng].reduce((s, e) => s + e.daysSpent, 0);
+            }, 0);
+
+            const teamMemberCount = getTasksTeamMemberCount(team);
+            const participatingCount = engineerNames.length;
+            const participationPct = teamMemberCount > 0 ? Math.round((participatingCount / teamMemberCount) * 100) : 0;
+
+            teamStats.push({
+                team,
+                effort: teamEffort,
+                participatingCount,
+                teamMemberCount,
+                participationPct
+            });
+
+            // Remove from allOrgTeams since we've handled it
+            allOrgTeams.delete(team);
+        });
+
+        // Add teams with no work logged (0% participation)
+        allOrgTeams.forEach(team => {
+            // Skip special entries like "eShare" or "Staff"
+            if (team === 'eShare' || team === 'Staff') return;
+
+            const teamMemberCount = getTasksTeamMemberCount(team);
+            if (teamMemberCount > 0) {  // Only show teams that have members in org chart
+                teamStats.push({
+                    team,
+                    effort: 0,
+                    participatingCount: 0,
+                    teamMemberCount,
+                    participationPct: 0
+                });
+            }
+        });
+
+        // Sort by effort descending (teams with 0 effort will be at the end)
+        teamStats.sort((a, b) => b.effort - a.effort);
+
+        // Calculate totals
+        const totalMemberCount = teamStats.reduce((sum, t) => sum + t.teamMemberCount, 0);
+        const totalParticipating = uniqueEngineers.size;
+        const totalParticipationPct = totalMemberCount > 0 ? Math.round((totalParticipating / totalMemberCount) * 100) : 0;
+
+        // Helper to get participation CSS class
+        const getParticipationClass = (pct) => {
+            if (pct >= 70) return 'pct-high';
+            if (pct >= 40) return 'pct-medium';
+            return 'pct-low';
+        };
+
+        // Build team cards HTML - check if team is currently selected in filter
+        const teamCardsHtml = teamStats.map(({ team, effort, participatingCount, teamMemberCount, participationPct }) => {
+            const pctClass = getParticipationClass(participationPct);
+            const participationText = teamMemberCount > 0
+                ? `<span class="${pctClass}">${participationPct}%</span> participation (${participatingCount}/${teamMemberCount})`
+                : `${participatingCount} engineer${participatingCount !== 1 ? 's' : ''}`;
+
+            // Check if this team is selected in the filter
+            const isSelected = tasksFilters.teams.length === 1 && tasksFilters.teams[0] === team;
+            const selectedClass = isSelected ? ' selected' : '';
+
+            // Escape team name for onclick handler
+            const escapedTeam = team.replace(/'/g, "&#39;");
+
+            return `
+                <div class="effort-card${selectedClass}" onclick="toggleTasksTeamCard('${escapedTeam}')" title="Click to filter by ${team}">
+                    <div class="effort-card-header">
+                        <div class="effort-card-label">${team}</div>
+                    </div>
+                    <div class="effort-card-value">${effort.toFixed(1)}<span class="effort-card-unit">d</span></div>
+                    <div class="effort-card-participation">${participationText}</div>
+                </div>
+            `;
+        }).join('');
+
+        // Build total card - clicking clears team filter
+        const totalPctClass = getParticipationClass(totalParticipationPct);
+        const totalParticipationText = totalMemberCount > 0
+            ? `<span class="${totalPctClass}">${totalParticipationPct}%</span> participation (${totalParticipating}/${totalMemberCount})`
+            : `${totalParticipating} engineer${totalParticipating !== 1 ? 's' : ''}`;
+
+        container.innerHTML = `
+            <div class="tasks-team-summary">
+                <div class="tasks-team-summary-header">
+                    <span class="tasks-team-summary-title">👥 Team Summary</span>
+                    <span class="tasks-team-summary-subtitle">(Past 7 Days)</span>
+                </div>
+                <div class="tasks-team-cards">
+                    <div class="effort-card total" onclick="clearTasksTeamFilter()" title="Click to show all teams">
+                        <div class="effort-card-header">
+                            <div class="effort-card-label">All Teams</div>
+                        </div>
+                        <div class="effort-card-value">${totalDays.toFixed(1)}<span class="effort-card-unit">days</span></div>
+                        <div class="effort-card-participation">${totalParticipationText}</div>
+                    </div>
+                    ${teamCardsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // Toggle team filter from team summary card click
+    function toggleTasksTeamCard(team) {
+        // If clicking the already-selected team, clear the filter
+        if (tasksFilters.teams.length === 1 && tasksFilters.teams[0] === team) {
+            tasksFilters.teams = [];
+        } else {
+            // Set filter to just this team
+            tasksFilters.teams = [team];
+        }
+
+        // Sync the team dropdown checkboxes
+        const teamOptions = document.querySelectorAll('#tasks-team-options input[type="checkbox"]');
+        teamOptions.forEach(cb => {
+            cb.checked = tasksFilters.teams.includes(cb.value);
+        });
+
+        // Update display text
+        updateGenericTeamDisplay('tasks');
+
+        saveStateToStorage();
+        renderTasksView();
+        updateTasksClearButton();
+    }
+
+    // Clear team filter (called from "All Teams" card)
+    function clearTasksTeamFilter() {
+        tasksFilters.teams = [];
+
+        // Sync the team dropdown checkboxes
+        const teamOptions = document.querySelectorAll('#tasks-team-options input[type="checkbox"]');
+        teamOptions.forEach(cb => {
+            cb.checked = false;
+        });
+
+        // Update display text
+        updateGenericTeamDisplay('tasks');
+
+        saveStateToStorage();
+        renderTasksView();
+        updateTasksClearButton();
+    }
+
     function renderTasksCharts(tasks) {
         const container = document.getElementById('tasks-charts');
         if (!container) return;

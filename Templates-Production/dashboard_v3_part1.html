@@ -2445,6 +2445,58 @@
             color: white;
         }
 
+        /* Tasks Team Summary */
+        .tasks-team-summary {
+            margin-bottom: 1rem;
+        }
+
+        .tasks-team-summary-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tasks-team-summary-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .tasks-team-summary-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .tasks-team-cards {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .effort-card-participation {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
+        }
+
+        .effort-card-participation .pct-high {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .effort-card-participation .pct-medium {
+            color: var(--accent-yellow);
+            font-weight: 600;
+        }
+
+        .effort-card-participation .pct-low {
+            color: var(--accent-orange);
+            font-weight: 600;
+        }
+
         .reset-sort-btn {
             background: transparent;
             border: 1px solid var(--accent-orange);
@@ -4549,7 +4601,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v97</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v98</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>
@@ -5635,6 +5687,8 @@
             <div class="stats-grid" id="tasks-stats"></div>
             <!-- Insights Panel (below stats) -->
             <div class="insights-panel" id="tasks-insights"></div>
+            <!-- Team Summary Section (Past Week Effort by Team) -->
+            <div id="tasks-team-summary-container"></div>
             <!-- Work Log Summary Section (Past Week) -->
             <div id="tasks-worklog-summary-container"></div>
             <!-- Charts and Table -->
