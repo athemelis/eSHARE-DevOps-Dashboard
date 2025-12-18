@@ -379,12 +379,78 @@
 
         /* Wide dropdown menu - for Aging filter showing bucket + count */
         #customers-aging-menu,
-        #bugs-aging-menu {
+        #bugs-aging-menu,
+        #tasks-aging-menu {
             right: auto;
             min-width: 180px;
         }
         #customers-aging-menu .option-count,
-        #bugs-aging-menu .option-count {
+        #bugs-aging-menu .option-count,
+        #tasks-aging-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Tasks filter menus - consistent with other dashboards */
+        #tasks-priority-menu,
+        #tasks-state-menu,
+        #tasks-team-menu {
+            right: auto;
+            min-width: 200px;
+        }
+        #tasks-priority-menu .option-count,
+        #tasks-state-menu .option-count,
+        #tasks-team-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Tasks tag filter - consistent with other dashboards */
+        #tasks-tag-menu {
+            right: auto;
+            min-width: 200px;
+        }
+        #tasks-tag-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Tasks Task Type filter */
+        #tasks-tasktype-menu {
+            right: auto;
+            min-width: 220px;
+        }
+        #tasks-tasktype-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Tasks Iteration filter */
+        #tasks-iteration-menu {
+            right: auto;
+            min-width: 220px;
+        }
+        #tasks-iteration-menu .option-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Tasks Assignee filter */
+        #tasks-assignee-menu {
+            right: auto;
+            min-width: 250px;
+        }
+        #tasks-assignee-menu .option-count {
             margin-left: auto;
             font-size: 0.7rem;
             color: var(--text-muted);
@@ -4455,7 +4521,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v96</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v97</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>
@@ -4923,8 +4989,114 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tasks filter row -->
+        <div class="filter-row" id="filter-row-tasks">
+            <span class="filter-row-label">Search:</span>
+            <input type="text" id="tasks-search-input" class="filter-search-input" placeholder="Search titles and IDs..." oninput="handleGenericSearchChange('tasks')">
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="tasks-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-priority-dropdown')">
+                    <span id="tasks-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-priority-menu">
+                    <!-- Populated dynamically by generic Priority filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="tasks-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-state-dropdown')">
+                    <span id="tasks-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-state-menu">
+                    <!-- Populated dynamically by generic State filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="tasks-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-tag-dropdown')">
+                    <span id="tasks-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="tasks-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-team-dropdown')">
+                    <span id="tasks-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-team-menu">
+                    <!-- Populated dynamically by generic Team filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Task Type:</span>
+            <div class="filter-dropdown" id="tasks-tasktype-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-tasktype-dropdown')">
+                    <span id="tasks-tasktype-display">All Task Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-tasktype-menu">
+                    <!-- Populated dynamically by generic Task Type filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="tasks-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-iteration-dropdown')">
+                    <span id="tasks-iteration-display">All Iterations</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-iteration-menu">
+                    <!-- Populated dynamically by generic Iteration filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Assigned To:</span>
+            <div class="filter-dropdown" id="tasks-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-assignee-dropdown')">
+                    <span id="tasks-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-assignee-menu">
+                    <!-- Populated dynamically by generic Assignee filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Aging:</span>
+            <div class="filter-dropdown" id="tasks-aging-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-aging-dropdown')">
+                    <span id="tasks-aging-display">All Ages</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-aging-menu">
+                    <!-- Populated dynamically by generic Aging filter -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="tasks-clear-filters-btn" onclick="clearAllTasksFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('tasks-info-panel')">ℹ️ Info</span>
+                <div class="info-panel" id="tasks-info-panel">
+                    <p><strong>Tasks:</strong> Work items of type "Task" created to track implementation work.</p>
+                    <p><strong>Task Type:</strong> Category of task (e.g., Coding, Testing, Design, Documentation).</p>
+                    <p><strong>Aging:</strong> Time since task was created (or time to close for completed tasks).</p>
+                    <p><strong>Work Log:</strong> Shows work logged in the past 7 days with timeline visualization.</p>
+                </div>
+            </div>
+        </div>
     </div>
-    
+
     <main class="main-content">
         <div class="breadcrumb" id="breadcrumb" style="display: none;">
             <span class="breadcrumb-current">Executive</span>
@@ -5431,47 +5603,6 @@
 
         <!-- Tasks View -->
         <div class="dashboard-view" id="view-tasks">
-            <div class="filter-bar" id="tasks-filters">
-                <div class="filter-group">
-                    <label>Parent Type:</label>
-                    <select id="tasks-parent-type-filter" onchange="applyTasksFilters()">
-                        <option value="all">All Parents</option>
-                        <option value="Delivery Slice">Delivery Slice</option>
-                        <option value="Bug">Bug</option>
-                        <option value="Issue">Issue</option>
-                        <option value="Feature">Feature</option>
-                        <option value="orphan">Orphan (No Parent)</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>State:</label>
-                    <div class="multi-select-dropdown" id="tasks-state-dropdown">
-                        <div class="multi-select-display" onclick="toggleTasksStateDropdown()">
-                            <span id="tasks-state-display">All States</span>
-                            <span class="dropdown-arrow">▼</span>
-                        </div>
-                        <div class="multi-select-options" id="tasks-state-options">
-                            <label class="checkbox-option select-all-option"><input type="checkbox" id="tasks-state-select-all" onchange="toggleAllTasksStates(this.checked)"> <strong>Select All</strong></label>
-                            <div class="checkbox-divider"></div>
-                            <label class="checkbox-option"><input type="checkbox" value="New" onchange="updateTasksStateFilter()"> New</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateTasksStateFilter()"> Triaged</label>
-                            <label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateTasksStateFilter()"> To Do</label>
-                            <label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateTasksStateFilter()"> In Progress</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateTasksStateFilter()"> Ready For Review</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateTasksStateFilter()"> Done</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateTasksStateFilter()"> Closed</label>
-                            <label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateTasksStateFilter()"> Removed</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label>Team:</label>
-                    <select id="tasks-team-filter" onchange="applyTasksFilters()">
-                        <option value="all">All Teams</option>
-                    </select>
-                </div>
-            </div>
-
             <!-- Work Log Summary Section (Past Week) -->
             <div id="tasks-worklog-summary-container"></div>
 

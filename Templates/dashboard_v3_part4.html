@@ -723,44 +723,22 @@
         // Filter dropdowns are populated and synced in renderCustomersView via populateCustomersFilterDropdowns
     }
 
-    // Sync Tasks view state from localStorage
+    // Sync Tasks view state from localStorage (v97: generic filter components)
     function syncTasksFilterState() {
         if (!loadedStateCache) return;
 
-        // Restore dropdown selects
-        const parentTypeFilter = document.getElementById('tasks-parent-type-filter');
-        const teamFilter = document.getElementById('tasks-team-filter');
+        // Sync search filter
+        syncGenericSearchFilter('tasks');
 
-        if (parentTypeFilter && loadedStateCache.tasksParentTypeFilter) {
-            parentTypeFilter.value = loadedStateCache.tasksParentTypeFilter;
-        }
-        if (teamFilter && loadedStateCache.tasksTeamFilter) {
-            teamFilter.value = loadedStateCache.tasksTeamFilter;
-        }
-
-        // Restore state filter checkboxes
-        if (loadedStateCache.tasksStateFilter && loadedStateCache.tasksStateFilter.length > 0) {
-            const checkboxes = document.querySelectorAll('#tasks-state-options input[type="checkbox"]:not(#tasks-state-select-all)');
-            checkboxes.forEach(cb => {
-                cb.checked = loadedStateCache.tasksStateFilter.includes(cb.value);
-            });
-            // Update display
-            const displayText = document.getElementById('tasks-state-display');
-            const selectAllCheckbox = document.getElementById('tasks-state-select-all');
-            const selected = loadedStateCache.tasksStateFilter;
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = selected.length === checkboxes.length;
-                selectAllCheckbox.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
-            }
-            if (displayText) {
-                // If all selected, show "All States" (same as if none selected)
-                if (selected.length === 0 || selected.length === checkboxes.length) {
-                    displayText.textContent = 'All States';
-                } else {
-                    displayText.textContent = formatFilterDisplay(selected, 'All States', 'states');
-                }
-            }
-        }
+        // Sync all generic filter components
+        syncGenericPriorityFilter('tasks');
+        syncGenericStateFilter('tasks');
+        syncGenericTagFilter('tasks');
+        syncGenericTeamFilter('tasks');
+        syncGenericTaskTypeFilter('tasks');
+        syncGenericIterationFilter('tasks');
+        syncGenericAssigneeFilter('tasks');
+        syncGenericAgingFilter('tasks');
     }
 
     // Sync Details view state from localStorage
@@ -6153,23 +6131,41 @@
     });
     
     // ==================== TASKS VIEW ====================
-    
+
     let tasksData = {
         all: [],
         filtered: [],
         parentMap: {},  // Map of parent ID to parent work item
         tasksByParent: {}  // Map of parent ID to array of tasks
     };
-    
+
+    // Tasks filter state (matches generic filter component pattern)
+    let tasksFilters = {
+        search: '',
+        priorities: [],
+        states: [],
+        tags: [],
+        tagsLogicMode: 'or',
+        tagsExclusionMode: false,
+        teams: [],
+        taskTypes: [],        // Task Type field (new)
+        iterations: [],
+        assignees: [],
+        aging: []
+    };
+
+    // Tasks table column widths persistence
+    let tasksColumnWidths = {};
+
     function initTasksView() {
         const tasks = workItems.filter(w => w.type === 'Task');
         tasksData.all = tasks;
-        
+
         // Build parent map (ALL work items including tasks, since tasks can be parents of tasks)
         workItems.forEach(w => {
             tasksData.parentMap[w.id] = w;
         });
-        
+
         // Group tasks by parent
         tasksData.tasksByParent = {};
         tasks.forEach(task => {
@@ -6179,85 +6175,340 @@
             }
             tasksData.tasksByParent[parentId].push(task);
         });
-        
-        // Populate team filter
-        const teams = [...new Set(tasks.map(t => t.team).filter(Boolean))].sort();
-        const teamFilter = document.getElementById('tasks-team-filter');
-        if (teamFilter) {
-            teamFilter.innerHTML = '<option value="all">All Teams</option>' +
-                teams.map(t => `<option value="${t}">${t}</option>`).join('');
-        }
     }
-    
-    function applyTasksFilters() {
-        const parentTypeFilter = document.getElementById('tasks-parent-type-filter')?.value || 'all';
-        const selectedStates = getSelectedTasksStates();
-        const teamFilter = document.getElementById('tasks-team-filter')?.value || 'all';
 
-        let filtered = [...tasksData.all];
+    // Get tasks filtered by all filters EXCEPT the specified one (for cross-filter dropdowns)
+    function getTasksItemsExcludingFilter(excludeFilter) {
+        let items = [...tasksData.all];
 
-        // Filter by parent type
-        if (parentTypeFilter === 'orphan') {
-            filtered = filtered.filter(t => !t.parentId);
-        } else if (parentTypeFilter !== 'all') {
-            filtered = filtered.filter(t => {
-                if (!t.parentId) return false;
-                const parent = tasksData.parentMap[t.parentId];
-                return parent && parent.type === parentTypeFilter;
+        // Always apply search filter (never excluded)
+        items = applyGenericSearchFilter(items, tasksFilters.search);
+
+        // Apply priority filter
+        if (excludeFilter !== 'priority' && tasksFilters.priorities.length > 0) {
+            items = items.filter(item => {
+                const priority = item.priority ? 'P' + item.priority : '(No Priority)';
+                return tasksFilters.priorities.includes(priority);
             });
         }
 
-        // Filter by state (multi-select)
-        if (selectedStates.length > 0) {
-            filtered = filtered.filter(t => selectedStates.includes(t.state));
+        // Apply state filter
+        if (excludeFilter !== 'state' && tasksFilters.states.length > 0) {
+            items = items.filter(item => tasksFilters.states.includes(item.state));
         }
 
-        // Filter by team
-        if (teamFilter !== 'all') {
-            filtered = filtered.filter(t => t.team === teamFilter);
+        // Apply tag filter
+        if (excludeFilter !== 'tag' && tasksFilters.tags.length > 0) {
+            items = items.filter(item => {
+                const itemTags = (item.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                if (tasksFilters.tagsExclusionMode) {
+                    // Exclusion mode: get all available tags from all tasks, find unchecked ones, exclude items with those tags
+                    const allAvailableTags = new Set();
+                    tasksData.all.forEach(t => {
+                        const tags = (t.tags || '').split(';').map(tag => tag.trim()).filter(tag => tag);
+                        tags.forEach(tag => allAvailableTags.add(tag));
+                    });
+                    const uncheckedTags = [...allAvailableTags].filter(t => !tasksFilters.tags.includes(t));
+                    return !itemTags.some(tag => uncheckedTags.includes(tag));
+                } else {
+                    // Inclusion mode with AND/OR logic
+                    if (tasksFilters.tagsLogicMode === 'and') {
+                        return tasksFilters.tags.every(tag => itemTags.includes(tag));
+                    } else {
+                        return tasksFilters.tags.some(tag => itemTags.includes(tag));
+                    }
+                }
+            });
         }
 
-        tasksData.filtered = filtered;
+        // Apply team filter
+        if (excludeFilter !== 'team' && tasksFilters.teams.length > 0) {
+            items = items.filter(item => {
+                const team = item.team || '(No Team)';
+                return tasksFilters.teams.includes(team);
+            });
+        }
+
+        // Apply task type filter
+        if (excludeFilter !== 'taskType' && tasksFilters.taskTypes.length > 0) {
+            items = items.filter(item => {
+                const taskType = item.taskType || '(No Task Type)';
+                return tasksFilters.taskTypes.includes(taskType);
+            });
+        }
+
+        // Apply iteration filter
+        if (excludeFilter !== 'iteration' && tasksFilters.iterations.length > 0) {
+            items = items.filter(item => {
+                const iteration = getLastPathSegment(item.iterationPath) || '(No Iteration)';
+                return tasksFilters.iterations.includes(iteration);
+            });
+        }
+
+        // Apply assignee filter
+        if (excludeFilter !== 'assignee' && tasksFilters.assignees.length > 0) {
+            items = items.filter(item => {
+                const assignee = item.assignedTo || '(Unassigned)';
+                return tasksFilters.assignees.includes(assignee);
+            });
+        }
+
+        // Apply aging filter
+        if (excludeFilter !== 'aging' && tasksFilters.aging.length > 0) {
+            items = items.filter(item => {
+                const agingCategory = getAgingCategory(item);
+                return tasksFilters.aging.includes(agingCategory);
+            });
+        }
+
+        return items;
+    }
+
+    // Populate all Tasks filter dropdowns using generic components
+    function populateTasksFilterDropdowns() {
+        // Priority dropdown
+        const priorityMenu = document.getElementById('tasks-priority-menu');
+        if (priorityMenu) {
+            const priorityFilteredItems = getTasksItemsExcludingFilter('priority');
+            priorityMenu.innerHTML = buildPriorityFilterDropdown({
+                dashboardId: 'tasks',
+                items: priorityFilteredItems,
+                selectedPriorities: tasksFilters.priorities
+            });
+        }
+
+        // State dropdown
+        const stateMenu = document.getElementById('tasks-state-menu');
+        if (stateMenu) {
+            const stateFilteredItems = getTasksItemsExcludingFilter('state');
+            stateMenu.innerHTML = buildStateFilterDropdown({
+                dashboardId: 'tasks',
+                items: stateFilteredItems,
+                selectedStates: tasksFilters.states
+            });
+        }
+
+        // Tag dropdown
+        const tagMenu = document.getElementById('tasks-tag-menu');
+        if (tagMenu) {
+            const tagFilteredItems = getTasksItemsExcludingFilter('tag');
+            tagMenu.innerHTML = buildTagFilterDropdown({
+                dashboardId: 'tasks',
+                items: tagFilteredItems,
+                selectedTags: tasksFilters.tags,
+                logicMode: tasksFilters.tagsLogicMode
+            });
+        }
+
+        // Team dropdown
+        const teamMenu = document.getElementById('tasks-team-menu');
+        if (teamMenu) {
+            const teamFilteredItems = getTasksItemsExcludingFilter('team');
+            teamMenu.innerHTML = buildTeamFilterDropdown({
+                dashboardId: 'tasks',
+                items: teamFilteredItems,
+                selectedTeams: tasksFilters.teams
+            });
+        }
+
+        // Task Type dropdown
+        const taskTypeMenu = document.getElementById('tasks-tasktype-menu');
+        if (taskTypeMenu) {
+            const taskTypeFilteredItems = getTasksItemsExcludingFilter('taskType');
+            taskTypeMenu.innerHTML = buildTaskTypeFilterDropdown({
+                dashboardId: 'tasks',
+                items: taskTypeFilteredItems,
+                selectedTaskTypes: tasksFilters.taskTypes
+            });
+        }
+
+        // Iteration dropdown
+        const iterationMenu = document.getElementById('tasks-iteration-menu');
+        if (iterationMenu) {
+            const iterationFilteredItems = getTasksItemsExcludingFilter('iteration');
+            iterationMenu.innerHTML = buildIterationFilterDropdown({
+                dashboardId: 'tasks',
+                items: iterationFilteredItems,
+                selectedIterations: tasksFilters.iterations
+            });
+        }
+
+        // Assignee dropdown
+        const assigneeMenu = document.getElementById('tasks-assignee-menu');
+        if (assigneeMenu) {
+            const assigneeFilteredItems = getTasksItemsExcludingFilter('assignee');
+            assigneeMenu.innerHTML = buildAssigneeFilterDropdown({
+                dashboardId: 'tasks',
+                items: assigneeFilteredItems,
+                selectedAssignees: tasksFilters.assignees
+            });
+        }
+
+        // Aging dropdown
+        const agingMenu = document.getElementById('tasks-aging-menu');
+        if (agingMenu) {
+            const agingFilteredItems = getTasksItemsExcludingFilter('aging');
+            agingMenu.innerHTML = buildAgingFilterDropdown({
+                dashboardId: 'tasks',
+                items: agingFilteredItems,
+                selectedAgingBuckets: tasksFilters.aging
+            });
+        }
+    }
+
+    // Check if any Tasks filters are active
+    function hasActiveTasksFilters() {
+        if (hasGenericSearchFilter('tasks')) return true;
+        if (tasksFilters.priorities.length > 0) return true;
+        if (tasksFilters.states.length > 0) return true;
+        if (tasksFilters.tags.length > 0) return true;
+        if (tasksFilters.teams.length > 0) return true;
+        if (tasksFilters.taskTypes.length > 0) return true;
+        if (tasksFilters.iterations.length > 0) return true;
+        if (tasksFilters.assignees.length > 0) return true;
+        if (tasksFilters.aging.length > 0) return true;
+        return false;
+    }
+
+    // Update Clear All button visibility
+    function updateTasksClearButton() {
+        const clearBtn = document.getElementById('tasks-clear-filters-btn');
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', !hasActiveTasksFilters());
+        }
+    }
+
+    // Clear all Tasks filters
+    function clearAllTasksFilters() {
+        // Clear search
+        clearGenericSearch('tasks');
+
+        // Clear all filter arrays
+        tasksFilters.priorities = [];
+        tasksFilters.states = [];
+        tasksFilters.tags = [];
+        tasksFilters.tagsLogicMode = 'or';
+        tasksFilters.tagsExclusionMode = false;
+        tasksFilters.teams = [];
+        tasksFilters.taskTypes = [];
+        tasksFilters.iterations = [];
+        tasksFilters.assignees = [];
+        tasksFilters.aging = [];
+
+        // Update all display texts
+        updateGenericPriorityDisplay('tasks');
+        updateGenericStateDisplay('tasks');
+        updateGenericTagDisplay('tasks');
+        updateGenericTeamDisplay('tasks');
+        updateGenericTaskTypeDisplay('tasks');
+        updateGenericIterationDisplay('tasks');
+        updateGenericAssigneeDisplay('tasks');
+        updateGenericAgingDisplay('tasks');
+
         saveStateToStorage();
         renderTasksView();
     }
-    
+
+    function applyTasksFilters() {
+        saveStateToStorage();
+        renderTasksView();
+    }
+
     function renderTasksView() {
         if (tasksData.all.length === 0) {
             initTasksView();
         }
-        
+
+        // Populate filter dropdowns with cross-filter support
+        populateTasksFilterDropdowns();
+
+        // Update Clear All button visibility
+        updateTasksClearButton();
+
         applyTasksFiltersInternal();
     }
-    
+
     function applyTasksFiltersInternal() {
-        const parentTypeFilter = document.getElementById('tasks-parent-type-filter')?.value || 'all';
-        const selectedStates = getSelectedTasksStates();
-        const teamFilter = document.getElementById('tasks-team-filter')?.value || 'all';
-        
         let filtered = [...tasksData.all];
-        
-        // Filter by parent type
-        if (parentTypeFilter === 'orphan') {
-            filtered = filtered.filter(t => !t.parentId);
-        } else if (parentTypeFilter !== 'all') {
+
+        // Apply search filter
+        filtered = applyGenericSearchFilter(filtered, tasksFilters.search);
+
+        // Apply priority filter
+        if (tasksFilters.priorities.length > 0) {
             filtered = filtered.filter(t => {
-                if (!t.parentId) return false;
-                const parent = tasksData.parentMap[t.parentId];
-                return parent && parent.type === parentTypeFilter;
+                const priority = t.priority ? 'P' + t.priority : '(No Priority)';
+                return tasksFilters.priorities.includes(priority);
             });
         }
-        
-        // Filter by state (multi-select)
-        if (selectedStates.length > 0) {
-            filtered = filtered.filter(t => selectedStates.includes(t.state));
+
+        // Apply state filter
+        if (tasksFilters.states.length > 0) {
+            filtered = filtered.filter(t => tasksFilters.states.includes(t.state));
         }
-        
-        // Filter by team
-        if (teamFilter !== 'all') {
-            filtered = filtered.filter(t => t.team === teamFilter);
+
+        // Apply tag filter
+        if (tasksFilters.tags.length > 0) {
+            filtered = filtered.filter(t => {
+                const itemTags = (t.tags || '').split(';').map(tag => tag.trim()).filter(tag => tag);
+                if (tasksFilters.tagsExclusionMode) {
+                    const allAvailableTags = new Set();
+                    tasksData.all.forEach(task => {
+                        const tags = (task.tags || '').split(';').map(tag => tag.trim()).filter(tag => tag);
+                        tags.forEach(tag => allAvailableTags.add(tag));
+                    });
+                    const uncheckedTags = [...allAvailableTags].filter(tag => !tasksFilters.tags.includes(tag));
+                    return !itemTags.some(tag => uncheckedTags.includes(tag));
+                } else {
+                    if (tasksFilters.tagsLogicMode === 'and') {
+                        return tasksFilters.tags.every(tag => itemTags.includes(tag));
+                    } else {
+                        return tasksFilters.tags.some(tag => itemTags.includes(tag));
+                    }
+                }
+            });
         }
-        
+
+        // Apply team filter
+        if (tasksFilters.teams.length > 0) {
+            filtered = filtered.filter(t => {
+                const team = t.team || '(No Team)';
+                return tasksFilters.teams.includes(team);
+            });
+        }
+
+        // Apply task type filter
+        if (tasksFilters.taskTypes.length > 0) {
+            filtered = filtered.filter(t => {
+                const taskType = t.taskType || '(No Task Type)';
+                return tasksFilters.taskTypes.includes(taskType);
+            });
+        }
+
+        // Apply iteration filter
+        if (tasksFilters.iterations.length > 0) {
+            filtered = filtered.filter(t => {
+                const iteration = getLastPathSegment(t.iterationPath) || '(No Iteration)';
+                return tasksFilters.iterations.includes(iteration);
+            });
+        }
+
+        // Apply assignee filter
+        if (tasksFilters.assignees.length > 0) {
+            filtered = filtered.filter(t => {
+                const assignee = t.assignedTo || '(Unassigned)';
+                return tasksFilters.assignees.includes(assignee);
+            });
+        }
+
+        // Apply aging filter
+        if (tasksFilters.aging.length > 0) {
+            filtered = filtered.filter(t => {
+                const agingCategory = getAgingCategory(t);
+                return tasksFilters.aging.includes(agingCategory);
+            });
+        }
+
         tasksData.filtered = filtered;
 
         renderTasksWorkLogSummary();
@@ -6265,6 +6516,24 @@
         renderTasksInsights(filtered);
         renderTasksCharts(filtered);
         renderTasksTable(filtered);
+    }
+
+    // Helper to get aging category for a task
+    function getAgingCategory(task) {
+        // Only open items age
+        if (['Done', 'Closed', 'Removed'].includes(task.state)) return 'Completed';
+
+        const createdDate = task.createdDate ? new Date(task.createdDate) : null;
+        if (!createdDate) return '(Unknown Age)';
+
+        const today = new Date();
+        const ageInDays = Math.floor((today - createdDate) / (1000 * 60 * 60 * 24));
+
+        if (ageInDays <= 7) return '0-7 days';
+        if (ageInDays <= 14) return '8-14 days';
+        if (ageInDays <= 30) return '15-30 days';
+        if (ageInDays <= 60) return '31-60 days';
+        return '60+ days';
     }
 
     // ========== WORK LOG SUMMARY SECTION ==========
