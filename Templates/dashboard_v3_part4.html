@@ -6927,130 +6927,6 @@
                    date.getFullYear() === now.getFullYear();
         };
 
-        // Build Gantt HTML - using CSS class names from part1.html
-        let ganttHtml = `
-            <div class="worklog-timeline">
-                <div class="worklog-section-label">${timelineLabel}</div>
-                <div class="worklog-gantt-container">
-                    <div class="worklog-gantt">
-                        <div class="worklog-gantt-days">
-                            ${days.map(d => {
-                                const todayClass = isToday(d) ? 'today' : '';
-                                const weekendClass = isWeekend(d) ? 'weekend' : '';
-                                return `<div class="worklog-gantt-day ${todayClass} ${weekendClass}">${formatDayHeader(d)}</div>`;
-                            }).join('')}
-                        </div>
-        `;
-
-        // For each team and engineer, build rows with bars
-        sortedTeams.forEach(team => {
-            const engineers = byTeam[team];
-            const sortedEngineers = Object.keys(engineers).sort((a, b) => {
-                if (a === 'Unassigned') return 1;
-                if (b === 'Unassigned') return -1;
-                return a.localeCompare(b);
-            });
-
-            ganttHtml += `<div class="worklog-gantt-team">
-                <div class="worklog-gantt-team-name">${team}</div>`;
-
-            sortedEngineers.forEach(engineer => {
-                const entries = engineers[engineer];
-                const displayName = typeof getCommonName === 'function' ? getCommonName(engineer) : engineer;
-                const firstName = displayName.split(' ')[0];
-
-                // Build bars for this engineer
-                let barsHtml = '';
-                entries.forEach(entry => {
-                    // Use pre-parsed local dates to avoid timezone issues
-                    const startDate = entry.startDateLocal;
-                    const endDate = entry.endDateLocal;
-
-                    // Calculate position within the visible days grid
-                    const dayStartMs = days[0].getTime();
-                    const dayEndMs = days[days.length - 1].getTime() + 24 * 60 * 60 * 1000; // End of last visible day
-                    const totalMs = dayEndMs - dayStartMs;
-
-                    // For weekday-only view, we need to map entry dates to visible day positions
-                    // Find the visible start and end positions
-                    let visibleStartMs = null;
-                    let visibleEndMs = null;
-
-                    // Find which visible days this entry spans
-                    for (let i = 0; i < days.length; i++) {
-                        const dayMs = days[i].getTime();
-                        const nextDayMs = dayMs + 24 * 60 * 60 * 1000;
-
-                        // Entry starts on or before this day and ends on or after this day
-                        if (startDate.getTime() <= dayMs && endDate.getTime() >= days[i].getTime()) {
-                            if (visibleStartMs === null) visibleStartMs = dayMs;
-                            visibleEndMs = nextDayMs;
-                        }
-                        // Entry starts on this day
-                        if (startDate.getTime() === dayMs) {
-                            visibleStartMs = dayMs;
-                        }
-                        // Entry ends on this day
-                        if (endDate.getTime() === days[i].getTime()) {
-                            visibleEndMs = nextDayMs;
-                        }
-                    }
-
-                    // Skip if entry doesn't overlap any visible days
-                    if (visibleStartMs === null || visibleEndMs === null) return;
-
-                    const leftPct = ((visibleStartMs - dayStartMs) / totalMs) * 100;
-                    const widthPct = ((visibleEndMs - visibleStartMs) / totalMs) * 100;
-
-                    if (widthPct <= 0) return;
-
-                    const actClass = entry.activityType.toLowerCase().replace(/\s+/g, '-');
-                    const parentTypeClass = entry.meaningfulParent ? 'parent-' + entry.meaningfulParent.type.toLowerCase().replace(/\s+/g, '-') : '';
-                    const orphanClass = entry.isOrphan ? 'orphan' : '';
-                    const inconsistentClass = entry.hasInconsistency ? 'inconsistent' : '';
-
-                    // Build tooltip with inconsistency warning if applicable
-                    let tooltip = `#${entry.taskId}: ${entry.taskTitle.substring(0, 50)}${entry.taskTitle.length > 50 ? '...' : ''}\n${entry.activityType} · ${entry.daysSpent.toFixed(1)}d\n${formatDateShort(entry.startDate)}${entry.startDate !== entry.endDate ? ' - ' + formatDateShort(entry.endDate) : ''}`;
-                    if (entry.hasInconsistency) {
-                        tooltip += `\n⚠️ DATA ISSUE: ${entry.daysSpent}d logged for single day`;
-                    }
-
-                    barsHtml += `<div class="worklog-gantt-bar ${actClass} ${parentTypeClass} ${orphanClass} ${inconsistentClass}" style="left: ${leftPct}%; width: ${widthPct}%;" title="${tooltip.replace(/"/g, '&quot;')}" onclick="window.open('${entry.taskUrl}', '_blank')"></div>`;
-                });
-
-                // Build grid cells with weekend styling
-                const gridCellsHtml = days.map(d => {
-                    const weekendClass = isWeekend(d) ? 'weekend' : '';
-                    return `<div class="worklog-gantt-grid-cell ${weekendClass}"></div>`;
-                }).join('');
-
-                ganttHtml += `
-                    <div class="worklog-gantt-row">
-                        <div class="worklog-gantt-engineer">${firstName}</div>
-                        <div class="worklog-gantt-bars">
-                            <div class="worklog-gantt-grid">${gridCellsHtml}</div>
-                            ${barsHtml}
-                        </div>
-                    </div>
-                `;
-            });
-
-            ganttHtml += `</div>`; // Close worklog-gantt-team
-        });
-
-        // Legend
-        ganttHtml += `
-                    </div>
-                    <div class="worklog-gantt-legend">
-                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color coding"></span>Coding</span>
-                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color testing"></span>Testing</span>
-                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color design"></span>Design</span>
-                        <span class="worklog-gantt-legend-item"><span class="worklog-gantt-legend-color other"></span>Other</span>
-                    </div>
-                </div>
-            </div>
-        `;
-
         // Helper to build parent badge
         const buildParentBadge = (entry) => {
             if (entry.isOrphan) {
@@ -7061,7 +6937,17 @@
             }
             const mp = entry.meaningfulParent;
             const typeClass = mp.type.toLowerCase().replace(/\s+/g, '-');
-            const icon = mp.type === 'Feature' ? '📦' : mp.type === 'Bug' ? '🐛' : mp.type === 'Issue' ? '🎫' : '📋';
+            // Use different icons for Customer Bugs (🐛) vs Internal Bugs (🔧)
+            let icon;
+            if (mp.type === 'Feature') {
+                icon = '📦';
+            } else if (mp.type === 'Bug') {
+                icon = mp.bugType === 'Customer Related' ? '🐛' : '🔧';
+            } else if (mp.type === 'Issue') {
+                icon = '🎫';
+            } else {
+                icon = '📋';
+            }
             const label = mp.type === 'Bug' ? `#${mp.id}` : mp.title.length > 20 ? mp.title.substring(0, 20) + '...' : mp.title;
             return `<a href="${mp.url}" target="_blank" class="worklog-parent-badge ${typeClass}" title="${mp.type}: ${mp.title.replace(/"/g, '&quot;')}">${icon} ${label}</a>`;
         };
@@ -7113,14 +6999,26 @@
                         return `<span class="worklog-activity-badge ${actClass}">${a.activityType}</span>`;
                     }).join('');
 
-                    // Get date range
-                    const dates = task.activities.map(a => new Date(a.startDate));
-                    const endDates = task.activities.map(a => new Date(a.endDate));
-                    const minDate = new Date(Math.min(...dates));
-                    const maxDate = new Date(Math.max(...endDates));
-                    const dateRange = minDate.getTime() === maxDate.getTime()
-                        ? formatDateShort(minDate)
-                        : `${formatDateShort(minDate)} - ${formatDateShort(maxDate)}`;
+                    // Build timeline dots for this task - which days had work logged
+                    const taskDaysWorked = new Set();
+                    task.activities.forEach(a => {
+                        const start = a.startDateLocal;
+                        const end = a.endDateLocal;
+                        // Mark each day in the range
+                        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                            taskDaysWorked.add(d.getTime());
+                        }
+                    });
+
+                    // Build timeline dots HTML
+                    const timelineDotsHtml = days.map(day => {
+                        const dayMs = day.getTime();
+                        const isActive = taskDaysWorked.has(dayMs);
+                        const weekendClass = isWeekend(day) ? 'weekend' : '';
+                        const activeClass = isActive ? 'active' : '';
+                        const todayClass = isToday(day) ? 'today' : '';
+                        return `<span class="worklog-task-day-dot ${activeClass} ${weekendClass} ${todayClass}" title="${formatDayHeader(day)}"></span>`;
+                    }).join('');
 
                     // Build parent badge
                     const parentBadge = buildParentBadge(task);
@@ -7132,7 +7030,7 @@
                             <a href="${task.taskUrl}" target="_blank" class="worklog-task-id">#${task.taskId}</a>
                             <span class="worklog-task-title" title="${task.taskTitle.replace(/"/g, '&quot;')}">${task.taskTitle}</span>
                             ${activities}
-                            <span class="worklog-date-range">${dateRange}</span>
+                            <div class="worklog-task-timeline">${timelineDotsHtml}</div>
                             <span class="worklog-task-days">${taskDays.toFixed(1)}d</span>
                         </div>
                     `;
@@ -7201,9 +7099,17 @@
                         <div class="worklog-section-label">BY WORK ITEM:</div>
                         ${workItemSummaryHtml || '<div class="worklog-no-items">No parent work items found</div>'}
                     </div>
-                    ${ganttHtml}
                     <div class="worklog-by-team">
-                        <div class="worklog-section-label">BY TEAM:</div>
+                        <div class="worklog-by-team-header">
+                            <div class="worklog-section-label">BY TEAM:</div>
+                            <div class="worklog-days-header">
+                                ${days.map(d => {
+                                    const todayClass = isToday(d) ? 'today' : '';
+                                    const weekendClass = isWeekend(d) ? 'weekend' : '';
+                                    return `<span class="worklog-day-label ${todayClass} ${weekendClass}">${formatDayHeader(d)}</span>`;
+                                }).join('')}
+                            </div>
+                        </div>
                         ${teamsHtml}
                     </div>
                 </div>

@@ -3623,6 +3623,63 @@
             font-size: 0.7rem;
             color: var(--text-muted);
         }
+        /* By Team header with day labels */
+        .worklog-by-team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .worklog-days-header {
+            display: flex;
+            gap: 0.25rem;
+            margin-right: 3rem; /* Align with timeline dots (offset for task-days column) */
+        }
+        .worklog-day-label {
+            font-size: 0.65rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            width: 2.5rem;
+            text-align: center;
+            padding: 0.15rem 0;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+        }
+        .worklog-day-label.today {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+        .worklog-day-label.weekend {
+            opacity: 0.5;
+        }
+        /* Task timeline dots */
+        .worklog-task-timeline {
+            display: flex;
+            gap: 0.25rem;
+            margin-left: auto;
+        }
+        .worklog-task-day-dot {
+            width: 2.5rem;
+            height: 0.5rem;
+            border-radius: 2px;
+            background: var(--bg-tertiary);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+        .worklog-task-day-dot.active {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            border-color: #3b82f6;
+        }
+        .worklog-task-day-dot.today {
+            border-color: var(--accent-cyan);
+        }
+        .worklog-task-day-dot.today.active {
+            background: linear-gradient(135deg, #22d3ee, #67e8f9);
+            border-color: #22d3ee;
+        }
+        .worklog-task-day-dot.weekend {
+            opacity: 0.5;
+        }
         /* Summary stats row */
         .worklog-stats-row {
             display: flex;
@@ -4601,7 +4658,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v98</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v99</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>
