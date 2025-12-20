@@ -12,7 +12,7 @@
 #   - Prod templates: ./Templates-Production (for scheduled publishing)
 #
 
-cd "/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/"
+cd "/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/"
 
 # Check if --publish or -p flag is present
 if [[ "$*" == *"--publish"* ]] || [[ "$*" == *"-p"* ]]; then

@@ -3,23 +3,23 @@
 This setup runs your `generate_dashboard.py` script every minute using a `launchd` LaunchAgent.
 
 **Key files:**
-- Shell wrapper script: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
-- Reload helper script: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/reload-launchd-agent.sh`
+- Shell wrapper script: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
+- Reload helper script: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/reload-launchd-agent.sh`
 - LaunchAgent plist: `~/Library/LaunchAgents/com.eshare.devops.dashboard.plist`
 
 **Template directories:**
-- Development: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/Templates/`
-- Production: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/Templates-Production/`
+- Development: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/Templates/`
+- Production: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/Templates-Production/`
 
 **Output locations:**
-- Local (for testing): `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
-- Published (production): `/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/ᵉShare DevOps Dashboard.html`
+- Local (for testing): `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
+- Published (production): `/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/eSHARE-DevOps-Dashboard.html`
 
 ---
 
 ## 1. The runner shell script
 
-File: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
+File: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh`
 
 This script selects the appropriate template directory based on the mode:
 - **Local mode**: Uses `Templates/` (development templates)
@@ -40,7 +40,7 @@ This script selects the appropriate template directory based on the mode:
 #   - Prod templates: ./Templates-Production (for scheduled publishing)
 #
 
-cd "/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/"
+cd "/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/"
 
 # Check if --publish or -p flag is present
 if [[ "$*" == *"--publish"* ]] || [[ "$*" == *"-p"* ]]; then
@@ -66,7 +66,7 @@ This separation allows you to develop and test code changes locally without affe
 
 Make it executable:
 ```bash
-chmod +x /Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh
+chmod +x /Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh
 ```
 
 ---
@@ -93,7 +93,7 @@ Current plist (includes `--publish` flag for production output):
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
+        <string>/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
         <string>--publish</string>
     </array>
 

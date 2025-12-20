@@ -1,6 +1,6 @@
 # eShare DevOps Dashboard
 
-## Current Version: v99
+## Current Version: v100
 
 ---
 
@@ -249,6 +249,7 @@ pip3 install pandas
 
 | Version | Date | Notes |
 |---------|------|-------|
+| v100 | 12/20/2025 | **Infrastructure Updates:** Updated repository path from `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard` to `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard`. Renamed production HTML file from `ᵉShare DevOps Dashboard.html` to `eSHARE-DevOps-Dashboard.html` for simpler path handling. Updated all related scripts (generate_dashboard.py, update-eSHARE-DevOps-Dashboard.sh), documentation (CLAUDE.md, update-eSHARE-DevOps-Dashboard.md), and launchd plist. |
 | v99 | 12/19/2025 | **Tasks Dashboard - Combined Work Log Timeline:** Merged the separate "Timeline" (Gantt chart) and "By Team" views into a single unified view. Each task entry now shows inline timeline dots indicating which of the past 5 weekdays the engineer worked on that task. Day header labels (Mon, Tue, etc.) displayed at top right of By Team section, aligned with timeline dots. Today highlighted in cyan. Weekend days shown at 50% opacity if present. Removed standalone Gantt chart view. **Bug Type Emoji Distinction:** Customer Bugs now show 🐛 emoji, Internal Bugs show 🔧 emoji throughout the dashboard (previously all bugs used 🐛). Applied to parent badges in By Team section, matching the By Work Item section distinction. |
 | v98 | 12/18/2025 | **Tasks Dashboard - Team Summary & Work Log Enhancements:** Added Team Summary section below Task Insights showing team cards with effort and participation percentage. All teams from org chart displayed (teams with no work logged show 0% participation). Clickable team cards filter all visuals (stats, charts, table, work log summary). "All Teams" card clears filter. Team filter syncs with sticky header Team dropdown. **Work Log Summary - Bug Type Breakdown:** Bugs now categorized into Customer Bugs (🐛), Internal Bugs (🔧), and Uncategorized Bugs (❓) based on Bug Type field. **Work Log Summary - Show All Items:** Removed "+X more" truncation - all items in each category now displayed. **Team Filter Integration:** Work Log Summary now responds to team filter selection. Team names normalized to handle region suffixes (e.g., "Frontend (US)" matches "Frontend"). |
 | v97 | 12/17/2025 | **Tasks Dashboard - Sticky Header & Filters:** Added sticky header with 9 filter dropdowns: Search, Priority, State, Tag, Team, Task Type, Iteration, Assigned To, Aging. Created 3 new generic filter components (Task Type, Iteration, Assignee) in part2.html. Full cross-filter support (dropdown options update based on other active filters). State persistence via localStorage. **Layout Improvements:** Moved stat cards (Total Tasks, Open Tasks, Completed, Total Effort, Orphan Tasks) to top of dashboard. Renamed insights panel to "Task Insights" with 📋 emoji. Moved Data Issue and Orphan warnings from Work Log Summary to Task Insights. Horizontal layout for insights to minimize height. |

@@ -42,8 +42,8 @@ This is a reporting dashboard that visualizes Azure DevOps work items (Features,
 4. The launchd job will continue refreshing data every 60 seconds using production templates
 
 **Key paths:**
-- DEV output: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
-- PROD output: SharePoint `Product Planning/ᵉShare DevOps Dashboard.html`
+- DEV output: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
+- PROD output: SharePoint `Product Planning/eSHARE-DevOps-Dashboard.html`
 
 **Shell script behavior:**
 - `./update-eSHARE-DevOps-Dashboard.sh` → Uses `Templates/`, outputs to DEV
@@ -76,7 +76,7 @@ git push
 # Verify push was successful (should show "Everything up-to-date" or commit info)
 ```
 
-## Current Version: v85
+## Current Version: v100
 
 ## UI Patterns for All Dashboards
 
@@ -1425,8 +1425,8 @@ Key changes implemented in v70:
 - Plist updated to include `--publish` for scheduled runs
 
 **Key paths:**
-- Local output: `/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
-- Published output: SharePoint `Product Planning/ᵉShare DevOps Dashboard.html`
+- Local output: `/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html`
+- Published output: SharePoint `Product Planning/eSHARE-DevOps-Dashboard.html`
 - CSV source: SharePoint `Product Planning/ALL Items.csv`
 
 ## Data Schema

@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/tonythem/GitHub/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
+        <string>/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/update-eSHARE-DevOps-Dashboard.sh</string>
         <string>--publish</string>
     </array>
 
