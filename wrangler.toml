@@ -1,0 +1,9 @@
+# Cloudflare Pages Configuration
+# https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+
+name = "eshare-devops-dashboard"
+compatibility_date = "2025-12-01"
+pages_build_output_dir = "."
+
+# Note: Static assets are served directly by Pages
+# Headers and redirects are configured via _headers and _redirects files

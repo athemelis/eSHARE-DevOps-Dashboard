@@ -1,0 +1,36 @@
+{
+  "name": "eshare-devops-dashboard",
+  "version": "1.0.0",
+  "description": "eShare DevOps Dashboard - Real-time visibility into Azure DevOps work items",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx wrangler pages dev . --port 8000",
+    "build": "echo 'Static site - no build required'",
+    "preview": "npx wrangler pages dev . --port 8000",
+    "deploy": "npx wrangler pages deploy . --project-name eshare-devops-dashboard",
+    "serve": "python3 -m http.server 8000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshare-inc/eSHARE-DevOps-Dashboard.git"
+  },
+  "keywords": [
+    "devops",
+    "dashboard",
+    "azure-devops",
+    "analytics"
+  ],
+  "author": "eShare Inc",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/eshare-inc/eSHARE-DevOps-Dashboard/issues"
+  },
+  "homepage": "https://github.com/eshare-inc/eSHARE-DevOps-Dashboard#readme",
+  "devDependencies": {
+    "wrangler": "^3.99.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

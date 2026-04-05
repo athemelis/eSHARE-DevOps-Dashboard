@@ -16,6 +16,40 @@
     let selectedReleases = []; // Array for multi-select
     let selectedTimePeriod = 'all';
 
+    // ==================== AUTO-REFRESH GLOBALS ====================
+    // These must be declared early so shouldAnimateCharts() is available during initial render
+    let isRefreshing = false;
+    let disableChartAnimations = false; // Set to true only during auto-refresh
+
+    // Helper function for charts to check if animations should be enabled
+    // Animations are ON by default (page load, Cmd-R, manual refresh button)
+    // Animations are OFF only during silent auto-refresh
+    function shouldAnimateCharts() {
+        return !disableChartAnimations;
+    }
+
+    // ==================== SCROLL POSITION PERSISTENCE ====================
+    // Save scroll position and state before page unload (Cmd-R) and restore on load
+    const SCROLL_KEY = 'eshare-dashboard-scroll';
+
+    window.addEventListener('beforeunload', () => {
+        sessionStorage.setItem(SCROLL_KEY, window.scrollY.toString());
+        // Also save current state to localStorage so Cmd-R preserves current view
+        if (typeof saveStateToStorage === 'function') {
+            saveStateToStorage();
+        }
+    });
+
+    // Restore scroll position after page loads (with small delay to ensure content is rendered)
+    window.addEventListener('load', () => {
+        const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+        if (savedScroll) {
+            setTimeout(() => {
+                window.scrollTo(0, parseInt(savedScroll, 10));
+            }, 100);
+        }
+    });
+
     // ==================== STATE PERSISTENCE (localStorage) ====================
     // Use pathname-based key to keep DEV and PROD states independent
     const STORAGE_KEY = 'eshare-devops-dashboard-state-' + (window.location.pathname.includes('eSHARE-DevOps-Dashboard.html') ? 'dev' : 'prod');
@@ -2717,14 +2751,18 @@
     /**
      * Compute tag information from a list of items
      * @param {Array} items - Array of work items
-     * @returns {Object} { tags: [], tagInfo: {} }
+     * @returns {Object} { tags: [], tagInfo: {}, noTagsCount: number }
      */
     function computeTagInfo(items) {
         const tagInfo = {};
+        let noTagsCount = 0;
 
         items.forEach(item => {
-            if (!item.tags) return;
-            const tags = item.tags.split(';').map(t => t.trim()).filter(t => t);
+            const tags = item.tags ? item.tags.split(';').map(t => t.trim()).filter(t => t) : [];
+            if (tags.length === 0) {
+                noTagsCount++;
+                return;
+            }
             tags.forEach(tag => {
                 if (!tagInfo[tag]) {
                     tagInfo[tag] = { count: 0 };
@@ -2736,7 +2774,7 @@
         // Sort tags alphabetically
         const tags = Object.keys(tagInfo).sort((a, b) => a.localeCompare(b));
 
-        return { tags, tagInfo };
+        return { tags, tagInfo, noTagsCount };
     }
 
     /**
@@ -2746,9 +2784,9 @@
      */
     function buildTagFilterDropdown(config) {
         const { dashboardId, items, selectedTags, logicMode = 'or' } = config;
-        const { tags, tagInfo } = computeTagInfo(items);
+        const { tags, tagInfo, noTagsCount } = computeTagInfo(items);
 
-        if (tags.length === 0) {
+        if (tags.length === 0 && noTagsCount === 0) {
             return '<div class="filter-dropdown-empty">No tags available</div>';
         }
 
@@ -2767,6 +2805,19 @@
             </div>
             <div class="filter-dropdown-options" id="${optionsId}">
         `;
+
+        // Add "(No Tags)" option first if there are items without tags
+        if (noTagsCount > 0) {
+            const isNoTagsChecked = selectedTags.includes('(No Tags)');
+            html += `
+                <label class="filter-dropdown-option" data-search-value="(no tags)" onclick="event.stopPropagation();">
+                    <input type="checkbox" value="(No Tags)" ${isNoTagsChecked ? 'checked' : ''}
+                           onchange="handleGenericTagChange('${dashboardId}', '(No Tags)', this.checked, event)">
+                    <span class="option-label">(No Tags)</span>
+                    <span class="option-count">${noTagsCount}</span>
+                </label>
+            `;
+        }
 
         // Add tag options in alphabetical order
         tags.forEach(tag => {
@@ -4787,10 +4838,16 @@
         destroyChart(canvasId);
         const ctx = document.getElementById(canvasId);
         if (!ctx) return null;
-        
+
+        // Check if animations should be enabled
+        // Animations ON: page load, Cmd-R, manual refresh button
+        // Animations OFF: auto-refresh (silent background)
+        const animationsEnabled = typeof shouldAnimateCharts === 'function' ? shouldAnimateCharts() : true;
+
         const defaultOptions = {
             responsive: true,
             maintainAspectRatio: false,
+            animation: animationsEnabled ? { duration: 750 } : false, // Explicit animation duration
             plugins: {
                 legend: {
                     display: type === 'doughnut' || type === 'pie',
@@ -4802,13 +4859,13 @@
                 }
             }
         };
-        
+
         activeCharts[canvasId] = new Chart(ctx, {
             type,
             data,
             options: { ...defaultOptions, ...options }
         });
-        
+
         return activeCharts[canvasId];
     }
     

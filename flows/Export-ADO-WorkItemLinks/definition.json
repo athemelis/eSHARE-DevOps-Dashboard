@@ -1,0 +1,345 @@
+{
+  "name": "2733283c-9a39-48ae-8b4e-7c736fb44567",
+  "id": "/providers/Microsoft.Flow/flows/2733283c-9a39-48ae-8b4e-7c736fb44567",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "Export ADO WorkItemLinks",
+    "definition": {
+      "metadata": {
+        "workflowEntityId": null,
+        "processAdvisorMetadata": null,
+        "flowChargedByPaygo": null,
+        "flowclientsuspensionreason": "None",
+        "flowclientsuspensiontime": null,
+        "flowclientsuspensionreasondetails": null,
+        "creator": {
+          "id": "74e681d8-ff6b-4110-9da2-c32067fadd61",
+          "type": "User",
+          "tenantId": "8ba9573d-c2ec-4486-a1a3-3b55546c9c64"
+        },
+        "provisioningMethod": "FromDefinition",
+        "failureAlertSubscription": true,
+        "clientLastModifiedTime": "2026-04-03T22:46:17.1824092Z",
+        "connectionKeySavedTimeKey": "2026-04-03T22:46:17.1824092Z",
+        "creationSource": "Portal",
+        "modifiedSources": "Portal"
+      },
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "interval": 5,
+            "frequency": "Minute",
+            "timeZone": "Pacific Standard Time",
+            "startTime": "2025-12-14T10:40:00"
+          },
+          "evaluatedRecurrence": {
+            "interval": 5,
+            "frequency": "Minute",
+            "timeZone": "Pacific Standard Time",
+            "startTime": "2025-12-14T10:40:00"
+          },
+          "type": "Recurrence",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          }
+        }
+      },
+      "actions": {
+        "Initialize_varAllLinks": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varAllLinks",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "Initialize_varNextLink": {
+          "runAfter": {
+            "Initialize_varAllLinks": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNextLink",
+                "type": "string",
+                "value": "https://analytics.dev.azure.com/ncryptedcloud/eShare/_odata/v3.0-preview/WorkItemLinks?$select=WorkItemLinkSK,SourceWorkItemId,TargetWorkItemId,CreatedDate,DeletedDate,Comment,LinkTypeId,LinkTypeReferenceName,LinkTypeName,LinkTypeIsAcyclic,LinkTypeIsDirectional,AnalyticsUpdatedDate,ProjectSK"
+              }
+            ]
+          }
+        },
+        "Initialize_varPAT": {
+          "runAfter": {
+            "Initialize_varKeepGoing": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varPAT",
+                "type": "string",
+                "value": "<REDACTED>"
+              }
+            ]
+          }
+        },
+        "Do_Until_No_More_Pages": {
+          "actions": {
+            "HTTP_Get_WorkItemLinks": {
+              "type": "Http",
+              "inputs": {
+                "uri": "@variables('varNextLink')",
+                "method": "GET",
+                "headers": {
+                  "Authorization": "<REDACTED>"
+                }
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              }
+            },
+            "Check_for_NextLink": {
+              "actions": {
+                "Set_NextLink": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varNextLink",
+                    "value": "@body('HTTP_Get_WorkItemLinks')?['@odata.nextLink']"
+                  }
+                }
+              },
+              "runAfter": {
+                "Set_varAllLinks": [
+                  "Succeeded"
+                ]
+              },
+              "else": {
+                "actions": {
+                  "Set_KeepGoing_Zero": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "varKeepGoing",
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@body('HTTP_Get_WorkItemLinks')?['@odata.nextLink']",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "type": "If"
+            },
+            "Compose_Merged_Results": {
+              "runAfter": {
+                "HTTP_Get_WorkItemLinks": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@union(variables('varAllLinks'), body('HTTP_Get_WorkItemLinks')?['value'])"
+            },
+            "Set_varAllLinks": {
+              "runAfter": {
+                "Compose_Merged_Results": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varAllLinks",
+                "value": "@outputs('Compose_Merged_Results')"
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_varPAT": [
+              "Succeeded"
+            ]
+          },
+          "expression": "@equals(variables('varKeepGoing'), 0)",
+          "limit": {
+            "count": 60,
+            "timeout": "PT2H"
+          },
+          "type": "Until"
+        },
+        "Select_Fields_for_CSV": {
+          "runAfter": {
+            "Do_Until_No_More_Pages": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@variables('varAllLinks')",
+            "select": {
+              "WorkItemLinkSK": "@item()?['WorkItemLinkSK']",
+              "SourceWorkItemId": "@item()?['SourceWorkItemId']",
+              "TargetWorkItemId": "@item()?['TargetWorkItemId']",
+              "CreatedDate": "@item()?['CreatedDate']",
+              "DeletedDate": "@item()?['DeletedDate']",
+              "Comment": "@item()?['Comment']",
+              "LinkTypeId": "@item()?['LinkTypeId']",
+              "LinkTypeReferenceName": "@item()?['LinkTypeReferenceName']",
+              "LinkTypeName": "@item()?['LinkTypeName']",
+              "LinkTypeIsAcyclic": "@item()?['LinkTypeIsAcyclic']",
+              "LinkTypeIsDirectional": "@item()?['LinkTypeIsDirectional']",
+              "AnalyticsUpdatedDate": "@item()?['AnalyticsUpdatedDate']",
+              "ProjectSK": "@item()?['ProjectSK']"
+            }
+          }
+        },
+        "Initialize_varKeepGoing": {
+          "runAfter": {
+            "Initialize_varNextLink": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varKeepGoing",
+                "type": "integer",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "Create_CSV_table": {
+          "runAfter": {
+            "Select_Fields_for_CSV": [
+              "Succeeded"
+            ]
+          },
+          "type": "Table",
+          "inputs": {
+            "from": "@body('Select_Fields_for_CSV')",
+            "format": "CSV"
+          }
+        },
+        "Update_file": {
+          "runAfter": {
+            "Compose_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "%252fShared%2bDocuments%252fProduct%2bPlanning%252fWorkItemLinks.csv": "/Shared Documents/Product Planning/WorkItemLinks.csv"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://wardedbox.sharepoint.com/sites/ProductManagement",
+              "id": "%252fShared%2bDocuments%252fProduct%2bPlanning%252fWorkItemLinks.csv",
+              "body": "@body('Create_CSV_table')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "UpdateFile"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Compose_JSON": {
+          "runAfter": {
+            "Select_Transformed_Links": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@body('Select_Transformed_Links')"
+        },
+        "Update_JSON_file": {
+          "runAfter": {
+            "Update_file": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "%252fShared%2bDocuments%252fProduct%2bPlanning%252fWorkItemLinks.json": "/Shared Documents/Product Planning/WorkItemLinks.json"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://wardedbox.sharepoint.com/sites/ProductManagement",
+              "id": "%252fShared%2bDocuments%252fProduct%2bPlanning%252fWorkItemLinks.json",
+              "body": "@outputs('Compose_JSON')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "UpdateFile"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Select_Transformed_Links": {
+          "runAfter": {
+            "Create_CSV_table": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Select_Fields_for_CSV')",
+            "select": {
+              "source": "@item()?['SourceWorkItemId']\n",
+              "target": "@item()?['TargetWorkItemId']\n",
+              "type": "@item()?['LinkTypeName']\n",
+              "comment": "@item()?['Comment']\n"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "connectionName": "shared-sharepointonl-30b40964-780e-4716-b58a-5616f559a478",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "tier": "NotSpecified",
+        "apiName": "sharepointonline",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}

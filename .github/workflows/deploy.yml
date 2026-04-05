@@ -1,0 +1,42 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Restrict permissions at workflow level for security
+permissions: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate files
+        run: |
+          echo "Validating dashboard files exist..."
+          test -f dashboard.html
+          test -f dashboard.js
+          test -f dashboard.css
+          test -f dashboard-loader.js
+          test -f dashboard-body.html
+          test -f eSHARE-faviconV2.png
+          echo "✅ All required files present"
+
+      # Pin to specific SHA for supply chain security
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy . --project-name=eshare-devops-dashboard --branch=${{ github.ref_name }}

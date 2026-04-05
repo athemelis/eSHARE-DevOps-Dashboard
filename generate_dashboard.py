@@ -68,7 +68,7 @@ DEFAULT_TEMPLATE_DIR = './Templates'
 LOCAL_OUTPUT_PATH = '/Users/tonythem/GitHub/athemelis/eSHARE-DevOps-Dashboard/eSHARE-DevOps-Dashboard.html'
 PUBLISH_OUTPUT_PATH = '/Users/tonythem/Library/CloudStorage/OneDrive-SharedLibraries-e-Share/Product Management - Documents/Product Planning/eSHARE-DevOps-Dashboard.html'
 
-CURRENT_VERSION = 100  # Increment this with each code change
+CURRENT_VERSION = 101  # Increment this with each code change
 
 # Placeholders that MUST be replaced
 PLACEHOLDERS = {

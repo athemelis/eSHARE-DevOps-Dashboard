@@ -1,0 +1,5 @@
+# Cloudflare Pages Redirects Configuration
+# https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Redirect root to dashboard
+/  /dashboard.html  301

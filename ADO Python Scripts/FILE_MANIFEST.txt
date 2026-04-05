@@ -1,0 +1,28 @@
+ADO-Python-Scripts File Manifest
+=================================
+
+Production Scripts (Ready for Use)
+-----------------------------------
+1. convert_all_target_dates_production.py - UTC to Athens timezone conversion
+2. copy_target_date_to_cascading.py - Target date field migration
+3. copy_release_version_to_cascading.py - Release version field migration
+4. migrate_bug_estimates_to_tasks.py - Bug estimation to Task migration (WIP)
+
+Utility Scripts
+---------------
+5. list_processes.py - List Azure DevOps process templates
+
+Experimental Scripts (API limitations encountered)
+--------------------------------------------------
+6. add_picklist_bulk.py - Bulk picklist population attempt
+7. add_picklist_values_v2.py - Alternative picklist approach
+
+Documentation
+-------------
+- README.md - Comprehensive guide and reference
+- 2026-02-03_SESSION_LOG.md - Detailed chronological session log
+- COWORK_STARTER.md - Prompt for continuing in Cowork
+
+Total Files: 10 (7 Python scripts + 3 documentation files)
+
+All files ready to move to GitHub repository folder: ADO-Python-Scripts/

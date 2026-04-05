@@ -1,0 +1,239 @@
+{
+  "name": "9d763a47-ff31-40e0-93d5-b452353ccbc8",
+  "id": "/providers/Microsoft.Flow/flows/9d763a47-ff31-40e0-93d5-b452353ccbc8",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "ADO ALL Items",
+    "definition": {
+      "metadata": {
+        "workflowEntityId": null,
+        "processAdvisorMetadata": null,
+        "flowChargedByPaygo": null,
+        "flowclientsuspensionreason": "None",
+        "flowclientsuspensiontime": null,
+        "flowclientsuspensionreasondetails": null,
+        "creator": {
+          "id": "74e681d8-ff6b-4110-9da2-c32067fadd61",
+          "type": "User",
+          "tenantId": "8ba9573d-c2ec-4486-a1a3-3b55546c9c64"
+        },
+        "provisioningMethod": "FromDefinition",
+        "failureAlertSubscription": true,
+        "clientLastModifiedTime": "2026-04-03T22:47:33.0499661Z",
+        "connectionKeySavedTimeKey": "2026-04-03T22:47:33.0499661Z",
+        "creationSource": "Portal",
+        "modifiedSources": "Portal"
+      },
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 3,
+            "startTime": "2025-12-05T15:42:00Z",
+            "timeZone": "Pacific Standard Time"
+          },
+          "evaluatedRecurrence": {
+            "frequency": "Minute",
+            "interval": 3,
+            "startTime": "2025-12-05T15:42:00Z",
+            "timeZone": "Pacific Standard Time"
+          },
+          "type": "Recurrence",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          }
+        }
+      },
+      "actions": {
+        "Get_query_results": {
+          "runAfter": {},
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "account": "ncryptedcloud",
+              "project": "eShare",
+              "queryId": "d98c6d59-07e6-4c39-ad44-aab85b2e295e",
+              "workItemsCount": 20000
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+              "connectionName": "shared_visualstudioteamservices-1",
+              "operationId": "GetQueryResultsV2"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 20000
+            }
+          }
+        },
+        "Create_CSV_table": {
+          "runAfter": {
+            "Get_query_results": [
+              "Succeeded"
+            ]
+          },
+          "type": "Table",
+          "inputs": {
+            "from": "@outputs('Get_query_results')?['body/value']",
+            "format": "CSV"
+          }
+        },
+        "Update_file": {
+          "runAfter": {
+            "Compose_JSON": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "%252fShared%2bDocuments%252fProduct%2bPlanning%252fALL%2bItems%2b(from%2bPA).csv": "/Shared Documents/Product Planning/ALL Items (from PA).csv"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://wardedbox.sharepoint.com/sites/ProductManagement",
+              "id": "/Shared Documents/Product Planning/ALL Items.csv",
+              "body": "@body('Create_CSV_table')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "UpdateFile"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Compose_JSON": {
+          "runAfter": {
+            "Select_Transformed_Fields": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@body('Select_Transformed_Fields')"
+        },
+        "Update_JSON_file": {
+          "runAfter": {
+            "Update_file": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "%252fShared%2bDocuments%252fProduct%2bPlanning%252fALL%2bItems.json": "/Shared Documents/Product Planning/ALL Items.json"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://wardedbox.sharepoint.com/sites/ProductManagement",
+              "id": "%252fShared%2bDocuments%252fProduct%2bPlanning%252fALL%2bItems.json",
+              "body": "@outputs('Compose_JSON')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "UpdateFile"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Select_Transformed_Fields": {
+          "runAfter": {
+            "Create_CSV_table": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@outputs('Get_query_results')?['body/value']",
+            "select": {
+              "id": "@item()?['System.Id']\n",
+              "type": "@item()?['System.WorkItemType']\n",
+              "title": "@item()?['System.Title']\n",
+              "state": "@item()?['System.State']\n",
+              "assignedTo": "@item()?['System.AssignedTo']\n",
+              "areaPath": "@item()?['System.AreaPath']\n",
+              "iterationPath": "@item()?['System.IterationPath']\n",
+              "createdDate": "@item()?['System.CreatedDate']\n",
+              "closedDate": "@item()?['Microsoft.VSTS.Common.ClosedDate']\n",
+              "stateChangeDate": "@item()?['Microsoft.VSTS.Common.StateChangeDate']\n",
+              "targetDate": "@item()?['Microsoft.VSTS.Scheduling.TargetDate']\n",
+              "priority": "@item()?['Microsoft.VSTS.Common.Priority']\n",
+              "severity": "@item()?['Microsoft.VSTS.Common.Severity']\n",
+              "tags": "@item()?['System.Tags']\n",
+              "parentId": "@item()?['System.Parent']\n",
+              "effort": "@item()?['Microsoft.VSTS.Scheduling.Effort']\n",
+              "effortRollup": "@item()?['Custom.EffortRollup']\n",
+              "backlogPriority": "@item()?['Microsoft.VSTS.Common.BacklogPriority']\n",
+              "customers": "@item()?['Custom.Customers']\n",
+              "teamsAffected": "@item()?['Custom.TeamsAffected']\n",
+              "releaseVersion": "@item()?['Custom.ReleaseVersion']\n",
+              "bugType": "@item()?['Custom.BugType']\n",
+              "component": "@item()?['Custom.Component']\n",
+              "feature": "@item()?['Custom.Feature']\n",
+              "ticketCategory": "@item()?['Custom.TicketCategory']\n",
+              "deliverySliceOwner": "@item()?['Custom.DeliverySliceOwner']\n",
+              "csOwner": "@item()?['Custom.CSOwner']\t",
+              "workLogData": "@item()?['Custom.WorkLogData']\t",
+              "taskType": "@item()?['Microsoft.VSTS.CMMI.TaskType']\t",
+              "externalLinkCount": "@item()?['System.ExternalLinkCount']\t",
+              "hyperLinkCount": "@item()?['System.HyperLinkCount']\t",
+              "relatedLinkCount": "@item()?['System.RelatedLinkCount']\t",
+              "remoteLinkCount": "@item()?['System.RemoteLinkCount']\t",
+              "security": "@item()?['Custom.Security']",
+              "regression": "@item()?['Custom.Regression']",
+              "analyticsEstimation": "@item()?['Custom.AnalyticsEstimation']",
+              "backendEstimation": "@item()?['Custom.BackendEstimation']",
+              "devopsEstimation": "@item()?['Custom.DevOpsEstimation']",
+              "frontendEstimation": "@item()?['Custom.FrontendEstimation']",
+              "governEstimation": "@item()?['Custom.GovernEstimation']",
+              "scgEstimation": "@item()?['Custom.SCGEstimation']",
+              "qaEstimation": "@item()?['Custom.QAEstimation']",
+              "devdoneDate": "@item()?['Custom.DevDoneDate']",
+              "committedIterations": "@item()?['Custom.CommittedIterations']",
+              "staffEstimation": "@item()?['Custom.StaffEstimation']",
+              "cascadingVersion": "@item()?['Custom.CascadingVersion']",
+              "cascadingDate": "@item()?['Custom.CascadingDate']",
+              "originalEstimate": "@item()?['Microsoft.VSTS.Scheduling.OriginalEstimate']"
+            }
+          }
+        }
+      }
+    },
+    "connectionReferences": {
+      "shared_visualstudioteamservices-1": {
+        "connectionName": "shared-visualstudiot-7464e497-5059-48df-bbaa-7d99c67dc4e4",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+        "tier": "NotSpecified",
+        "apiName": "visualstudioteamservices",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      },
+      "shared_sharepointonline": {
+        "connectionName": "shared-sharepointonl-30b40964-780e-4716-b58a-5616f559a478",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "tier": "NotSpecified",
+        "apiName": "sharepointonline",
+        "isProcessSimpleApiReferenceConversionAlreadyDone": false
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}

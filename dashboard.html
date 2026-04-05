@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eShare DevOps Dashboard</title>
+    <link rel="icon" type="image/png" href="eSHARE-faviconV2.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css?v=249">
+    <script src="https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js"></script>
+    <script src="dashboard-loader.js?v=249"></script>
+    <script src="capacity-planning-data.js?v=187"></script>
+    <script src="changelog.js?v=249"></script>
+    <script src="dashboard.js?v=249" defer></script>
+</head>
+<body>
+    <!-- Dashboard content loaded from dashboard-body.html -->
+    <div id="app-loading" style="display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--bg-primary, #0a0e17); color: var(--text-secondary, #94a3b8);">
+        Loading dashboard...
+    </div>
+    <script>
+        // Load dashboard body content
+        fetch('dashboard-body.html?v=249')
+            .then(response => response.text())
+            .then(html => {
+                // Extract just the body content (between <body> and </body>)
+                const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+                if (bodyMatch) {
+                    document.body.innerHTML = bodyMatch[1];
+                } else {
+                    document.body.innerHTML = html;
+                }
+                // Dashboard.js will auto-initialize via DOMContentLoaded handler
+                // DashboardApp is the exported namespace from dashboard.js
+                if (typeof DashboardApp !== 'undefined' && typeof DashboardApp.init === 'function') {
+                    DashboardApp.init();
+                }
+            })
+            .catch(error => {
+                document.body.innerHTML = '<div style="color: #f87171; padding: 20px; background: #0a0e17; height: 100vh;">Failed to load dashboard: ' + error.message + '</div>';
+            });
+    </script>
+</body>
+</html>

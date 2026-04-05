@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ADO API Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 2rem; }
+        h1 { color: #00d4ff; }
+        button { background: #00d4ff; color: #1a1a2e; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 1rem; margin: 0.5rem 0.5rem 0.5rem 0; }
+        button:hover { background: #00b8d9; }
+        button:disabled { background: #555; color: #999; cursor: not-allowed; }
+        #output { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 1rem; margin-top: 1rem; white-space: pre-wrap; font-family: 'Cascadia Code', monospace; font-size: 0.85rem; max-height: 600px; overflow-y: auto; }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .info { color: #00d4ff; }
+        .warn { color: #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Azure DevOps API Test</h1>
+    <p>Tests MSAL authentication and ADO REST API access.</p>
+    <p style="color:#888;">Org: <strong>ncryptedcloud</strong> | Project: <strong>eShare</strong></p>
+
+    <button id="btn-login" onclick="login()">1. Sign In (MSAL)</button>
+    <button id="btn-test-read" onclick="testRead()" disabled>2. Test Read (GET work item)</button>
+    <button id="btn-test-write" onclick="testWrite()" disabled>3. Test Write (add/remove tag)</button>
+    <button id="btn-clear" onclick="clearOutput()">Clear</button>
+
+    <div id="output"></div>
+
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+    <script>
+        const ORG = 'ncryptedcloud';
+        const PROJECT = 'eShare';
+        const ADO_RESOURCE_ID = '499b84ac-1321-427f-aa17-267ca6975798'; // Azure DevOps resource ID
+        const ADO_SCOPE = `${ADO_RESOURCE_ID}/user_impersonation`;
+        const TEST_WORK_ITEM_ID = 4456; // Known Feature ID
+
+        const msalConfig = {
+            auth: {
+                clientId: 'bf683b68-0dc3-4205-a5b7-676f54a958c0',
+                authority: 'https://login.microsoftonline.com/wardedbox.onmicrosoft.com',
+                redirectUri: window.location.origin + '/dashboard.html'
+            },
+            cache: {
+                cacheLocation: 'localStorage',
+                storeAuthStateInCookie: false
+            }
+        };
+
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+        let adoAccessToken = null;
+
+        // Handle redirect on page load
+        msalInstance.initialize().then(() => {
+            msalInstance.handleRedirectPromise().then(response => {
+                if (response) {
+                    msalInstance.setActiveAccount(response.account);
+                    log('✅ Redirect login successful: ' + response.account.username, 'success');
+                    document.getElementById('btn-test-read').disabled = false;
+                } else {
+                    const accounts = msalInstance.getAllAccounts();
+                    if (accounts.length > 0) {
+                        msalInstance.setActiveAccount(accounts[0]);
+                        log('ℹ️ Already signed in: ' + accounts[0].username, 'info');
+                        document.getElementById('btn-test-read').disabled = false;
+                    }
+                }
+            }).catch(err => {
+                log('❌ Redirect error: ' + err.message, 'error');
+            });
+        });
+
+        async function login() {
+            log('ℹ️ Initiating MSAL login with ADO scope...', 'info');
+            try {
+                const accounts = msalInstance.getAllAccounts();
+                if (accounts.length > 0) {
+                    msalInstance.setActiveAccount(accounts[0]);
+                    log('✅ Already signed in: ' + accounts[0].username, 'success');
+                    document.getElementById('btn-test-read').disabled = false;
+                    return;
+                }
+                // Use redirect (registered URI) for login
+                await msalInstance.loginRedirect({
+                    scopes: [ADO_SCOPE]
+                });
+            } catch (err) {
+                log('❌ Login failed: ' + err.message, 'error');
+            }
+        }
+
+        async function getAdoToken() {
+            log('ℹ️ Acquiring ADO access token...', 'info');
+            log(`   Scope: ${ADO_SCOPE}`, 'info');
+            log(`   Account: ${msalInstance.getActiveAccount()?.username || 'none'}`, 'info');
+            try {
+                const response = await msalInstance.acquireTokenSilent({
+                    scopes: [ADO_SCOPE],
+                    account: msalInstance.getActiveAccount()
+                });
+                adoAccessToken = response.accessToken;
+                log('✅ ADO token acquired (expires: ' + response.expiresOn + ')', 'success');
+                return adoAccessToken;
+            } catch (err) {
+                log('⚠️ Silent token failed: ' + err.message, 'warn');
+                log('   Error name: ' + err.name, 'warn');
+                if (err.errorCode) log('   Error code: ' + err.errorCode, 'warn');
+                if (err.subError) log('   Sub-error: ' + err.subError, 'warn');
+                log('', 'info');
+                log('ℹ️ This likely means the ADO API permission needs to be added to the Azure AD app registration:', 'info');
+                log('   1. Azure Portal → App registrations → bf683b68...', 'info');
+                log('   2. API permissions → Add a permission → Azure DevOps → user_impersonation', 'info');
+                log('   3. Grant admin consent', 'info');
+                return null;
+            }
+        }
+
+        async function testRead() {
+            const token = await getAdoToken();
+            if (!token) return;
+
+            log('ℹ️ Testing ADO API read...', 'info');
+            log(`   GET https://dev.azure.com/${ORG}/${PROJECT}/_apis/wit/workitems/${TEST_WORK_ITEM_ID}`, 'info');
+
+            try {
+                const url = `https://dev.azure.com/${ORG}/${PROJECT}/_apis/wit/workitems/${TEST_WORK_ITEM_ID}?api-version=7.0&$expand=all`;
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ READ SUCCESS! Work item retrieved:', 'success');
+                    log(`   ID: ${data.id}`, 'success');
+                    log(`   Title: ${data.fields['System.Title']}`, 'success');
+                    log(`   Type: ${data.fields['System.WorkItemType']}`, 'success');
+                    log(`   State: ${data.fields['System.State']}`, 'success');
+                    log(`   Iteration: ${data.fields['System.IterationPath']}`, 'success');
+                    log('', 'info');
+                    log('🎉 ADO API access is working!', 'success');
+                    document.getElementById('btn-test-write').disabled = false;
+                } else {
+                    const text = await response.text();
+                    log(`❌ READ FAILED (${response.status} ${response.statusText})`, 'error');
+                    log('   Response: ' + text, 'error');
+                }
+            } catch (err) {
+                log('❌ Network error: ' + err.message, 'error');
+            }
+        }
+
+        async function testWrite() {
+            const token = await getAdoToken();
+            if (!token) return;
+
+            const TEST_TAG = '_API-WRITE-TEST_';
+            const url = `https://dev.azure.com/${ORG}/${PROJECT}/_apis/wit/workitems/${TEST_WORK_ITEM_ID}?api-version=7.0`;
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json-patch+json'
+            };
+
+            // Step 1: Read current tags
+            log('ℹ️ Step 1: Reading current tags...', 'info');
+            try {
+                const readResp = await fetch(`${url}&$select=System.Tags`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!readResp.ok) { log('❌ Failed to read tags: ' + readResp.status, 'error'); return; }
+                const readData = await readResp.json();
+                const currentTags = readData.fields['System.Tags'] || '';
+                log(`   Current tags: "${currentTags}"`, 'info');
+
+                // Step 2: Add test tag
+                log('ℹ️ Step 2: Adding test tag "' + TEST_TAG + '"...', 'info');
+                const newTags = currentTags ? `${currentTags}; ${TEST_TAG}` : TEST_TAG;
+                const addPatch = [{ op: 'replace', path: '/fields/System.Tags', value: newTags }];
+                const addResp = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(addPatch) });
+
+                if (!addResp.ok) {
+                    const text = await addResp.text();
+                    log(`❌ WRITE FAILED (${addResp.status} ${addResp.statusText})`, 'error');
+                    log('   Response: ' + text, 'error');
+                    return;
+                }
+                log('✅ Tag added successfully!', 'success');
+
+                // Step 3: Verify tag was added
+                log('ℹ️ Step 3: Verifying tag was added...', 'info');
+                const verifyResp = await fetch(`${url}&$select=System.Tags`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const verifyData = await verifyResp.json();
+                const verifyTags = verifyData.fields['System.Tags'] || '';
+                if (verifyTags.includes(TEST_TAG)) {
+                    log(`   ✅ Verified: "${verifyTags}"`, 'success');
+                } else {
+                    log(`   ⚠️ Tag not found in: "${verifyTags}"`, 'warn');
+                }
+
+                // Step 4: Remove test tag
+                log('ℹ️ Step 4: Removing test tag...', 'info');
+                const restoredTags = currentTags;
+                const removePatch = [{ op: 'replace', path: '/fields/System.Tags', value: restoredTags }];
+                const removeResp = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(removePatch) });
+
+                if (!removeResp.ok) {
+                    const text = await removeResp.text();
+                    log(`❌ CLEANUP FAILED (${removeResp.status})`, 'error');
+                    log('   Response: ' + text, 'error');
+                    log(`   ⚠️ Please manually remove "${TEST_TAG}" tag from work item ${TEST_WORK_ITEM_ID}`, 'warn');
+                    return;
+                }
+                log('✅ Tag removed, original tags restored.', 'success');
+                log('', 'info');
+                log('🎉 ADO API write access is working!', 'success');
+            } catch (err) {
+                log('❌ Network error: ' + err.message, 'error');
+            }
+        }
+
+        function log(msg, cls) {
+            const el = document.getElementById('output');
+            el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

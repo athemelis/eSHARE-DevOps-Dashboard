@@ -1,0 +1,2078 @@
+<body>
+    <!-- Sticky Header -->
+    <div class="sticky-header">
+        <!-- Top row: Logo + Nav -->
+        <div class="header-top">
+            <div class="logo"><svg class="logo-img" viewBox="0 0 228 43" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.4635 0.199219C21.218 0.199219 26.4964 6.01507 26.4964 14.5246V16.0313H7.16297C7.59487 19.315 10.2324 22.0614 14.6504 22.0614C17.0737 22.0614 19.9288 21.0921 21.5971 19.4766L24.6138 23.8912C21.9763 26.3145 17.9375 27.5014 13.8987 27.5014C5.98265 27.5014 0.00195312 22.1702 0.00195312 13.8223C0.00195312 6.28213 5.55075 0.199219 13.4668 0.199219H13.4635ZM7.05417 11.4023H19.8728C19.7112 8.923 17.9869 5.63922 13.4635 5.63922C9.21039 5.63922 7.37727 8.8175 7.05417 11.4023Z" fill="currentColor"/><path d="M26.4977 37.2422H0V41.8678H26.4977V37.2422Z" fill="currentColor"/><path d="M37.3292 29.3911C40.2338 32.4177 44.7408 34.9498 50.4215 34.9498C55.2383 34.9498 57.5858 32.665 57.5858 30.3176C57.5858 27.2283 54.002 26.1799 49.2477 25.0655C42.5153 23.5225 33.8707 21.6696 33.8707 12.4678C33.8707 5.61338 39.7986 0.0546875 49.495 0.0546875C56.0428 0.0546875 61.4762 2.02957 65.5546 5.79801L60.675 12.2205C57.3385 9.13125 52.8942 7.71025 48.8785 7.71025C44.8628 7.71025 42.8252 9.44116 42.8252 11.9106C42.8252 14.6899 46.2838 15.5537 51.0413 16.6648C57.8331 18.2078 66.481 20.2453 66.481 29.3878C66.481 36.9214 61.1069 42.6054 49.9929 42.6054C42.0867 42.6054 36.406 39.948 32.5156 36.0576L37.3325 29.3878L37.3292 29.3911Z" fill="currentColor"/><path d="M100.638 24.5755H81.186V41.8681H72.416V0.675781H81.186V16.8573H100.638V0.675781H109.471V41.8681H100.638V24.5755Z" fill="currentColor"/><path d="M143.81 34.7664H125.406L122.811 41.8681H113.178L129.112 0.675781H140.104L155.976 41.8681H146.401L143.81 34.7664ZM127.754 27.1702H141.403L134.608 8.272L127.754 27.1702Z" fill="currentColor"/><path d="M175.007 27.1076H168.584V41.8681H159.814V0.675781H179.082C187.667 0.675781 192.916 6.29711 192.916 13.9527C192.916 21.6082 188.346 25.1327 183.899 26.1811L193.163 41.8681H183.094L175.004 27.1076H175.007ZM177.783 8.20936H168.581V19.5707H177.783C181.304 19.5707 183.958 17.3486 183.958 13.89C183.958 10.4315 181.304 8.20936 177.783 8.20936Z" fill="currentColor"/><path d="M198.85 0.675781H228.001V8.21265H207.62V17.1672H227.57V24.7041H207.62V34.2785H228.001V41.8747H198.85V0.675781Z" fill="currentColor"/></svg><span>DevOps Dashboard</span><div class="header-meta"><span class="version">v249</span><div class="header-meta-lines"><div class="header-meta-line1"><span class="refresh-time"><span id="refresh-indicator">Loading...</span> <span id="refresh-countdown" class="refresh-countdown"></span> </span></div><div class="header-meta-line2"><span id="refresh-timezones"></span></div></div></div></div>
+
+            <div class="header-nav-group">
+                <button class="header-action-button logout-button" onclick="signOut()" title="Sign out">⏻</button>
+                <button id="refresh-button" class="header-action-button" onclick="manualRefresh()" title="Click to refresh now">↻</button>
+                <button id="theme-toggle" class="header-action-button" onclick="toggleTheme()" title="Toggle light/dark mode">☀</button>
+                <button id="mention-bell" class="header-action-button mention-bell-button" onclick="showMentionNotifications()" title="@Mention Notifications">🔔<span id="mention-badge" class="mention-badge" style="display:none;">0</span></button>
+                <nav class="nav-tabs">
+                <button class="nav-tab" data-view="executive">Executive</button>
+                <button class="nav-tab" data-view="releases">Releases</button>
+                <button class="nav-tab" data-view="roadmap">Roadmap</button>
+                <button class="nav-tab" data-view="customers">Customers</button>
+                <button class="nav-tab" data-view="bugs">Bugs</button>
+                <button class="nav-tab" data-view="tasks">Tasks</button>
+                <button class="nav-tab" data-view="teams">Teams</button>
+                <button class="nav-tab" data-view="capacity">Capacity</button>
+                <button class="nav-tab" data-view="orgchart">Org Chart</button>
+                <button class="nav-tab" data-view="validation">Validation</button>
+                <button class="nav-tab" data-view="reports">Reports</button>
+                </nav>
+            </div>
+
+            <button class="hamburger" onclick="toggleMobileNav()">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+        
+        <!-- Mobile nav (hidden by default) -->
+        <div class="nav-mobile" id="nav-mobile">
+            <button class="nav-tab" data-view="executive">Executive</button>
+            <button class="nav-tab" data-view="releases">Releases</button>
+            <button class="nav-tab" data-view="roadmap">Roadmap</button>
+            <button class="nav-tab" data-view="customers">Customers</button>
+            <button class="nav-tab" data-view="bugs">Bugs</button>
+            <button class="nav-tab" data-view="tasks">Tasks</button>
+            <button class="nav-tab" data-view="teams">Teams</button>
+            <button class="nav-tab" data-view="capacity">Capacity</button>
+            <button class="nav-tab" data-view="orgchart">Org Chart</button>
+            <button class="nav-tab" data-view="validation">Validation</button>
+            <button class="nav-tab" data-view="reports">Reports</button>
+        </div>
+        
+        <!-- Filter rows (view-specific, only one active at a time) -->
+        <!-- Releases filter row -->
+        <div class="filter-row" id="filter-row-releases">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="releases-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('releases')"><div class="universal-search-dropdown" id="releases-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="releases-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-release-dropdown')">
+                    <span id="releases-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-release-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="releases-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-customer-dropdown')">
+                    <span id="releases-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="releases-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-priority-dropdown')">
+                    <span id="releases-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="releases-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-state-dropdown')">
+                    <span id="releases-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="releases-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-tag-dropdown')">
+                    <span id="releases-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-tag-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="releases-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-team-dropdown')">
+                    <span id="releases-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-team-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Assigned<br>To:</span>
+            <div class="filter-dropdown" id="releases-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-assignee-dropdown')">
+                    <span id="releases-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-assignee-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Bug<br>Owner:</span>
+            <div class="filter-dropdown" id="releases-bugowner-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-bugowner-dropdown')">
+                    <span id="releases-bugowner-display">All Bug Owners</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-bugowner-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Type:</span>
+            <div class="filter-dropdown" id="releases-type-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-type-dropdown')">
+                    <span id="releases-type-display">All Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-type-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Bug<br>Type:</span>
+            <div class="filter-dropdown" id="releases-bugtype-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-bugtype-dropdown')">
+                    <span id="releases-bugtype-display">All Bug Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-bugtype-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Progress:</span>
+            <div class="filter-dropdown" id="releases-progressstatus-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('releases-progressstatus-dropdown')">
+                    <span id="releases-progressstatus-display">All Progress</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="releases-progressstatus-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="releases-clear-filters-btn" onclick="clearAllReleaseFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('releases-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="releases-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>Release Items:</strong> Features, Issues, Bugs with a Release Version assigned.</p>
+                    <p><strong>Completion %:</strong> Done or Closed items ÷ Total × 100.</p>
+                    <p><strong>At Risk:</strong> Incomplete items with target date within 14 days or past.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Executive filter row -->
+        <div class="filter-row active" id="filter-row-executive">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="executive-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('executive')"><div class="universal-search-dropdown" id="executive-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="executive-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-release-dropdown')">
+                    <span id="executive-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-release-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="executive-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-customer-dropdown')">
+                    <span id="executive-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="executive-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-priority-dropdown')">
+                    <span id="executive-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="executive-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-state-dropdown')">
+                    <span id="executive-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="executive-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-tag-dropdown')">
+                    <span id="executive-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-tag-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="executive-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-team-dropdown')">
+                    <span id="executive-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-team-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="executive-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-iteration-dropdown')">
+                    <span id="executive-iteration-display">All Iterations</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-iteration-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Assigned<br>To:</span>
+            <div class="filter-dropdown" id="executive-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('executive-assignee-dropdown')">
+                    <span id="executive-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="executive-assignee-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="quick-toggles" style="margin-left: auto; display: flex; gap: 0.5rem; align-items: center;">
+                <div class="quick-toggle-stack">
+                    <button class="quick-toggle-btn" id="executive-active-toggle" onclick="toggleExecutiveActiveOnly()" title="Show only items not Done/Closed">Active</button>
+                    <button class="quick-toggle-btn" id="executive-unreleased-toggle" onclick="toggleExecutiveUnreleasedOnly()" title="Show items without Release Version">Unreleased</button>
+                </div>
+                <button class="clear-filters-btn hidden" id="executive-clear-filters-btn" onclick="clearAllExecutiveFilters()">✕ Clear</button>
+                <div class="filter-row-info">
+                <span class="info-toggle" onclick="toggleHeaderInfo('executive-info-panel')">ℹ️ Info</span>
+                    <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                    <div class="info-panel" id="executive-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                        <p><strong>Executive Dashboard:</strong> High-level overview of all work items</p>
+                        <p>Use filters to narrow down the view. Click any card or chart to drill down.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roadmap filter row -->
+        <div class="filter-row" id="filter-row-roadmap">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="roadmap-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('roadmap')"><div class="universal-search-dropdown" id="roadmap-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="roadmap-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-release-dropdown')">
+                    <span id="roadmap-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-release-menu">
+                    <!-- Populated dynamically by generic Release filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="roadmap-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-customer-dropdown')">
+                    <span id="roadmap-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="roadmap-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-priority-dropdown')">
+                    <span id="roadmap-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="roadmap-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-state-dropdown')">
+                    <span id="roadmap-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="roadmap-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-tag-dropdown')">
+                    <span id="roadmap-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="roadmap-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-team-dropdown')">
+                    <span id="roadmap-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-team-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="roadmap-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-iteration-dropdown')">
+                    <span id="roadmap-iteration-display">All Iterations</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-iteration-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Assigned<br>To:</span>
+            <div class="filter-dropdown" id="roadmap-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('roadmap-assignee-dropdown')">
+                    <span id="roadmap-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="roadmap-assignee-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="quick-toggles" style="margin-left: auto; display: flex; gap: 0.5rem; align-items: center;">
+                <div class="quick-toggle-stack">
+                    <button class="quick-toggle-btn" id="roadmap-active-toggle" onclick="toggleRoadmapActiveOnly()" title="Show only features not Done/Closed">Active</button>
+                    <button class="quick-toggle-btn" id="roadmap-unreleased-toggle" onclick="toggleRoadmapUnreleasedOnly()" title="Show features without Release or Target Date">Unreleased</button>
+                </div>
+                <button class="clear-filters-btn hidden" id="roadmap-clear-filters-btn" onclick="clearAllRoadmapFilters()">✕ Clear</button>
+                <div class="filter-row-info">
+                <span class="info-toggle" onclick="toggleHeaderInfo('roadmap-info-panel')">ℹ️ Info</span>
+                    <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                    <div class="info-panel" id="roadmap-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                        <p><strong>Roadmap Features:</strong> All Features in the backlog</p>
+                        <p><strong>Default order:</strong> Backlog Priority (lower = higher priority)</p>
+                        <p>Click any column header to sort. Use filters to narrow down the list.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers filter row -->
+        <div class="filter-row" id="filter-row-customers">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="customers-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('customers')"><div class="universal-search-dropdown" id="customers-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="customers-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-release-dropdown')">
+                    <span id="customers-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-release-menu">
+                    <!-- Populated dynamically by generic Release filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="customers-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-customer-dropdown')">
+                    <span id="customers-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-customer-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="customers-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-priority-dropdown')">
+                    <span id="customers-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-priority-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="customers-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-state-dropdown')">
+                    <span id="customers-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-state-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="customers-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-tag-dropdown')">
+                    <span id="customers-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Category:</span>
+            <div class="filter-dropdown" id="customers-category-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-category-dropdown')">
+                    <span id="customers-category-display">All Categories</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-category-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Aging:</span>
+            <div class="filter-dropdown" id="customers-aging-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-aging-dropdown')">
+                    <span id="customers-aging-display">All Ages</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-aging-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">CS Owner:</span>
+            <div class="filter-dropdown" id="customers-csowner-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-csowner-dropdown')">
+                    <span id="customers-csowner-display">All CS Owners</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-csowner-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Assigned<br>To:</span>
+            <div class="filter-dropdown" id="customers-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('customers-assignee-dropdown')">
+                    <span id="customers-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="customers-assignee-menu">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="quick-toggles" style="display: flex; gap: 0.5rem; align-items: center;">
+                <div class="quick-toggle-stack">
+                    <button class="quick-toggle-btn" id="customers-active-toggle" onclick="toggleCustomersActiveOnly()" title="Show only issues not Done/Closed">Active</button>
+                    <button class="quick-toggle-btn" id="customers-unreleased-toggle" onclick="toggleCustomersUnreleasedOnly()" title="Show issues without Release">Unreleased</button>
+                </div>
+                <button class="clear-filters-btn hidden" id="customers-clear-filters-btn" onclick="clearAllCustomersFilters()">✕ Clear</button>
+            </div>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('customers-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="customers-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>Customer Issues:</strong> Work items of type "Issue" with customer information.</p>
+                    <p><strong>Ticket Category:</strong> Enhancement Request, Bug, Task, or (Not Set).</p>
+                    <p><strong>CS Owner:</strong> Customer Success team member assigned to the issue.</p>
+                    <p><strong>Multi-Customer Items:</strong> Issues affecting multiple customers (semicolon-separated in the Customers field).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bugs filter row -->
+        <div class="filter-row" id="filter-row-bugs">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="bugs-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('bugs')"><div class="universal-search-dropdown" id="bugs-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="bugs-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-release-dropdown')">
+                    <span id="bugs-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-release-menu">
+                    <!-- Populated dynamically by generic Release filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="bugs-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-customer-dropdown')">
+                    <span id="bugs-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-customer-menu">
+                    <!-- Populated dynamically by generic Customer filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="bugs-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-priority-dropdown')">
+                    <span id="bugs-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-priority-menu">
+                    <!-- Populated dynamically by generic Priority filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="bugs-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-state-dropdown')">
+                    <span id="bugs-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-state-menu">
+                    <!-- Populated dynamically by generic State filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="bugs-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-tag-dropdown')">
+                    <span id="bugs-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="bugs-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-team-dropdown')">
+                    <span id="bugs-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-team-menu">
+                    <!-- Populated dynamically by generic Team filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Bug<br>Type:</span>
+            <div class="filter-dropdown" id="bugs-bugtype-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-bugtype-dropdown')">
+                    <span id="bugs-bugtype-display">All Bug Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-bugtype-menu">
+                    <!-- Populated dynamically by generic Bug Type filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Aging:</span>
+            <div class="filter-dropdown" id="bugs-aging-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-aging-dropdown')">
+                    <span id="bugs-aging-display">All Ages</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-aging-menu">
+                    <!-- Populated dynamically by generic Aging filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Bug<br>Owner:</span>
+            <div class="filter-dropdown" id="bugs-bugowner-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-bugowner-dropdown')">
+                    <span id="bugs-bugowner-display">All Bug Owners</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="bugs-bugowner-menu">
+                    <!-- Populated dynamically by Bug Owner filter -->
+                </div>
+            </div>
+
+            <div class="quick-toggles" style="display: flex; gap: 0.5rem; align-items: center;">
+                <div class="quick-toggle-stack">
+                    <button class="quick-toggle-btn" id="bugs-active-toggle" onclick="toggleBugsActiveOnly()" title="Show only bugs not Done/Closed">Active</button>
+                    <button class="quick-toggle-btn" id="bugs-unreleased-toggle" onclick="toggleBugsUnreleasedOnly()" title="Show bugs without Release">Unreleased</button>
+                </div>
+                <button class="clear-filters-btn hidden" id="bugs-clear-filters-btn" onclick="clearAllBugsFilters()">✕ Clear All</button>
+            </div>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('bugs-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="bugs-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>Bug Type:</strong> Customer Related, Product Quality, or Technical & Infrastructure.</p>
+                    <p><strong>Aging:</strong> Time since bug was created (or time to close for closed bugs).</p>
+                    <p><strong>Bug Trend:</strong> Shows bugs opened and closed over the past quarter.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks filter row -->
+        <div class="filter-row" id="filter-row-tasks">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="tasks-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('tasks')"><div class="universal-search-dropdown" id="tasks-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="tasks-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-priority-dropdown')">
+                    <span id="tasks-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-priority-menu">
+                    <!-- Populated dynamically by generic Priority filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="tasks-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-state-dropdown')">
+                    <span id="tasks-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-state-menu">
+                    <!-- Populated dynamically by generic State filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="tasks-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-tag-dropdown')">
+                    <span id="tasks-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="tasks-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-team-dropdown')">
+                    <span id="tasks-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-team-menu">
+                    <!-- Populated dynamically by generic Team filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Task Type:</span>
+            <div class="filter-dropdown" id="tasks-tasktype-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-tasktype-dropdown')">
+                    <span id="tasks-tasktype-display">All Task Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-tasktype-menu">
+                    <!-- Populated dynamically by generic Task Type filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="tasks-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-iteration-dropdown')">
+                    <span id="tasks-iteration-display">All Iterations</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-iteration-menu">
+                    <!-- Populated dynamically by generic Iteration filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Assigned To:</span>
+            <div class="filter-dropdown" id="tasks-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-assignee-dropdown')">
+                    <span id="tasks-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-assignee-menu">
+                    <!-- Populated dynamically by generic Assignee filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">📅 Period:</span>
+            <div class="filter-dropdown" id="tasks-period-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('tasks-period-dropdown')">
+                    <span id="tasks-period-display">This Week</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="tasks-period-menu">
+                    <!-- Populated dynamically by period/week selector -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="tasks-clear-filters-btn" onclick="clearAllTasksFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('tasks-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="tasks-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>Tasks:</strong> Work items of type "Task" created to track implementation work.</p>
+                    <p><strong>Task Type:</strong> Category of task (e.g., Coding, Testing, Design, Documentation).</p>
+                    <p><strong>Period:</strong> Select one or more weeks to scope Work Log Summary and utilization.</p>
+                    <p><strong>Work Log:</strong> Shows work logged with timeline visualization for the selected period.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation filter row -->
+        <div class="filter-row" id="filter-row-validation">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="validation-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('validation')"><div class="universal-search-dropdown" id="validation-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="validation-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-release-dropdown')">
+                    <span id="validation-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-release-menu">
+                    <!-- Populated dynamically by generic Release filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="validation-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-customer-dropdown')">
+                    <span id="validation-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-customer-menu">
+                    <!-- Populated dynamically by generic Customer filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="validation-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-priority-dropdown')">
+                    <span id="validation-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-priority-menu">
+                    <!-- Populated dynamically by generic Priority filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="validation-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-state-dropdown')">
+                    <span id="validation-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-state-menu">
+                    <!-- Populated dynamically by generic State filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="validation-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-tag-dropdown')">
+                    <span id="validation-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-tag-menu">
+                    <!-- Populated dynamically by generic Tag filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="validation-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-team-dropdown')">
+                    <span id="validation-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-team-menu">
+                    <!-- Populated dynamically by generic Team filter -->
+                </div>
+            </div>
+
+            <span class="filter-row-label">Bug Type:</span>
+            <div class="filter-dropdown" id="validation-bugtype-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('validation-bugtype-dropdown')">
+                    <span id="validation-bugtype-display">All Bug Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="validation-bugtype-menu">
+                    <!-- Populated dynamically by generic Bug Type filter -->
+                </div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="validation-clear-filters-btn" onclick="clearAllValidationFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('validation-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="validation-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>Data Source Validation:</strong> Ensures the dashboard accurately reflects the source data from Azure DevOps.</p>
+                    <p><strong>Data Quality Checks:</strong> Identifies work items with missing or inconsistent data.</p>
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+                    <p><strong>Fully Classified Bug:</strong> A bug with Bug Type, Feature, and Component all set.</p>
+                    <p><strong>Tasks Missing Effort:</strong> Tasks where engineers haven't logged their actual effort (Effort field is empty or 0).</p>
+                    <p><strong>Bugs Without Tasks:</strong> Bugs with estimates but no task breakdown (work not yet planned).</p>
+                    <p><strong>Orphan Tasks:</strong> Tasks not linked to any parent work item.</p>
+                    <p><strong>Same-Type Parent:</strong> Work items whose parent is the same type (e.g., Task under Task) - unusual hierarchy.</p>
+                    <p><strong>Cross-Team Assignment:</strong> Work item assigned to someone not in the team (based on Area Path vs Org Chart).</p>
+                    <p><strong>Unknown Assignee:</strong> Work item assigned to someone not found in any team in the Org Chart.</p>
+                    <p><strong>Release Date Issues:</strong> Releases where items have inconsistent or missing target dates.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capacity Planning filter row -->
+        <div class="filter-row" id="filter-row-capacity">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="capacity-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('capacity')"><div class="universal-search-dropdown" id="capacity-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="capacity-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-iteration-dropdown')">
+                    <span id="capacity-iteration-display">Select Iteration</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-iteration-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="capacity-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-release-dropdown')">
+                    <span id="capacity-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-release-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="capacity-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-customer-dropdown')">
+                    <span id="capacity-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-customer-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="capacity-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-priority-dropdown')">
+                    <span id="capacity-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-priority-menu"></div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="capacity-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-state-dropdown')">
+                    <span id="capacity-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-state-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="capacity-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-tag-dropdown')">
+                    <span id="capacity-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-tag-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="capacity-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-team-dropdown')">
+                    <span id="capacity-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-team-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Bug Owner:</span>
+            <div class="filter-dropdown" id="capacity-bugowner-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-bugowner-dropdown')">
+                    <span id="capacity-bugowner-display">All Bug Owners</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-bugowner-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Assignee:</span>
+            <div class="filter-dropdown" id="capacity-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('capacity-assignee-dropdown')">
+                    <span id="capacity-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="capacity-assignee-menu"></div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="capacity-clear-filters-btn" onclick="clearCapacityFilters()">Clear Filters</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('capacity-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="capacity-info-panel"><p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>Capacity Planning:</strong> Visualizes planned effort vs. team capacity for a selected iteration.</p>
+                    <p><strong>Team Capacity:</strong> Calculated as Active Team Members × Working Days in Iteration.</p>
+                    <p><strong>Planned Effort:</strong> Sum of effort from Delivery Slices (Features) or Estimation fields (Bugs).</p>
+                    <p><strong>Actual Effort:</strong> Sum of Completed Work from child Tasks.</p>
+                    <p><strong>Completion %:</strong> Actual ÷ Planned × 100.</p>
+                    <hr style="border-color: var(--border-subtle); margin: 8px 0;">
+                    <p><strong>CLI Sync Prerequisites:</strong> Run these once before syncing:</p>
+                    <ol style="font-size: 11px; margin: 4px 0 4px 20px; padding: 0;">
+                        <li><code>az extension add --name azure-devops</code></li>
+                        <li><code>az devops configure --defaults organization=https://dev.azure.com/ncryptedcloud</code></li>
+                        <li><code>az devops configure -d project=eShare</code></li>
+                        <li><code>az login</code></li>
+                    </ol>
+                    <p style="font-size: 11px; color: var(--text-muted);">After running commands, click "Mark as Synced" to clear changes.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports filter row -->
+        <div class="filter-row" id="filter-row-reports">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="reports-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('reports')"><div class="universal-search-dropdown" id="reports-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="reports-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-release-dropdown')">
+                    <span id="reports-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-release-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="reports-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-customer-dropdown')">
+                    <span id="reports-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-customer-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="reports-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-priority-dropdown')">
+                    <span id="reports-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-priority-menu"></div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="reports-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-state-dropdown')">
+                    <span id="reports-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-state-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="reports-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-tag-dropdown')">
+                    <span id="reports-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-tag-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="reports-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-team-dropdown')">
+                    <span id="reports-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-team-menu"></div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Bug<br>Type:</span>
+            <div class="filter-dropdown" id="reports-bugtype-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-bugtype-dropdown')">
+                    <span id="reports-bugtype-display">All Bug Types</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-bugtype-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Aging:</span>
+            <div class="filter-dropdown" id="reports-aging-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-aging-dropdown')">
+                    <span id="reports-aging-display">All Ages</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-aging-menu"></div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Bug<br>Owner:</span>
+            <div class="filter-dropdown" id="reports-bugowner-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-bugowner-dropdown')">
+                    <span id="reports-bugowner-display">All Bug Owners</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-bugowner-menu"></div>
+            </div>
+
+            <span class="filter-row-label filter-row-label-stacked">Assigned<br>To:</span>
+            <div class="filter-dropdown" id="reports-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('reports-assignee-dropdown')">
+                    <span id="reports-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="reports-assignee-menu"></div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="reports-clear-filters-btn" onclick="clearAllReportsFilters()">✕ Clear All</button>
+
+            <div class="filter-row-info" style="margin-left: auto;">
+                <span class="info-toggle" onclick="toggleHeaderInfo('reports-info-panel')">ℹ️ Info</span>
+                <span class="info-toggle" onclick="showVersionsModal()">📅 Versions</span>
+                <div class="info-panel" id="reports-info-panel">
+                    <p><span class="info-toggle whats-new-link" onclick="showWhatsNew(true)">🚀 What's New - click to view</span></p>
+                    <p><strong>MTTR:</strong> Mean Time to Resolution — average days from creation to close, by priority.</p>
+                    <p><strong>Bug Aging:</strong> Distribution of open bugs by age bucket and priority.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teams filter row -->
+        <div class="filter-row" id="filter-row-teams">
+            <span class="filter-row-label">Search:</span>
+            <div class="universal-search-wrapper"><input type="text" id="teams2-search-input" class="filter-search-input" placeholder="Search across all dashboards..." oninput="handleGenericSearchChange('teams2')"><div class="universal-search-dropdown" id="teams2-search-dropdown"></div></div>
+
+            <span class="filter-row-label">Iteration:</span>
+            <div class="filter-dropdown" id="teams2-iteration-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-iteration-dropdown')">
+                    <span id="teams2-iteration-display">Select Iteration</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-iteration-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Release:</span>
+            <div class="filter-dropdown" id="teams2-release-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-release-dropdown')">
+                    <span id="teams2-release-display">All Releases</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-release-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Customer:</span>
+            <div class="filter-dropdown" id="teams2-customer-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-customer-dropdown')">
+                    <span id="teams2-customer-display">All Customers</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-customer-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Priority:</span>
+            <div class="filter-dropdown" id="teams2-priority-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-priority-dropdown')">
+                    <span id="teams2-priority-display">All Priorities</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-priority-menu"></div>
+            </div>
+
+            <span class="filter-row-label">State:</span>
+            <div class="filter-dropdown" id="teams2-state-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-state-dropdown')">
+                    <span id="teams2-state-display">All States</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-state-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Tag:</span>
+            <div class="filter-dropdown" id="teams2-tag-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-tag-dropdown')">
+                    <span id="teams2-tag-display">All Tags</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-tag-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Team:</span>
+            <div class="filter-dropdown" id="teams2-team-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-team-dropdown')">
+                    <span id="teams2-team-display">All Teams</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-team-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Bug Owner:</span>
+            <div class="filter-dropdown" id="teams2-bugowner-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-bugowner-dropdown')">
+                    <span id="teams2-bugowner-display">All Bug Owners</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-bugowner-menu"></div>
+            </div>
+
+            <span class="filter-row-label">Assignee:</span>
+            <div class="filter-dropdown" id="teams2-assignee-dropdown">
+                <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('teams2-assignee-dropdown')">
+                    <span id="teams2-assignee-display">All Assignees</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <div class="filter-dropdown-menu" id="teams2-assignee-menu"></div>
+            </div>
+
+            <button class="clear-filters-btn hidden" id="teams2-clear-filters-btn" onclick="clearTeams2Filters()">Clear Filters</button>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="breadcrumb" id="breadcrumb" style="display: none;">
+            <span class="breadcrumb-current">Executive</span>
+        </div>
+        
+        <!-- Executive View -->
+        <div class="dashboard-view" id="view-executive">
+            <div id="executive-content"></div>
+        </div>
+        
+        <!-- Teams View -->
+        <div class="dashboard-view" id="view-teams">
+
+            <!-- Summary Cards -->
+            <div class="teams-summary-cards" id="teams-summary-cards">
+                <div class="teams-summary-card">
+                    <div class="teams-card-label">Features (Owned)</div>
+                    <div class="teams-card-value" id="teams-feat-owned">—</div>
+                    <div class="teams-card-sub">above cut line</div>
+                </div>
+                <div class="teams-summary-card">
+                    <div class="teams-card-label">Features (Contributing)</div>
+                    <div class="teams-card-value" id="teams-feat-contrib">—</div>
+                    <div class="teams-card-sub">above cut line</div>
+                </div>
+                <div class="teams-summary-card teams-card-customer">
+                    <div class="teams-card-label">Customer Bugs (Owned)</div>
+                    <div class="teams-card-value" id="teams-cust-bugs-owned">—</div>
+                    <div class="teams-card-sub">above cut line</div>
+                </div>
+                <div class="teams-summary-card teams-card-customer" style="border-top-color: #f97316;">
+                    <div class="teams-card-label">Customer Bugs (Contributing)</div>
+                    <div class="teams-card-value" id="teams-cust-bugs-contrib">—</div>
+                    <div class="teams-card-sub">above cut line</div>
+                </div>
+                <div class="teams-summary-card teams-card-internal">
+                    <div class="teams-card-label">Internal Bugs (Owned)</div>
+                    <div class="teams-card-value" id="teams-int-bugs-owned">—</div>
+                    <div class="teams-card-sub">above cut line</div>
+                </div>
+                <div class="teams-summary-card teams-card-internal" style="border-top-color: #ca8a04;">
+                    <div class="teams-card-label">Internal Bugs (Contributing)</div>
+                    <div class="teams-card-value" id="teams-int-bugs-contrib">—</div>
+                    <div class="teams-card-sub">above cut line</div>
+                </div>
+                <div class="teams-summary-card teams-card-progress">
+                    <div class="teams-card-label">Overall Progress</div>
+                    <div class="teams-card-value" id="teams-progress">—</div>
+                    <div class="teams-card-sub">work completed</div>
+                </div>
+            </div>
+
+            <!-- Section: Features (Owned) -->
+            <div class="teams-section" id="teams-section-features-owned">
+                <div class="teams-section-header">
+                    <h3>🟢 Features — Owned by Team <span class="teams-section-badge" id="teams-feat-owned-badge">0</span></h3>
+                    <div class="teams-section-legend">
+                        <span class="teams-legend-above">● Above cut line</span>
+                        <span class="teams-legend-below">● Below cut line</span>
+                    </div>
+                </div>
+                <div class="teams-table-container" id="teams-features-owned-table"></div>
+            </div>
+
+            <!-- Section: Features (Contributing) -->
+            <div class="teams-section" id="teams-section-features-contrib">
+                <div class="teams-section-header">
+                    <h3>🔵 Features — Contributing <span class="teams-section-badge" id="teams-feat-contrib-badge">0</span></h3>
+                    <p class="teams-section-desc">Features owned by other teams where this team has Delivery Slices</p>
+                </div>
+                <div class="teams-table-container" id="teams-features-contrib-table"></div>
+            </div>
+
+            <!-- Section: Customer Bugs (Owned) -->
+            <div class="teams-section" id="teams-section-customer-bugs-owned">
+                <div class="teams-section-header">
+                    <h3>🟠 Customer Bugs — Owned by Team <span class="teams-section-badge teams-badge-orange" id="teams-cust-bugs-owned-badge">0</span></h3>
+                </div>
+                <div class="teams-table-container" id="teams-customer-bugs-owned-table"></div>
+            </div>
+
+            <!-- Section: Customer Bugs (Contributing) -->
+            <div class="teams-section" id="teams-section-customer-bugs-contrib">
+                <div class="teams-section-header">
+                    <h3>🟠 Customer Bugs — Contributing <span class="teams-section-badge teams-badge-orange" id="teams-cust-bugs-contrib-badge">0</span></h3>
+                    <p class="teams-section-desc">Customer Bugs owned by other teams where this team has estimation</p>
+                </div>
+                <div class="teams-table-container" id="teams-customer-bugs-contrib-table"></div>
+            </div>
+
+            <!-- Section: Internal Bugs (Owned) -->
+            <div class="teams-section" id="teams-section-internal-bugs-owned">
+                <div class="teams-section-header">
+                    <h3>🟡 Internal Bugs — Owned by Team <span class="teams-section-badge teams-badge-yellow" id="teams-int-bugs-owned-badge">0</span></h3>
+                </div>
+                <div class="teams-table-container" id="teams-internal-bugs-owned-table"></div>
+            </div>
+
+            <!-- Section: Internal Bugs (Contributing) -->
+            <div class="teams-section" id="teams-section-internal-bugs-contrib">
+                <div class="teams-section-header">
+                    <h3>🟡 Internal Bugs — Contributing <span class="teams-section-badge teams-badge-yellow" id="teams-int-bugs-contrib-badge">0</span></h3>
+                    <p class="teams-section-desc">Internal Bugs owned by other teams where this team has estimation</p>
+                </div>
+                <div class="teams-table-container" id="teams-internal-bugs-contrib-table"></div>
+            </div>
+
+        </div>
+        
+        <!-- Customers View -->
+        <div class="dashboard-view" id="view-customers">
+            <div class="stats-grid" id="customer-stats"></div>
+            <div class="insights-panel insights-horizontal" id="customer-insights"></div>
+
+            <!-- Enhancement Request Prioritization Summary (Collapsible) -->
+            <div class="er-prioritization-section collapsible" id="er-prioritization-section">
+                <div class="er-prioritization-header" onclick="toggleERPrioritizationSummary()">
+                    <span class="er-prioritization-title">Enhancement Request Prioritization Summary</span>
+                    <span class="collapse-indicator">▼</span>
+                </div>
+                <div class="er-section-content">
+                    <div id="er-prioritization-heatmap"></div>
+                    <div class="strategy-summary-footer">
+                        <div class="strategy-summary-note" id="er-untagged-note"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="aging-histogram-section" id="customer-aging-histogram"></div>
+
+            <!-- Issue Trend Section -->
+            <div class="stats-grid" id="issues-trend-stats"></div>
+            <div class="chart-card full-width" id="issues-trend-chart-container">
+                <div class="chart-title">Issue Trend by Week (Past Quarter)</div>
+                <div class="chart-container tall"><canvas id="issues-trend-chart"></canvas></div>
+            </div>
+
+            <!-- Quarterly Summary Tables -->
+            <div id="customer-quarterly-summary"></div>
+
+            <div id="customer-issues-table"></div>
+        </div>
+        
+        <!-- Bugs View (renamed from Quality) -->
+        <div class="dashboard-view" id="view-bugs">
+            <div class="bugs-stats-row">
+                <div class="stats-grid" id="bugs-stats"></div>
+                <!-- Boolean Filters (Security/Regression) -->
+                <div class="bugs-boolean-filters">
+                    <div class="boolean-filter-group">
+                        <span class="filter-label">Security:</span>
+                        <div class="filter-dropdown" id="bugs-security-dropdown">
+                            <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-security-dropdown')">
+                                <span id="bugs-security-display">All</span>
+                                <span class="arrow">▼</span>
+                            </div>
+                            <div class="filter-dropdown-menu" id="bugs-security-menu">
+                                <label class="filter-option"><input type="radio" name="bugs-security" value="" checked onchange="handleBugsBooleanFilterChange('security')"> All</label>
+                                <label class="filter-option"><input type="radio" name="bugs-security" value="true" onchange="handleBugsBooleanFilterChange('security')"> Yes</label>
+                                <label class="filter-option"><input type="radio" name="bugs-security" value="false" onchange="handleBugsBooleanFilterChange('security')"> No</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="boolean-filter-group">
+                        <span class="filter-label">Regression:</span>
+                        <div class="filter-dropdown" id="bugs-regression-dropdown">
+                            <div class="filter-dropdown-toggle" onclick="toggleFilterDropdown('bugs-regression-dropdown')">
+                                <span id="bugs-regression-display">All</span>
+                                <span class="arrow">▼</span>
+                            </div>
+                            <div class="filter-dropdown-menu" id="bugs-regression-menu">
+                                <label class="filter-option"><input type="radio" name="bugs-regression" value="" checked onchange="handleBugsBooleanFilterChange('regression')"> All</label>
+                                <label class="filter-option"><input type="radio" name="bugs-regression" value="true" onchange="handleBugsBooleanFilterChange('regression')"> Yes</label>
+                                <label class="filter-option"><input type="radio" name="bugs-regression" value="false" onchange="handleBugsBooleanFilterChange('regression')"> No</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="insights-panel insights-horizontal" id="bugs-insights"></div>
+
+            <!-- Architecture Diagram Section -->
+            <div class="architecture-diagram-section" id="bugs-architecture-diagram"></div>
+
+            <div class="aging-histogram-section" id="bugs-aging-histogram"></div>
+
+            <!-- Bug Trend Section -->
+            <div class="stats-grid" id="bugs-trend-stats"></div>
+            <div class="chart-card full-width" id="bugs-trend-chart-container">
+                <div class="chart-title">Bug Trend by Week (Past Quarter)</div>
+                <div class="chart-container tall"><canvas id="bugs-trend-chart"></canvas></div>
+            </div>
+
+            <!-- Bugs Table -->
+            <div id="bugs-table-container"></div>
+
+            <!-- Archive Views Section (collapsed by default) -->
+            <div class="collapsible-section collapsed" id="bugs-archive-section">
+                <div class="collapsible-section-header" onclick="toggleBugsArchiveSection()">
+                    <h3>📦 Archive Views</h3>
+                    <span class="collapse-indicator">▼</span>
+                </div>
+                <div class="collapsible-section-content">
+                    <!-- Bug Categorization Section -->
+                    <div class="section-divider">
+                        <h3>Bug Categorization</h3>
+                    </div>
+                    <div class="charts-grid" id="bugs-categorization-charts"></div>
+
+                    <!-- Bug Effort Section -->
+                    <div class="section-divider">
+                        <h3>Bug Effort</h3>
+                    </div>
+                    <div class="charts-grid" id="bugs-effort-charts"></div>
+
+                    <!-- Bug Effort Analysis Section (Estimate vs Actual) -->
+                    <div class="section-divider" style="margin-top: 2rem;">
+                        <h3>Effort Estimate vs Actual</h3>
+                    </div>
+                    <div class="calculation-definition" id="bug-effort-definition">
+                        <div class="definition-toggle" onclick="toggleDefinition('bug-effort-definition')">
+                            <span>📖 How is bug effort tracked?</span>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="definition-content" style="display: none;">
+                            <p><strong>Estimate (Bug Effort):</strong> Initial estimate entered by Bug Owner when bug is created.</p>
+                            <p><strong>Actual (Effort Rollup):</strong> Sum of effort from child tasks, entered by engineers as they work.</p>
+                            <p><strong>Divergence:</strong> Actual − Estimate. Positive = took longer than estimated, Negative = took less.</p>
+                            <p><strong>Variance:</strong> The divergence as a percentage of the estimate.</p>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="bug-effort-stats"></div>
+                    <div class="charts-grid" id="bug-effort-charts"></div>
+                    <div class="table-container" id="bug-effort-table"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Releases View -->
+        <div class="dashboard-view" id="view-releases">
+            <div class="stats-grid" id="release-stats"></div>
+            <div class="insights-panel insights-horizontal" id="release-insights"></div>
+            
+            <!-- Full bar chart (shown when no filters active) -->
+            <div class="chart-card full-width" id="release-bar-chart-container" style="display: none;">
+                <div class="chart-header-row">
+                    <h3>Items by Release</h3>
+                    <span class="chart-subtitle">Click bar to select · Ctrl+Click for multi-select</span>
+                    <div class="chart-header-spacer"></div>
+                    <div id="release-period-selector-main"></div>
+                </div>
+                <div class="chart-container" style="height: 420px;">
+                    <canvas id="release-bar-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Mini bar chart (shown when filters active) -->
+            <div class="mini-chart-container" id="release-mini-chart-container" style="display: none;">
+                <div class="mini-chart-header">
+                    <span class="mini-chart-title">Items by Release</span>
+                    <span class="chart-subtitle">Click bar to select · Ctrl+Click for multi-select</span>
+                    <div class="chart-header-spacer"></div>
+                    <div id="release-period-selector-mini"></div>
+                </div>
+                <div class="mini-bar-track" id="release-mini-bars"></div>
+                <div class="mini-bar-labels" id="release-mini-labels"></div>
+                <div class="mini-chart-selection" id="release-mini-selection" style="display: none;"></div>
+            </div>
+            
+            <div class="charts-grid" id="release-charts"></div>
+
+            <!-- Release Progress Summary Section -->
+            <div id="release-progress-summary" class="dashboard-section collapsible" style="display: none;"></div>
+
+            <div id="release-items-table" style="display: none;">
+                <!-- Filter indicator rendered dynamically -->
+                <div id="release-table-filter-indicator"></div>
+                <!-- 4 table containers rendered by buildGenericTable -->
+                <div id="release-features-table-container"></div>
+                <div id="release-issues-table-container"></div>
+                <div id="release-customerbugs-table-container"></div>
+                <div id="release-internalbugs-table-container"></div>
+            </div>
+        </div>
+
+        <!-- Feature Roadmap View -->
+        <div class="dashboard-view" id="view-roadmap">
+            <!-- Section 1: OKR Summary -->
+            <div class="roadmap-section" id="roadmap-section-summary">
+                <div class="roadmap-section-header">
+                    <span class="section-number">1</span>
+                    <span>OKR Summary</span>
+                </div>
+                <div class="okr-diagram" id="okr-diagram">
+                    <!-- Populated dynamically by renderStrategySummary() -->
+                </div>
+                <div class="strategy-summary-footer">
+                    <span class="strategy-summary-note" id="strategy-unmatched-note"></span>
+                </div>
+                <div id="strategy-error-container"></div>
+            </div>
+
+            <!-- Section 2: Team Summary (Collapsible) -->
+            <div class="roadmap-section collapsible collapsed" id="roadmap-section-teams">
+                <div class="roadmap-section-header" onclick="toggleRoadmapTeamSummary()">
+                    <span class="section-number">2</span>
+                    <span>Team Summary</span>
+                    <span class="collapse-indicator">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="roadmap-effort-cards" id="roadmap-effort-cards">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Feature Details (rendered by generic table component) -->
+            <div class="roadmap-section" id="roadmap-section-details">
+                <div class="roadmap-section-header">
+                    <span class="section-number">3</span>
+                    <span id="roadmap-count"></span>
+                </div>
+                <div id="roadmap-table-container">
+                    <!-- Table rendered by buildGenericTable() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks View -->
+        <div class="dashboard-view" id="view-tasks">
+            <!-- Stats Cards (top) -->
+            <div class="stats-grid" id="tasks-stats"></div>
+            <!-- Insights Panel (below stats) -->
+            <div class="insights-panel" id="tasks-insights"></div>
+            <!-- Team Summary Section (Past Week Effort by Team) -->
+            <div id="tasks-team-summary-container"></div>
+            <!-- Team Utilization Breakdown (visible when single team selected) -->
+            <div id="tasks-utilization-container"></div>
+            <!-- Work Log Summary Section (Past Week) -->
+            <div id="tasks-worklog-summary-container"></div>
+            <!-- Charts and Table -->
+            <div class="charts-grid" id="tasks-charts"></div>
+            <div class="table-container" id="tasks-table-container"></div>
+        </div>
+
+        <!-- Validation View -->
+        <div class="dashboard-view" id="view-validation">
+            <!-- Data Source Summary -->
+            <div id="data-source-validation-section" style="margin-bottom: 2rem;">
+                <div id="data-source-validation-content"></div>
+            </div>
+
+            <!-- Unified Data Quality Section -->
+            <div id="unified-quality-section">
+                <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">📊 Data Quality Checks</h3>
+                <div class="stats-grid" id="unified-quality-stats" style="margin-top: 1rem;"></div>
+                <div class="table-container" id="data-quality-tables"></div>
+            </div>
+        </div>
+
+        <!-- Capacity Planning View -->
+        <div class="dashboard-view" id="view-capacity">
+            <div id="capacity-sticky-header" class="capacity-sticky-header"></div>
+
+            <!-- Capacity Planning Board (v143+) -->
+            <div id="capacity-planning-board" class="capacity-planning-board" style="display: none;">
+
+                <!-- Fixed Capacity Header -->
+                <div class="capacity-planning-header">
+                    <!-- Capacity Summary Card -->
+                    <div class="capacity-summary-card">
+                        <div class="summary-stat">
+                            <div class="summary-label">Total Capacity</div>
+                            <div class="summary-value" id="summary-total-capacity">0d</div>
+                        </div>
+                        <div class="summary-stat">
+                            <div class="summary-label">Committed</div>
+                            <div class="summary-value" id="summary-committed">0d</div>
+                        </div>
+                        <div class="summary-stat">
+                            <div class="summary-label">Remaining</div>
+                            <div class="summary-value" id="summary-remaining">0d</div>
+                        </div>
+                        <div class="summary-stat">
+                            <div class="summary-label">Teams Over</div>
+                            <div class="summary-value" id="summary-teams-over">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Stacked bar legend + glow info -->
+                    <div class="capacity-bars-legend">
+                        <span class="legend-item"><span class="legend-swatch" style="background:#22d3ee"></span>Features</span>
+                        <span class="legend-item"><span class="legend-swatch" style="background:#fbbf24"></span>Internal Bugs</span>
+                        <span class="legend-item"><span class="legend-swatch" style="background:#f87171"></span>Customer Bugs</span>
+                        <span class="legend-divider">|</span>
+                        <span class="legend-item glow-legend" title="Green glow: Under capacity&#10;Yellow glow: 0-5% over capacity&#10;Red glow: >5% over capacity"><span class="legend-swatch glow-info">ℹ</span>Capacity Status</span>
+                    </div>
+
+                    <!-- Team Capacity Bars (2 columns) -->
+                    <div class="capacity-bars-compact">
+                        <div id="capacity-bars-left" class="capacity-bars-column"></div>
+                        <div id="capacity-bars-right" class="capacity-bars-column"></div>
+                    </div>
+                </div>
+
+                <!-- Two-column planning grid -->
+                <div class="planning-board-grid">
+                    <!-- Left Column: Backlog Candidates -->
+                    <div class="planning-column candidates-column">
+                        <div class="planning-column-header">
+                            <div class="planning-column-title-row">
+                                <h3 class="planning-column-title">Backlog Work Candidates</h3>
+                                <div class="bulk-commit-wrapper">
+                                    <button class="bulk-commit-btn" onclick="toggleBulkCommitDropdown(event)" title="Bulk commit items by release version">Commit by Release ▾</button>
+                                    <div id="bulk-commit-dropdown" class="bulk-commit-dropdown" style="display: none;">
+                                        <div class="bulk-commit-dropdown-header">Select releases to commit:</div>
+                                        <div id="bulk-commit-release-list" class="bulk-commit-release-list"></div>
+                                        <div class="bulk-commit-dropdown-footer">
+                                            <button id="bulk-commit-execute-btn" class="bulk-commit-execute-btn" onclick="executeBulkCommit()" disabled>Select releases above</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="planning-column-subtitle">Ordered by Backlog Priority</p>
+                        </div>
+                        <div class="planning-column-content">
+                        <!-- Customer Bugs Section -->
+                        <div class="candidate-section" id="candidate-customer-bugs">
+                            <div class="candidate-section-header" onclick="togglePlanningSection('candidate-customer-bugs')">
+                                <span class="collapse-indicator" id="candidate-customer-bugs-indicator">▼</span>
+                                <span class="section-label">Customer Bugs</span>
+                                <span class="section-stats" id="candidate-customer-bugs-stats">(0)</span>
+                            </div>
+                            <div id="candidate-customer-bugs-list" class="candidate-list"></div>
+                        </div>
+
+                        <!-- Priority 1 Features Section -->
+                        <div class="candidate-section" id="candidate-p1-features">
+                            <div class="candidate-section-header" onclick="togglePlanningSection('candidate-p1-features')">
+                                <span class="collapse-indicator" id="candidate-p1-features-indicator">▼</span>
+                                <span class="section-label">P1 Features</span>
+                                <span class="section-stats" id="candidate-p1-features-stats">(0)</span>
+                            </div>
+                            <div id="candidate-p1-features-list" class="candidate-list"></div>
+                        </div>
+
+                        <!-- Priority 2 Features Section -->
+                        <div class="candidate-section" id="candidate-p2-features">
+                            <div class="candidate-section-header" onclick="togglePlanningSection('candidate-p2-features')">
+                                <span class="collapse-indicator" id="candidate-p2-features-indicator">▶</span>
+                                <span class="section-label">P2 Features</span>
+                                <span class="section-stats" id="candidate-p2-features-stats">(0)</span>
+                            </div>
+                            <div id="candidate-p2-features-list" class="candidate-list" style="display: none;"></div>
+                        </div>
+
+                        <!-- Priority 3 Features Section -->
+                        <div class="candidate-section" id="candidate-p3-features">
+                            <div class="candidate-section-header" onclick="togglePlanningSection('candidate-p3-features')">
+                                <span class="collapse-indicator" id="candidate-p3-features-indicator">▶</span>
+                                <span class="section-label">P3 Features</span>
+                                <span class="section-stats" id="candidate-p3-features-stats">(0)</span>
+                            </div>
+                            <div id="candidate-p3-features-list" class="candidate-list" style="display: none;"></div>
+                        </div>
+
+                        <!-- Priority 4 Features Section -->
+                        <div class="candidate-section" id="candidate-p4-features">
+                            <div class="candidate-section-header" onclick="togglePlanningSection('candidate-p4-features')">
+                                <span class="collapse-indicator" id="candidate-p4-features-indicator">▶</span>
+                                <span class="section-label">P4 Features</span>
+                                <span class="section-stats" id="candidate-p4-features-stats">(0)</span>
+                            </div>
+                            <div id="candidate-p4-features-list" class="candidate-list" style="display: none;"></div>
+                        </div>
+
+                        <!-- Internal Bugs Section -->
+                        <div class="candidate-section" id="candidate-internal-bugs">
+                            <div class="candidate-section-header" onclick="togglePlanningSection('candidate-internal-bugs')">
+                                <span class="collapse-indicator" id="candidate-internal-bugs-indicator">▶</span>
+                                <span class="section-label">Internal Bugs</span>
+                                <span class="section-stats" id="candidate-internal-bugs-stats">(0)</span>
+                            </div>
+                            <div id="candidate-internal-bugs-list" class="candidate-list" style="display: none;"></div>
+                        </div>
+                        </div><!-- /.planning-column-content -->
+                    </div>
+
+                    <!-- Right Column: Committed Plan -->
+                    <div class="planning-column committed-column">
+                        <div class="planning-column-header">
+                            <h3 class="planning-column-title">Committed Work Plan <span id="capacity-warnings-badge" class="capacity-warnings-badge" style="display: none;"></span></h3>
+                            <p class="planning-column-subtitle">Ordered by Backlog Priority</p>
+                        </div>
+                        <div class="planning-column-content">
+                        <!-- Committed Items List -->
+                        <div id="committed-items-list" class="committed-list"></div>
+
+                        <!-- Changes Summary Panel -->
+                        <div id="changes-summary-panel" class="changes-summary-panel" style="display: none;">
+                            <div class="changes-panel-header" onclick="toggleChangesPanel()">
+                                <h4 class="changes-panel-title">
+                                    <span class="changes-icon">⚠️</span>
+                                    Unsaved Changes (<span id="changes-count">0</span>)
+                                </h4>
+                                <span id="changes-toggle-icon" class="changes-toggle-icon">▼</span>
+                            </div>
+                            <div id="changes-panel-content" class="changes-panel-content">
+                                <div id="changes-list" class="changes-list"></div>
+                                <div class="changes-actions">
+                                    <button id="commit-ado-button" onclick="commitChangesToADO()" class="sync-button sync-button-primary">
+                                        ✅ Commit to ADO
+                                    </button>
+                                    <span id="commit-progress" style="display: none; font-size: 11px; color: var(--accent-cyan);"></span>
+                                    <button onclick="discardAllChanges()" class="sync-button sync-button-danger">
+                                        ✕ Discard
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        </div><!-- /.planning-column-content -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Org Chart View -->
+        <div class="dashboard-view" id="view-orgchart">
+            <div class="stats-grid" id="orgchart-stats"></div>
+            <div class="orgchart-container" id="orgchart-container"></div>
+        </div>
+
+        <!-- Reports View -->
+        <div class="dashboard-view" id="view-reports">
+            <div class="reports-layout">
+                <!-- Left sidebar: report list -->
+                <div class="reports-sidebar" id="reports-sidebar">
+                    <div class="reports-sidebar-header">
+                        <div class="reports-sidebar-title">Reports</div>
+                        <button class="reports-sidebar-toggle" onclick="toggleReportsSidebar()" title="Collapse sidebar">‹</button>
+                    </div>
+                    <ul class="reports-nav" id="reports-nav">
+                        <li class="reports-nav-item active" data-report="mtr" onclick="switchReport('mtr')" title="MTR Report">
+                            <span class="reports-nav-icon">⏱</span>
+                            <span class="reports-nav-label">MTR Report</span>
+                        </li>
+                        <li class="reports-nav-item" data-report="teams-archive" onclick="switchReport('teams-archive')" title="Teams (archive)">
+                            <span class="reports-nav-icon">👥</span>
+                            <span class="reports-nav-label">Teams (archive)</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Right content -->
+                <div class="reports-content" id="reports-content">
+                    <div class="reports-header">
+                        <h2 class="reports-title" id="reports-content-title">MTR Report</h2>
+                        <p class="reports-subtitle">Bug resolution metrics — filter by Bug Type, Customer, Priority, or Team</p>
+                    </div>
+
+                    <!-- Bug Aging Report (mtr) -->
+                    <div id="report-mtr" class="report-panel active">
+                <div class="report-section-header">
+                    <h3 class="report-section-title">Bug Aging Report</h3>
+                    <p class="report-section-desc">Bugs whose direct parent is an Issue — scoped to customer-reported bugs only</p>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="reports-stats-grid" id="reports-bug-stats"></div>
+
+                <!-- Chart 1: MTTR by Priority (Month over Month) -->
+                <div class="report-chart-section">
+                    <div class="report-chart-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                        <div>
+                            <h4 class="report-chart-title">Mean Time to Resolution by Priority (Month over Month)</h4>
+                            <p class="report-chart-desc">Average days from creation to resolution for closed bugs, grouped by priority.</p>
+                        </div>
+                        <select id="mttr-period-select" onchange="renderReportsView()" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border-color,#444);color:var(--text-primary,#e0e0e0);border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer;flex-shrink:0;">
+                            <option value="1">1 Month (6-month view)</option>
+                            <option value="3" selected>3 Months (1-year view)</option>
+                            <option value="6">6 Months (2-year view)</option>
+                        </select>
+                    </div>
+                    <div class="report-chart-container">
+                        <canvas id="reports-mttr-chart"></canvas>
+                    </div>
+                    <div class="report-no-data" id="reports-mttr-nodata" style="display:none;">No closed bug data available for the selected period.</div>
+                </div>
+
+                <!-- Chart 2: Open Bug Aging by Priority -->
+                <div class="report-chart-section">
+                    <div class="report-chart-header">
+                        <h4 class="report-chart-title">Open Bug Aging by Priority</h4>
+                        <p class="report-chart-desc">Currently open bugs distributed by age and priority.</p>
+                    </div>
+                    <div class="report-chart-container">
+                        <canvas id="reports-aging-chart"></canvas>
+                    </div>
+                    <div class="report-no-data" id="reports-aging-nodata" style="display:none;">No open bugs found.</div>
+                </div>
+                </div><!-- /#report-mtr -->
+
+                <!-- Teams (archive) Report -->
+                <div id="report-teams-archive" class="report-panel">
+            <div class="time-selector" id="team-time-selector">
+                <span class="time-selector-label">Time Period:</span>
+                <button class="time-btn active" data-period="all">All Time</button>
+                <button class="time-btn" data-period="quarter">This Quarter</button>
+                <button class="time-btn" data-period="lastmonth">Last Month</button>
+                <button class="time-btn" data-period="month">This Month</button>
+                <button class="time-btn" data-period="lastweek">Last Week</button>
+                <button class="time-btn" data-period="week">This Week</button>
+            </div>
+            <div class="insights-panel insights-grid" id="team-insights"></div>
+            <div class="charts-grid" id="team-charts"></div>
+            <div id="team-distribution-section"></div>
+            <div class="team-cta">👇 Click on a team card below to view details</div>
+            <div class="stats-grid" id="team-stats"></div>
+            
+            <!-- Team Details Section (expandable) -->
+            <div class="team-details-section" id="team-details-section" style="display: none;">
+                <div class="section-header">
+                    <h3 id="team-details-title">Team Details</h3>
+                    <button class="close-btn" onclick="closeTeamDetails()">✕ Close</button>
+                </div>
+                
+                <!-- Engineer Details Section -->
+                <div class="engineer-section" id="engineer-section">
+                    <div class="engineer-section-header">
+                        <h4>👥 Engineer Workload</h4>
+                    </div>
+                    
+                    <!-- State and Priority Filters -->
+                    <div class="engineer-filter-bar" style="margin-bottom: 1rem;">
+                        <label>Filter:</label>
+                        <div class="multi-select-dropdown" id="eng-state-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngDropdown('state')">
+                                <span id="eng-state-display">All States</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="eng-state-options"></div>
+                        </div>
+                        <div class="multi-select-dropdown" id="eng-priority-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngDropdown('priority')">
+                                <span id="eng-priority-display">All Priorities</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="eng-priority-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="eng-priority-select-all" onchange="toggleAllEngFilter('priority', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                <label class="checkbox-option"><input type="checkbox" value="1" onchange="updateEngFilter('priority')"> 1 - Critical</label>
+                                <label class="checkbox-option"><input type="checkbox" value="2" onchange="updateEngFilter('priority')"> 2 - High</label>
+                                <label class="checkbox-option"><input type="checkbox" value="3" onchange="updateEngFilter('priority')"> 3 - Medium</label>
+                                <label class="checkbox-option"><input type="checkbox" value="4" onchange="updateEngFilter('priority')"> 4 - Low</label>
+                            </div>
+                        </div>
+                        <div class="multi-select-dropdown" id="eng-type-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngDropdown('type')">
+                                <span id="eng-type-display">All Types</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="eng-type-options">
+                                <label class="checkbox-option select-all-option"><input type="checkbox" id="eng-type-select-all" onchange="toggleAllEngFilter('type', this.checked)"> <strong>Select All</strong></label>
+                                <div class="checkbox-divider"></div>
+                                <label class="checkbox-option"><input type="checkbox" value="Bug" onchange="updateEngFilter('type')"> Bug</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Task" onchange="updateEngFilter('type')"> Task</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Delivery Slice" onchange="updateEngFilter('type')"> Delivery Slice</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Feature" onchange="updateEngFilter('type')"> Feature</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Issue" onchange="updateEngFilter('type')"> Issue</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Epic" onchange="updateEngFilter('type')"> Epic</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Key Result" onchange="updateEngFilter('type')"> Key Result</label>
+                                <label class="checkbox-option"><input type="checkbox" value="Objective" onchange="updateEngFilter('type')"> Objective</label>
+                            </div>
+                        </div>
+                        <div class="team-coverage-indicator" id="team-coverage-indicator"></div>
+                    </div>
+                    
+                    <div class="engineer-summary-table" id="engineer-summary-container"></div>
+                    
+                    <div class="engineer-filter-bar">
+                        <label>Filter by Engineer:</label>
+                        <div class="multi-select-dropdown" id="engineer-filter-dropdown">
+                            <div class="multi-select-display" onclick="toggleEngineerFilter()">
+                                <span id="engineer-filter-display">All Engineers</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="multi-select-options" id="engineer-filter-options"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="engineer-details-container" id="engineer-details-container">
+                        <div class="no-engineer-data">Select engineers above to view work item details</div>
+                    </div>
+                </div>
+                
+                <div class="section-divider" style="margin-top: 2rem;">
+                    <h3>📊 Effort Categorization</h3>
+                </div>
+                
+                <div class="charts-grid" id="team-detail-charts">
+                    <div class="chart-card"><div class="chart-title">By Type</div><div class="chart-container doughnut-container"><canvas id="team-type-chart"></canvas></div><div class="chart-filter"><div class="multi-select-dropdown" id="team-type-dropdown"><div class="multi-select-display" onclick="toggleTeamDropdown('type')"><span id="team-type-display">All Types</span><span class="dropdown-arrow">▼</span></div><div class="multi-select-options" id="team-type-options"><label class="checkbox-option select-all-option"><input type="checkbox" id="team-type-select-all" onchange="toggleAllTeamFilter('type', this.checked)"> <strong>Select All</strong></label><div class="checkbox-divider"></div><label class="checkbox-option"><input type="checkbox" value="Bug" onchange="updateTeamFilter('type')"> Bug</label><label class="checkbox-option"><input type="checkbox" value="Task" onchange="updateTeamFilter('type')"> Task</label><label class="checkbox-option"><input type="checkbox" value="Delivery Slice" onchange="updateTeamFilter('type')"> Delivery Slice</label><label class="checkbox-option"><input type="checkbox" value="Feature" onchange="updateTeamFilter('type')"> Feature</label><label class="checkbox-option"><input type="checkbox" value="Issue" onchange="updateTeamFilter('type')"> Issue</label><label class="checkbox-option"><input type="checkbox" value="Epic" onchange="updateTeamFilter('type')"> Epic</label></div></div></div></div>
+                    <div class="chart-card"><div class="chart-title">By State</div><div class="chart-container doughnut-container"><canvas id="team-state-chart"></canvas></div><div class="chart-filter"><div class="multi-select-dropdown" id="team-state-dropdown"><div class="multi-select-display" onclick="toggleTeamDropdown('state')"><span id="team-state-display">All States</span><span class="dropdown-arrow">▼</span></div><div class="multi-select-options" id="team-state-options"><label class="checkbox-option select-all-option"><input type="checkbox" id="team-state-select-all" onchange="toggleAllTeamFilter('state', this.checked)"> <strong>Select All</strong></label><div class="checkbox-divider"></div><label class="checkbox-option"><input type="checkbox" value="New" onchange="updateTeamFilter('state')"> New</label><label class="checkbox-option"><input type="checkbox" value="Triaged" onchange="updateTeamFilter('state')"> Triaged</label><label class="checkbox-option"><input type="checkbox" value="To Do" onchange="updateTeamFilter('state')"> To Do</label><label class="checkbox-option"><input type="checkbox" value="In Progress" onchange="updateTeamFilter('state')"> In Progress</label><label class="checkbox-option"><input type="checkbox" value="Ready For Review" onchange="updateTeamFilter('state')"> Ready For Review</label><label class="checkbox-option"><input type="checkbox" value="Done" onchange="updateTeamFilter('state')"> Done</label><label class="checkbox-option"><input type="checkbox" value="Closed" onchange="updateTeamFilter('state')"> Closed</label><label class="checkbox-option"><input type="checkbox" value="Removed" onchange="updateTeamFilter('state')"> Removed</label></div></div></div></div>
+                    <div class="chart-card"><div class="chart-title">By Priority</div><div class="chart-container doughnut-container"><canvas id="team-priority-chart"></canvas></div><div class="chart-filter"><div class="multi-select-dropdown" id="team-priority-dropdown"><div class="multi-select-display" onclick="toggleTeamDropdown('priority')"><span id="team-priority-display">All Priorities</span><span class="dropdown-arrow">▼</span></div><div class="multi-select-options" id="team-priority-options"><label class="checkbox-option select-all-option"><input type="checkbox" id="team-priority-select-all" onchange="toggleAllTeamFilter('priority', this.checked)"> <strong>Select All</strong></label><div class="checkbox-divider"></div><label class="checkbox-option"><input type="checkbox" value="1" onchange="updateTeamFilter('priority')"> 1 - Critical</label><label class="checkbox-option"><input type="checkbox" value="2" onchange="updateTeamFilter('priority')"> 2 - High</label><label class="checkbox-option"><input type="checkbox" value="3" onchange="updateTeamFilter('priority')"> 3 - Medium</label><label class="checkbox-option"><input type="checkbox" value="4" onchange="updateTeamFilter('priority')"> 4 - Low</label></div></div></div></div>
+                    <div class="chart-card"><div class="chart-title">By Assigned To</div><div class="chart-container doughnut-container"><canvas id="team-assignee-chart"></canvas></div><div class="chart-filter"><div class="multi-select-dropdown" id="team-assignee-dropdown"><div class="multi-select-display" onclick="toggleTeamDropdown('assignee')"><span id="team-assignee-display">All Members</span><span class="dropdown-arrow">▼</span></div><div class="multi-select-options" id="team-assignee-options"></div></div></div></div>
+                    <div class="chart-card"><div class="chart-title">By Iteration</div><div class="chart-container doughnut-container"><canvas id="team-iteration-chart"></canvas></div><div class="chart-filter"><div class="multi-select-dropdown" id="team-iteration-dropdown"><div class="multi-select-display" onclick="toggleTeamDropdown('iteration')"><span id="team-iteration-display">All Iterations</span><span class="dropdown-arrow">▼</span></div><div class="multi-select-options" id="team-iteration-options"></div></div></div></div>
+                </div>
+                
+                <div class="effort-summary" id="team-effort-summary"></div>
+                <div class="calculation-definition" id="team-effort-definition">
+                    <div class="definition-toggle" onclick="toggleTeamEffortDefinition()"><span>📊 How is effort calculated?</span><span class="toggle-icon">▼</span></div>
+                    <div class="definition-content" id="team-effort-definition-content" style="display: none;">
+                        <p><strong>Effort:</strong> Sum of the "Effort" field on each work item (in person-days).</p>
+                        <p><strong>By Type:</strong> Effort is shown separately per work item type to avoid double-counting.</p>
+                        <p><strong>Capacity:</strong> Number of team members × working days in the selected period (excludes weekends).</p>
+                        <p><strong>Utilization:</strong> Total Effort ÷ Capacity × 100%.</p>
+                    </div>
+                </div>
+                
+                <div class="table-section" id="team-items-table-section">
+                    <div class="table-header"><h4 id="team-items-count">Work Items</h4><button class="time-btn" onclick="clearTeamFilters()">Clear Filters</button></div>
+                    <div class="table-scroll">
+                        <table class="work-items-table sortable-table" id="team-items-table">
+                            <thead><tr><th>ID</th><th>Type</th><th>Title</th><th>State</th><th>Priority</th><th>Assigned To</th><th>Iteration</th><th>Effort</th></tr></thead>
+                            <tbody id="team-items-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+                </div><!-- /#report-teams-archive -->
+
+                </div><!-- /.reports-content -->
+            </div><!-- /.reports-layout -->
+        </div>
+
+    </main>
+
+<!-- ==================== MODALS (from part4) ==================== -->
+<!-- Feature Delivery Slices Modal -->
+<div id="feature-slices-modal" class="feature-modal-overlay" style="display: none;">
+    <div class="feature-modal">
+        <div class="feature-modal-header">
+            <h3 id="feature-modal-title">Delivery Slices</h3>
+            <button class="feature-modal-close" onclick="closeFeatureModal()">&times;</button>
+        </div>
+        <div class="feature-modal-body">
+            <div id="feature-modal-content"></div>
+        </div>
+    </div>
+</div>
+<!-- Issue Relationships Modal -->
+<div id="issue-relationships-modal" class="issue-rel-modal-overlay" style="display: none;">
+    <div class="issue-rel-modal">
+        <div class="issue-rel-modal-header">
+            <div class="issue-rel-modal-title-section">
+                <h3 id="issue-rel-modal-title">Issue Relationships</h3>
+                <span id="issue-rel-modal-category" class="issue-rel-category-badge"></span>
+            </div>
+            <button class="issue-rel-modal-close" onclick="closeIssueRelationshipsModal()">&times;</button>
+        </div>
+        <div class="issue-rel-modal-body">
+            <div id="issue-rel-modal-content"></div>
+        </div>
+    </div>
+</div>
+<!-- Unified Work Item Modal (consolidated: details + conversation + progress) -->
+<div id="unified-modal" class="unified-modal-overlay" style="display: none;">
+    <div class="unified-modal">
+        <div class="unified-modal-header">
+            <div class="unified-modal-title-section">
+                <div class="unified-modal-title-row">
+                    <div class="unified-modal-title-left">
+                        <h3 id="unified-modal-title">Work Item Details</h3>
+                        <div id="unified-modal-owner" class="unified-modal-owner"></div>
+                    </div>
+                    <div id="unified-modal-iterations" class="unified-modal-iterations"></div>
+                </div>
+                <div class="unified-modal-subtitle-row">
+                    <div id="unified-modal-subtitle"></div>
+                    <div id="unified-modal-tags" class="unified-modal-tags"></div>
+                    <div id="unified-modal-meta" class="unified-modal-meta"></div>
+                </div>
+                <div id="unified-modal-release-warnings" class="unified-modal-release-warnings"></div>
+            </div>
+            <div class="unified-modal-header-actions">
+                <button class="unified-modal-close" onclick="closeUnifiedModal()">&times;</button>
+            </div>
+        </div>
+        <div class="unified-modal-body" id="unified-modal-body">
+            <div class="unified-modal-left" id="unified-modal-left">
+                <div id="unified-modal-description" class="unified-modal-description"></div>
+                <div class="unified-modal-desc-resize-handle" id="unified-modal-desc-resize-handle" title="Drag to resize"></div>
+                <div id="unified-modal-conversation" class="unified-modal-conversation">
+                    <div class="conversation-loading">Loading discussion...</div>
+                </div>
+            </div>
+            <div class="unified-modal-resize-handle" id="unified-modal-resize-handle" title="Drag to resize"></div>
+            <div class="unified-modal-right progress-detail-modal" id="unified-modal-right"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Versions Modal (Cascading Lists) -->
+<div id="versions-modal" class="versions-modal-overlay" style="display: none;">
+    <div class="versions-modal">
+        <div class="versions-modal-header">
+            <h3>Release Versions</h3>
+            <div class="versions-modal-header-actions">
+                <button id="versions-edit-toggle" class="versions-edit-toggle" onclick="toggleVersionsEditMode()" title="Toggle Edit Mode">✏️ Edit</button>
+                <button class="versions-modal-close" onclick="closeVersionsModal()">&times;</button>
+            </div>
+        </div>
+        <div class="versions-modal-search">
+            <input type="text" id="versions-search-input" placeholder="Search version or date..." oninput="filterVersionsTable()">
+        </div>
+        <!-- Add new pair form (edit mode only) -->
+        <div id="versions-add-form" class="versions-add-form" style="display: none;">
+            <input type="text" id="versions-add-version" placeholder="YYYYMM.X.X" class="versions-input">
+            <input type="date" id="versions-add-date" class="versions-input">
+            <button onclick="addVersionDatePair()" class="versions-btn versions-btn-add" title="Add">+</button>
+        </div>
+        <!-- Status message area -->
+        <div id="versions-status" class="versions-status" style="display: none;"></div>
+        <div class="versions-modal-body">
+            <table class="versions-table">
+                <thead>
+                    <tr>
+                        <th>Version</th>
+                        <th>Date</th>
+                        <th id="versions-actions-col" class="versions-actions-col" style="display: none;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="versions-table-body"></tbody>
+            </table>
+        </div>
+        <!-- Save/Discard bar (visible when unsaved changes) -->
+        <div id="versions-save-bar" class="versions-save-bar" style="display: none;">
+            <span id="versions-change-count" class="versions-change-count"></span>
+            <div class="versions-save-actions">
+                <button onclick="discardVersionChanges()" class="versions-btn versions-btn-discard">Discard</button>
+                <button onclick="saveVersionChanges()" class="versions-btn versions-btn-save">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- @Mention Notifications Modal -->
+<div id="mention-notification-modal" class="mention-notification-overlay" style="display: none;">
+    <div class="mention-notification-modal">
+        <div class="mention-notification-header">
+            <h3>🔔 @Mention Notifications</h3>
+            <div class="mention-notification-header-actions">
+                <button class="mention-export-btn" onclick="exportMentionCache()" title="Export notifications to mention-cache.json for offline testing">⬇ Export</button>
+                <label class="mention-show-cleared-toggle"><input type="checkbox" id="mention-show-cleared" onchange="toggleShowClearedMentions()"> Show cleared</label>
+                <button class="mention-clear-all-btn" onclick="clearAllMentions()" title="Clear all notifications">Clear All</button>
+                <button class="mention-notification-close" onclick="closeMentionNotifications()">&times;</button>
+            </div>
+        </div>
+        <div class="mention-notification-status" id="mention-notification-status"></div>
+        <div class="mention-notification-body" id="mention-notification-body">
+            <div id="mention-notification-table"></div>
+        </div>
+        <div class="mention-modal-resize-handle" id="mention-modal-resize-handle"></div>
+    </div>
+</div>
+
+<!-- Task Detail Modal (stacked on top of Unified Modal or Progress Popup) -->
+<div id="task-detail-modal" class="task-detail-overlay" style="display: none;">
+    <div class="task-detail-modal">
+        <div class="task-detail-header">
+            <div class="task-detail-title-section">
+                <h3 id="task-detail-title">Task Details</h3>
+                <div id="task-detail-subtitle" class="task-detail-subtitle"></div>
+            </div>
+            <button class="task-detail-close" onclick="closeTaskDetailModal()">&times;</button>
+        </div>
+        <div class="task-detail-body" id="task-detail-body">
+            <div class="task-detail-left" id="task-detail-left">
+                <div id="task-detail-description" class="unified-modal-description"></div>
+                <div id="task-detail-conversation" class="unified-modal-conversation">
+                    <div class="conversation-loading">Loading discussion...</div>
+                </div>
+            </div>
+            <div class="task-detail-right" id="task-detail-right"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Modal (side-by-side view for Issue↔Feature / Issue↔Bug) -->
+<div id="comparison-modal" class="comparison-modal-overlay" style="display: none;">
+    <div class="comparison-modal">
+        <div class="comparison-modal-header">
+            <h3 id="comparison-modal-title">Side-by-Side Comparison</h3>
+            <button class="comparison-modal-close" onclick="closeComparisonModal()">&times;</button>
+        </div>
+        <div class="comparison-modal-body" id="comparison-modal-body">
+            <div class="comparison-panel comparison-panel-left" id="comparison-panel-left"></div>
+            <div class="comparison-sync-column" id="comparison-sync-column"></div>
+            <div class="comparison-panel comparison-panel-right" id="comparison-panel-right"></div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

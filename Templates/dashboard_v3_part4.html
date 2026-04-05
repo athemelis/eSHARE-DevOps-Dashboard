@@ -1334,6 +1334,9 @@
         };
         
         setTimeout(() => {
+            // Check if animations should be enabled (only for manual refresh)
+            const animationsEnabled = typeof shouldAnimateCharts === 'function' ? shouldAnimateCharts() : true;
+
             const typeCtx = document.getElementById('team-type-chart');
             if (typeCtx) {
                 teamDetailCharts.type = new Chart(typeCtx, {
@@ -1348,20 +1351,21 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: animationsEnabled ? { duration: 750 } : false,
                         plugins: {
                             legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 8 } }
                         }
                     }
                 });
             }
-            
+
             // By State - sorted by count descending
             const byState = {};
             items.forEach(w => { byState[w.state] = (byState[w.state] || 0) + 1; });
             const stateSorted = Object.entries(byState).sort((a, b) => b[1] - a[1]);
             const stateLabels = stateSorted.map(e => e[0]);
             const stateData = stateSorted.map(e => e[1]);
-            
+
             const stateColors = {
                 'New': '#64748b',
                 'Triaged': '#8b5cf6',
@@ -1372,7 +1376,7 @@
                 'Closed': '#6b7280',
                 'Removed': '#374151'
             };
-            
+
             const stateCtx = document.getElementById('team-state-chart');
             if (stateCtx) {
                 teamDetailCharts.state = new Chart(stateCtx, {
@@ -1387,23 +1391,24 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: animationsEnabled ? { duration: 750 } : false,
                         plugins: {
                             legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 8 } }
                         }
                     }
                 });
             }
-            
+
             // By Priority - sorted by count descending
             const byPriority = {};
-            items.forEach(w => { 
+            items.forEach(w => {
                 const p = w.priority ? `P${w.priority}` : 'None';
-                byPriority[p] = (byPriority[p] || 0) + 1; 
+                byPriority[p] = (byPriority[p] || 0) + 1;
             });
             const prioritySorted = Object.entries(byPriority).sort((a, b) => b[1] - a[1]);
             const priorityLabels = prioritySorted.map(e => e[0]);
             const priorityData = prioritySorted.map(e => e[1]);
-            
+
             const priorityColors = {
                 'P1': '#ef4444',
                 'P2': '#f59e0b',
@@ -1411,7 +1416,7 @@
                 'P4': '#64748b',
                 'None': '#374151'
             };
-            
+
             const priorityCtx = document.getElementById('team-priority-chart');
             if (priorityCtx) {
                 teamDetailCharts.priority = new Chart(priorityCtx, {
@@ -1426,23 +1431,24 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: animationsEnabled ? { duration: 750 } : false,
                         plugins: {
                             legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 8 } }
                         }
                     }
                 });
             }
-            
+
             // By Assigned To - Horizontal Bar Chart
             const byAssignee = {};
-            items.forEach(w => { 
+            items.forEach(w => {
                 const a = w.assignedTo || 'Unassigned';
-                byAssignee[a] = (byAssignee[a] || 0) + 1; 
+                byAssignee[a] = (byAssignee[a] || 0) + 1;
             });
             const assigneeEntries = Object.entries(byAssignee).sort((a, b) => b[1] - a[1]).slice(0, 15);
             const assigneeLabels = assigneeEntries.map(e => e[0]);
             const assigneeData = assigneeEntries.map(e => e[1]);
-            
+
             const assigneeCtx = document.getElementById('team-assignee-chart');
             if (assigneeCtx) {
                 teamDetailCharts.assignee = new Chart(assigneeCtx, {
@@ -1457,6 +1463,7 @@
                         }]
                     },
                     options: {
+                        animation: animationsEnabled ? { duration: 750 } : false,
                         indexAxis: 'y',
                         responsive: true,
                         maintainAspectRatio: false,
@@ -1503,6 +1510,7 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: animationsEnabled ? { duration: 750 } : false,
                         cutout: '60%',
                         plugins: {
                             legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 8 } }
@@ -3398,11 +3406,14 @@
         };
         
         setTimeout(() => {
+            // Check if animations should be enabled (only for manual refresh)
+            const animationsEnabled = typeof shouldAnimateCharts === 'function' ? shouldAnimateCharts() : true;
+
             // Effort by Team - with effort labels on bars
             const sortedEffortByTeam = sortObjectByValue(spreadEffortByTeam);
             const teamLabels = Object.keys(sortedEffortByTeam);
             const teamEffortValues = Object.values(sortedEffortByTeam);
-            
+
             const teamCtx = document.getElementById('bugs-effort-team-chart');
             bugEffortCharts.team = new Chart(teamCtx, {
                 type: 'bar',
@@ -3418,6 +3429,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: animationsEnabled ? { duration: 750 } : false,
                     onClick: (evt, elements) => {
                         if (elements.length > 0) {
                             const team = teamLabels[elements[0].index];
@@ -3501,6 +3513,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: animationsEnabled ? { duration: 750 } : false,
                     interaction: {
                         mode: 'index',
                         intersect: false
@@ -3691,6 +3704,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: animationsEnabled ? { duration: 750 } : false,
                 interaction: {
                     mode: 'index',
                     intersect: false
@@ -4092,6 +4106,9 @@
         const closedData = weeks.map(w => weeklyData[w].closed);
         const openAtEndData = weeks.map(w => weeklyData[w].openAtEnd);
         
+        // Check if animations should be enabled
+        const animationsEnabled = typeof shouldAnimateCharts === 'function' ? shouldAnimateCharts() : true;
+
         bugTrendChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -4134,6 +4151,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: animationsEnabled ? { duration: 750 } : false,
                 interaction: {
                     mode: 'index',
                     intersect: false
@@ -7843,6 +7861,9 @@
         `;
         
         setTimeout(() => {
+            // Check if animations should be enabled (only for manual refresh)
+            const animationsEnabled = typeof shouldAnimateCharts === 'function' ? shouldAnimateCharts() : true;
+
             // Accuracy pie chart
             createChart('bug-effort-accuracy-chart', 'doughnut', {
                 labels: ['On Target (±0.5d)', 'Over Estimate', 'Under Estimate'],
@@ -7851,16 +7872,16 @@
                     backgroundColor: ['#22c55e', '#ef4444', '#eab308']
                 }]
             });
-            
+
             // Scatter chart - Estimate vs Actual
             const scatterData = bugsWithBoth.map(b => ({
                 x: b.estimate,
                 y: b.rollup,
                 bug: b.bug
             }));
-            
+
             const maxVal = Math.max(...bugsWithBoth.map(b => Math.max(b.estimate, b.rollup))) + 2;
-            
+
             new Chart(document.getElementById('bug-effort-scatter-chart'), {
                 type: 'scatter',
                 data: {
@@ -7888,6 +7909,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: animationsEnabled ? { duration: 750 } : false,
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -8909,22 +8931,127 @@
     // Initial render - use restored view or default to executive
     switchView(currentView);
 
-    // ==================== AUTO-REFRESH ====================
-    // Automatically refresh the page every 60 seconds to get latest data
-    // The refresh preserves state via localStorage
-    const AUTO_REFRESH_INTERVAL = 60 * 1000; // 60 seconds
+    // ==================== AUTO-REFRESH WITH COUNTDOWN ====================
+    // Auto-refresh: Silent background fetch, no animations, preserves scroll
+    // Manual refresh: Immediate fetch with spinning button, animations enabled
+    // Note: isRefreshing, disableChartAnimations, and shouldAnimateCharts() are defined in part2.html
+    const AUTO_REFRESH_INTERVAL = 60; // seconds
+    let refreshCountdown = AUTO_REFRESH_INTERVAL;
+    let countdownInterval = null;
 
-    function scheduleAutoRefresh() {
-        setTimeout(() => {
-            // Save state before refresh (already saved on each interaction, but ensure it's current)
-            saveStateToStorage();
-            // Silently reload the page - state will be restored from localStorage
-            window.location.reload();
-        }, AUTO_REFRESH_INTERVAL);
+    function updateCountdownDisplay() {
+        const countdownEl = document.getElementById('refresh-countdown');
+        if (countdownEl) {
+            countdownEl.textContent = `(${refreshCountdown}s)`;
+        }
     }
 
-    // Start the auto-refresh timer
-    scheduleAutoRefresh();
+    function startCountdown() {
+        refreshCountdown = AUTO_REFRESH_INTERVAL;
+        updateCountdownDisplay();
+
+        if (countdownInterval) clearInterval(countdownInterval);
+
+        countdownInterval = setInterval(() => {
+            refreshCountdown--;
+            updateCountdownDisplay();
+
+            if (refreshCountdown <= 0) {
+                clearInterval(countdownInterval);
+                performDataRefresh(false); // Auto-refresh: silent
+            }
+        }, 1000);
+    }
+
+    async function performDataRefresh(manual = false) {
+        if (isRefreshing) return;
+        isRefreshing = true;
+
+        // Disable chart animations only for auto-refresh (not manual)
+        disableChartAnimations = !manual;
+
+        const btn = document.getElementById('refresh-btn');
+        const countdownEl = document.getElementById('refresh-countdown');
+
+        // Save scroll position for auto-refresh
+        const scrollTop = window.scrollY;
+
+        // Only show spinning animation for manual refresh
+        if (manual) {
+            if (btn) btn.classList.add('spinning');
+            if (countdownEl) countdownEl.textContent = '(...)';
+        }
+
+        try {
+            // Fetch the current HTML file (regenerated every 60s by launchd)
+            const response = await fetch(window.location.href + '?t=' + Date.now());
+            const html = await response.text();
+
+            // Extract workItems array from the HTML
+            const workItemsMatch = html.match(/const\s+workItems\s*=\s*(\[[\s\S]*?\]);\s*(?:const|let|var|\/\/)/);
+            if (workItemsMatch) {
+                try {
+                    const newWorkItems = JSON.parse(workItemsMatch[1]);
+                    workItems.length = 0;
+                    workItems.push(...newWorkItems);
+                } catch (e) {
+                    console.warn('Could not parse workItems:', e);
+                }
+            }
+
+            // Extract workItemLinks array
+            const linksMatch = html.match(/const\s+workItemLinks\s*=\s*(\[[\s\S]*?\]);\s*(?:const|let|var|\/\/)/);
+            if (linksMatch) {
+                try {
+                    const newLinks = JSON.parse(linksMatch[1]);
+                    workItemLinks.length = 0;
+                    workItemLinks.push(...newLinks);
+                } catch (e) {
+                    console.warn('Could not parse workItemLinks:', e);
+                }
+            }
+
+            // Extract refresh timestamp
+            const timestampMatch = html.match(/Refreshed:\s*[^<]+/);
+            if (timestampMatch) {
+                const refreshTimeEl = document.querySelector('.refresh-time');
+                if (refreshTimeEl) {
+                    refreshTimeEl.textContent = timestampMatch[0];
+                }
+            }
+
+            // Re-render current view with fresh data
+            switchView(currentView);
+
+            // Restore scroll position for auto-refresh (silent, no jarring)
+            if (!manual) {
+                window.scrollTo(0, scrollTop);
+            }
+
+            console.log(`Data refreshed (${manual ? 'manual' : 'auto'}) at`, new Date().toLocaleTimeString());
+        } catch (e) {
+            console.warn('Data refresh failed, will retry:', e);
+        }
+
+        if (btn) btn.classList.remove('spinning');
+        isRefreshing = false;
+        disableChartAnimations = false; // Re-enable animations for normal interactions
+
+        // Always save state after refresh (success or fail) so Cmd-R preserves current view
+        saveStateToStorage();
+
+        // Restart countdown for next refresh
+        startCountdown();
+    }
+
+    function manualRefresh() {
+        if (isRefreshing) return;
+        clearInterval(countdownInterval);
+        performDataRefresh(true); // Manual refresh: with animations
+    }
+
+    // Start the countdown timer
+    startCountdown();
 </script>
 
 <!-- Feature Delivery Slices Modal -->

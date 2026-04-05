@@ -2011,12 +2011,12 @@
             </tr>
         `;
 
-        // Show note about features without matching tags
+        // Show note about features without matching tags (clickable)
         if (unmatchedNote) {
             if (unmatchedCount > 0) {
-                unmatchedNote.textContent = `${unmatchedCount} feature${unmatchedCount !== 1 ? 's' : ''} without OKR tags`;
+                unmatchedNote.innerHTML = `<a class="unmatched-link" onclick="filterFeaturesWithoutOkrTags()">${unmatchedCount} feature${unmatchedCount !== 1 ? 's' : ''} without OKR tags</a>`;
             } else {
-                unmatchedNote.textContent = '';
+                unmatchedNote.innerHTML = '';
             }
         }
 
@@ -2063,6 +2063,60 @@
         renderRoadmapView();
 
         // Sync the tag dropdown checkboxes AFTER render (since render may rebuild the dropdown)
+        const tagOptionsContainer = document.getElementById('roadmap-tag-options');
+        if (tagOptionsContainer) {
+            tagOptionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = roadmapFilters.tags.includes(cb.value);
+            });
+        }
+    }
+
+    // Filter to show features without OKR tags (tags that don't start with 1:, 2:, 3:, or 4:)
+    // Called when user clicks "X features without OKR tags" link in OKR Summary
+    // Uses EXCLUSION mode: selects all non-OKR tags, so features with ANY OKR tag are excluded
+    function filterFeaturesWithoutOkrTags() {
+        const allFeatures = getRoadmapFeatures();
+        const okrPrefixes = ['1:', '2:', '3:', '4:'];
+
+        // Collect ALL tags and identify non-OKR ones
+        const nonOkrTags = new Set();
+        let hasNoTagFeatures = false;
+
+        allFeatures.forEach(f => {
+            const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+            if (tags.length === 0) {
+                hasNoTagFeatures = true;
+            } else {
+                tags.forEach(tag => {
+                    const isOkrTag = okrPrefixes.some(prefix => tag.startsWith(prefix));
+                    if (!isOkrTag) {
+                        nonOkrTags.add(tag);
+                    }
+                });
+            }
+        });
+
+        // Use EXCLUSION mode: select all non-OKR tags + "(No Tags)"
+        // This means features with any UNCHECKED tag (OKR tags) will be excluded
+        const tagsToSelect = [];
+        if (hasNoTagFeatures) {
+            tagsToSelect.push('(No Tags)');
+        }
+        tagsToSelect.push(...nonOkrTags);
+
+        // Update the tag filter with exclusion mode
+        roadmapFilters.tags = tagsToSelect;
+        roadmapFilters.tagsExclusionMode = true;  // EXCLUSION mode: exclude features with OKR tags
+        roadmapFilters.tagsLogicMode = 'or';
+
+        // Update display
+        updateGenericTagDisplay('roadmap');
+
+        // Save state and re-render
+        saveStateToStorage();
+        renderRoadmapView();
+
+        // Sync the tag dropdown checkboxes AFTER render
         const tagOptionsContainer = document.getElementById('roadmap-tag-options');
         if (tagOptionsContainer) {
             tagOptionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -2191,22 +2245,31 @@
 
         // Apply tag filter
         if (roadmapFilters.tags.length > 0) {
+            const hasNoTagsSelected = roadmapFilters.tags.includes('(No Tags)');
+            const selectedRealTags = roadmapFilters.tags.filter(t => t !== '(No Tags)');
+
             if (roadmapFilters.tagsExclusionMode) {
                 // Exclusion mode: Started from "Select All", now excluding unchecked tags
                 // Get all available tags to determine what's unchecked
                 const allAvailableTags = new Set();
+                let hasItemsWithNoTags = false;
                 getRoadmapFeatures().forEach(f => {
-                    if (f.tags) {
-                        f.tags.split(';').forEach(t => {
-                            const trimmed = t.trim();
-                            if (trimmed) allAvailableTags.add(trimmed);
-                        });
+                    const tags = f.tags ? f.tags.split(';').map(t => t.trim()).filter(t => t) : [];
+                    if (tags.length === 0) {
+                        hasItemsWithNoTags = true;
+                    } else {
+                        tags.forEach(t => allAvailableTags.add(t));
                     }
                 });
                 const uncheckedTags = [...allAvailableTags].filter(t => !roadmapFilters.tags.includes(t));
+                const noTagsUnchecked = hasItemsWithNoTags && !hasNoTagsSelected;
 
                 features = features.filter(f => {
                     const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    // If feature has no tags and "(No Tags)" is unchecked, exclude it
+                    if (featureTags.length === 0) {
+                        return !noTagsUnchecked;
+                    }
                     // Exclude features that have any unchecked tag
                     return !featureTags.some(tag => uncheckedTags.includes(tag));
                 });
@@ -2214,12 +2277,26 @@
                 // Inclusion mode: logic depends on tagsLogicMode setting
                 features = features.filter(f => {
                     const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+
+                    // Handle "(No Tags)" selection
+                    if (featureTags.length === 0) {
+                        // Feature has no tags - include only if "(No Tags)" is selected
+                        return hasNoTagsSelected;
+                    }
+
+                    // Feature has tags - check against selected real tags
+                    if (selectedRealTags.length === 0) {
+                        // Only "(No Tags)" is selected, exclude features with tags
+                        return false;
+                    }
+
                     if (roadmapFilters.tagsLogicMode === 'and') {
-                        // AND logic: feature must have ALL selected tags
-                        return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+                        // AND logic: feature must have ALL selected real tags
+                        return selectedRealTags.every(selectedTag => featureTags.includes(selectedTag));
                     } else {
                         // OR logic (default): feature must have ANY selected tag
-                        return roadmapFilters.tags.some(selectedTag => featureTags.includes(selectedTag));
+                        // Also include if "(No Tags)" is selected along with other tags
+                        return selectedRealTags.some(selectedTag => featureTags.includes(selectedTag));
                     }
                 });
             }
@@ -2307,24 +2384,43 @@
 
         // Apply tag filter (unless excluded)
         if (excludeFilter !== 'tag' && roadmapFilters.tags.length > 0) {
+            const hasNoTagsSelected = roadmapFilters.tags.includes('(No Tags)');
+            const selectedRealTags = roadmapFilters.tags.filter(t => t !== '(No Tags)');
+
             if (roadmapFilters.tagsExclusionMode) {
                 const allAvailableTags = new Set();
+                let hasItemsWithNoTags = false;
                 getRoadmapFeatures().forEach(f => {
-                    const tags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
-                    tags.forEach(tag => allAvailableTags.add(tag));
+                    const tags = f.tags ? f.tags.split(';').map(t => t.trim()).filter(t => t) : [];
+                    if (tags.length === 0) {
+                        hasItemsWithNoTags = true;
+                    } else {
+                        tags.forEach(t => allAvailableTags.add(t));
+                    }
                 });
                 const uncheckedTags = [...allAvailableTags].filter(t => !roadmapFilters.tags.includes(t));
+                const noTagsUnchecked = hasItemsWithNoTags && !hasNoTagsSelected;
+
                 features = features.filter(f => {
                     const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    if (featureTags.length === 0) {
+                        return !noTagsUnchecked;
+                    }
                     return !featureTags.some(tag => uncheckedTags.includes(tag));
                 });
             } else {
                 features = features.filter(f => {
                     const featureTags = (f.tags || '').split(';').map(t => t.trim()).filter(t => t);
+                    if (featureTags.length === 0) {
+                        return hasNoTagsSelected;
+                    }
+                    if (selectedRealTags.length === 0) {
+                        return false;
+                    }
                     if (roadmapFilters.tagsLogicMode === 'and') {
-                        return roadmapFilters.tags.every(selectedTag => featureTags.includes(selectedTag));
+                        return selectedRealTags.every(selectedTag => featureTags.includes(selectedTag));
                     } else {
-                        return roadmapFilters.tags.some(selectedTag => featureTags.includes(selectedTag));
+                        return selectedRealTags.some(selectedTag => featureTags.includes(selectedTag));
                     }
                 });
             }

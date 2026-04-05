@@ -5,12 +5,43 @@
 # Data files (managed by Power Automate, not code)
 ALL_Items.csv
 Org_Chart.csv
+*.json
+!package.json
+!package-lock.json
+!wrangler.toml
+
+# Test files (for local development only)
+test-*.html
 
 # Generated output (regenerated locally from templates + data)
-ᵉShare DevOps Dashboard.html
+# Note: eSHARE-DevOps-Dashboard.html IS tracked in git (it's the DEV dashboard)
 
 # Zip packages (generated artifacts)
 eShare_DevOps_Dashboard.zip
+
+# Flow exports (raw ZIPs contain secrets — only redacted JSON is tracked)
+flows/**/*.zip
+
+# Flow definitions ARE tracked (override *.json ignore)
+!flows/
+!flows/**/
+!flows/**/*.json
+
+# ===========================================
+# Node.js / npm
+# ===========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-debug.log*
+
+# ===========================================
+# Cloudflare / Wrangler
+# ===========================================
+.wrangler/
+.dev.vars
 
 # ===========================================
 # macOS
@@ -52,3 +83,9 @@ build/
 *.log
 tmp/
 temp/
+debugging/
+dashboard.js.bak
+
+# SSL Certificates
+*.pem
+*.key

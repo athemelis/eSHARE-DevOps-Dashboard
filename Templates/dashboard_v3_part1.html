@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ᵉShare DevOps Dashboard</title>
+    <link rel="icon" type="image/png" sizes="256x256" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAAAe1BMVEX///8AAAB3d3f8/PwPDw/U1NQGBgbr6+sKCgo2NjZVVVXw8PCEhIQ/Pz8REREgICCMjIyVlZXCwsItLS26uroZGRlsbGzj4+OwsLAyMjIoKCiamprMzMxWVlZkZGQcHBympqZKSkpmZmZ9fX2Pj49GRkbc3Nw7OzuhoaG/AxoYAAAE40lEQVR4nO3d61riMBAGYEroASpYjhYotRVF7/8KF3R9XF0mhzY1Gfq9v7FPZmjSJJ3gYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzYni7VhOl+tREATR7H5cb7LVg+tG/ZY032yj4Ir1JAtdN65z8fzlavCf7jeF6yZ2SOS1NPoPu+fUdUO7kc7v1dG/SzY3OB6I57Vm+BfRMHbdYMty3W//02guXLfZooeJYfgX49t5JOxHDeI/DwXPrhtuR1w3Cv9icgvPg8K09/9rd3Ld/NbypEX859kh93nRvFX4Z6OF6xBauWsb/3ko5JwBC/Gf7wG+vaD1/f9hxnVivLITfxAseT4Nw2bTn2sOrmNpIm7z/P9p7jqaBl4sxh8k/NYFmUZYo209eSon0516m2TMbW0YqmJal9XX4C7C/WEm/zyzhZEYy8N5yf/7RkUl7TQjXs/CvTT8KTG5W0wlf1T+bgTtxLL7eSQZ0mU7B5zGwaEk/p00kNOS/MPJb7W+vQfJEnis2O1M6W7A5xbYSOJXzmrpDLAZBWL6BnjU2O1Od8QfR1y2yulFcKS1sg2pBN513XI7xCOZAM0IqFnkfbcNtyUn419qzmfFlrgAj80h+iXISvcS1E7CU5fttiUlVwFT/YsQM+k1hyXRW/sbYDCoiEtw6ANkDzAZwgQxJT521mxrqKYbNr68fo1xV822pyB7gNFMlnqU+L89Ss6CzB7iMXEV/weBmkqA4WKO2FLNumm1RWQhjOE8lkik9xvk1K1r9BC8eLp+lV03zbZnQSbgaWiE2lT0fRS09DqQ5vubUtlmmBWV6wgVDl0nwPc9AdnGthUb1xEq0Ju6lvi+N2xSD9uI76sBezUBBN8nAu2K4jQ8uo5Qoev4g5HrCBU0DkS0k7iOUKHzMSBwHaGCoszh9hNgszKKZQKoVxq9SYDV2jCOCSB2c/uTgGPfE0C/F/J9GWcJ/VrA4M0gZymZgJnrpv0SeiLAp8apFbo6wP93GlbQRdK+b2VYQo+CAf8zgDoEvRzqyYOQ3hhPuNT5tUNVt/TmFqCLpIKoH6OA5LcCXjlUebVGF0r6/2LLCiF7OZKbXWvIcvooOzGcmLzeFgd+p8UuJOXyRsfhwy3XTiM5MHHOgGYvENl7HiOOnUB2ZObsqHNbLz5rZFh2AkWdyFb5rYb116c5doJU8X4kKmXHIMWq/vZhjp2A3hr8Kympx0Fx/LmnwrITaJTKLI/Fz8jifHNtR4njVspJq1Bg9LJ5zovwdAqL1X44IY+LcewE8tPDhlh2AqsFcxw7QWqzYIxlJ3igzw+aY9kJCpsVUxw7wWBhMQMMf0blbGUxA6+ug2lkYa1mKDHcSvFFaKloaO3/aSlCbKV+/JXXb8h8I9qfoYi0dhD8tWo5IVj6fkxGKSWOgGlJMt5f/4dC8ctSpGhzKy8UK2qtK/32b+lX1kVlujraZbfy7X9aHPSr6ZOS7ZNfJp5rTQsey9z3E6LNxW+l9GTVrO7Bfxo5VcP6/zlyspwcq36UELwTp0W1z+6Gw2GW7atVeGsjHgAAAAAAAAAAAAAAAAAAAAAA3CKzfyPRhOsIFbQrQRtzHaECEoAEIAFIABKABCABSAASgAQgAUgAEoAEIAH9SwAAAAAAAAAAAAAAAAAAAAAAAAAAgEf+AFfFP0RIRTV1AAAAAElFTkSuQmCC">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -65,6 +66,23 @@
         .logo span { color: var(--text-primary); }
         .logo .version { font-size: 0.65rem; font-style: italic; color: var(--text-muted); margin-left: 0.25rem; }
         .logo .refresh-time { font-size: 0.6rem; color: var(--text-muted); margin-left: 0.75rem; font-weight: 400; }
+        .logo-svg { vertical-align: middle; margin-right: 0.35rem; }
+        .logo .refresh-countdown { font-size: 0.6rem; color: var(--accent-cyan); margin-left: 0.25rem; font-weight: 400; }
+        .refresh-btn {
+            background: none;
+            border: 1px solid var(--text-muted);
+            border-radius: 3px;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            cursor: pointer;
+            padding: 0.1rem 0.3rem;
+            margin-left: 0.35rem;
+            transition: color 0.2s, border-color 0.2s, transform 0.2s;
+            vertical-align: middle;
+        }
+        .refresh-btn:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+        .refresh-btn.spinning { animation: spin 1s linear infinite; color: var(--accent-cyan); }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         
         .nav-tabs {
             display: flex;
@@ -2772,6 +2790,17 @@
             font-style: italic;
         }
 
+        .strategy-summary-note .unmatched-link {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+            cursor: pointer;
+            font-style: normal;
+        }
+
+        .strategy-summary-note .unmatched-link:hover {
+            opacity: 0.8;
+        }
+
         /* Strategy multi-category error message */
         .strategy-error-message {
             margin-top: 0.75rem;
@@ -2878,12 +2907,14 @@
 
         .er-untagged-note.clickable {
             cursor: pointer;
-            transition: color 0.2s;
+            color: var(--accent-cyan);
+            text-decoration: underline;
+            font-style: normal;
+            transition: opacity 0.2s;
         }
 
         .er-untagged-note.clickable:hover {
-            color: var(--accent-cyan);
-            text-decoration: underline;
+            opacity: 0.8;
         }
 
         /* Generic Collapsible Section */
@@ -4658,7 +4689,7 @@
     <div class="sticky-header">
         <!-- Top row: Logo + Nav -->
         <div class="header-top">
-            <div class="logo">ᵉShare <span>DevOps Dashboard</span> <span class="version">v100</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span></div>
+            <div class="logo"><svg class="logo-svg" width="86" height="17" viewBox="0 0 228 43" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.4635 0.199219C21.218 0.199219 26.4964 6.01507 26.4964 14.5246V16.0313H7.16297C7.59487 19.315 10.2324 22.0614 14.6504 22.0614C17.0737 22.0614 19.9288 21.0921 21.5971 19.4766L24.6138 23.8912C21.9763 26.3145 17.9375 27.5014 13.8987 27.5014C5.98265 27.5014 0.00195312 22.1702 0.00195312 13.8223C0.00195312 6.28213 5.55075 0.199219 13.4668 0.199219H13.4635ZM7.05417 11.4023H19.8728C19.7112 8.923 17.9869 5.63922 13.4635 5.63922C9.21039 5.63922 7.37727 8.8175 7.05417 11.4023Z" fill="currentColor"/><path d="M26.4977 37.2422H0V41.8678H26.4977V37.2422Z" fill="currentColor"/><path d="M37.3292 29.3911C40.2338 32.4177 44.7408 34.9498 50.4215 34.9498C55.2383 34.9498 57.5858 32.665 57.5858 30.3176C57.5858 27.2283 54.002 26.1799 49.2477 25.0655C42.5153 23.5225 33.8707 21.6696 33.8707 12.4678C33.8707 5.61338 39.7986 0.0546875 49.495 0.0546875C56.0428 0.0546875 61.4762 2.02957 65.5546 5.79801L60.675 12.2205C57.3385 9.13125 52.8942 7.71025 48.8785 7.71025C44.8628 7.71025 42.8252 9.44116 42.8252 11.9106C42.8252 14.6899 46.2838 15.5537 51.0413 16.6648C57.8331 18.2078 66.481 20.2453 66.481 29.3878C66.481 36.9214 61.1069 42.6054 49.9929 42.6054C42.0867 42.6054 36.406 39.948 32.5156 36.0576L37.3325 29.3878L37.3292 29.3911Z" fill="currentColor"/><path d="M100.638 24.5755H81.186V41.8681H72.416V0.675781H81.186V16.8573H100.638V0.675781H109.471V41.8681H100.638V24.5755Z" fill="currentColor"/><path d="M143.81 34.7664H125.406L122.811 41.8681H113.178L129.112 0.675781H140.104L155.976 41.8681H146.401L143.81 34.7664ZM127.754 27.1702H141.403L134.608 8.272L127.754 27.1702Z" fill="currentColor"/><path d="M175.007 27.1076H168.584V41.8681H159.814V0.675781H179.082C187.667 0.675781 192.916 6.29711 192.916 13.9527C192.916 21.6082 188.346 25.1327 183.899 26.1811L193.163 41.8681H183.094L175.004 27.1076H175.007ZM177.783 8.20936H168.581V19.5707H177.783C181.304 19.5707 183.958 17.3486 183.958 13.89C183.958 10.4315 181.304 8.20936 177.783 8.20936Z" fill="currentColor"/><path d="M198.85 0.675781H228.001V8.21265H207.62V17.1672H227.57V24.7041H207.62V34.2785H228.001V41.8747H198.85V0.675781Z" fill="currentColor"/></svg> <span>DevOps Dashboard</span> <span class="version">v101</span> <span class="refresh-time">REFRESH_TIMESTAMP_PLACEHOLDER</span> <span class="refresh-countdown" id="refresh-countdown">(60s)</span> <button class="refresh-btn" id="refresh-btn" onclick="manualRefresh()" title="Refresh data now">↻</button></div>
             
             <nav class="nav-tabs">
                 <button class="nav-tab" data-view="executive">Executive</button>

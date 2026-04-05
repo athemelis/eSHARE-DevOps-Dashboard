@@ -1,0 +1,1246 @@
+2026-02-04 10:17:30 | ======================================================================
+2026-02-04 10:17:30 | BUG ESTIMATION TO TASK MIGRATION
+2026-02-04 10:17:30 | ======================================================================
+2026-02-04 10:17:30 | Log file: /Users/tonythem/GitHub/eSHARE/eSHARE-DevOps-Dashboard/ADO Python Scripts/migration_log_20260204_101730.txt
+2026-02-04 10:17:30 | Loading local data files...
+2026-02-04 10:17:30 | Found 204 Bugs with estimations to process
+2026-02-04 10:17:30 | Connecting to Azure DevOps...
+2026-02-04 10:17:30 | 
+[1/204] Bug 956: 'New' button is available for recipient on TS crea
+2026-02-04 10:17:30 |   Estimations: Frontend=1.0d
+2026-02-04 10:17:30 |   Child Tasks: 2
+2026-02-04 10:17:30 |   SKIP Task 2368: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 |   SKIP Task 3893: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 | 
+[2/204] Bug 1325: Share API response, when created in async mode, re
+2026-02-04 10:17:30 |   Estimations: Backend=3.0d, QA=1.0d
+2026-02-04 10:17:30 |   Child Tasks: 2
+2026-02-04 10:17:30 |   SKIP Task 4266: Already has originalEstimate: 3.0
+2026-02-04 10:17:30 |   SKIP Task 4277: Already has originalEstimate: 1.0
+2026-02-04 10:17:30 | 
+[3/204] Bug 1327: Signature Button Can Be Clicked Even If Not Visibl
+2026-02-04 10:17:30 |   Estimations: Frontend=0.1d, QA=0.5d
+2026-02-04 10:17:30 |   Child Tasks: 3
+2026-02-04 10:17:30 |   SKIP Task 2371: Already has originalEstimate: 0.05
+2026-02-04 10:17:30 |   SKIP Task 3894: Already has originalEstimate: 0.05
+2026-02-04 10:17:30 |   SKIP Task 3040: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 | 
+[4/204] Bug 1328: [Sharing policies] Wrong error message is populate
+2026-02-04 10:17:30 |   Estimations: Frontend=1.0d
+2026-02-04 10:17:30 |   Child Tasks: 2
+2026-02-04 10:17:30 |   SKIP Task 3895: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 |   SKIP Task 2372: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 | 
+[5/204] Bug 1329: New endpoint to deactivate SWM-TS
+2026-02-04 10:17:30 |   Estimations: Backend=2.0d
+2026-02-04 10:17:30 |   Child Tasks: 1
+2026-02-04 10:17:30 |   SKIP Task 5240: Already has originalEstimate: 2.0
+2026-02-04 10:17:30 | 
+[6/204] Bug 1906: 'Include original message' checkbox is missing in 
+2026-02-04 10:17:30 |   Estimations: Frontend=1.0d, QA=1.0d
+2026-02-04 10:17:30 |   Child Tasks: 3
+2026-02-04 10:17:30 |   SKIP Task 2375: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 |   SKIP Task 3891: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 |   SKIP Task 3038: Already has originalEstimate: 1.0
+2026-02-04 10:17:30 | 
+[7/204] Bug 1915: Trusted sharing modal: External link is displayed 
+2026-02-04 10:17:30 |   Estimations: Frontend=2.0d
+2026-02-04 10:17:30 |   Child Tasks: 2
+2026-02-04 10:17:30 |   SKIP Task 3896: Already has originalEstimate: 1.0
+2026-02-04 10:17:30 |   SKIP Task 2376: Already has originalEstimate: 1.0
+2026-02-04 10:17:30 | 
+[8/204] Bug 2045: Links without https:// do not redirect correctly w
+2026-02-04 10:17:30 |   Estimations: Frontend=0.5d
+2026-02-04 10:17:30 |   Child Tasks: 1
+2026-02-04 10:17:30 |   SKIP Task 5173: Already has originalEstimate: 0.5
+2026-02-04 10:17:30 | 
+[9/204] Bug 2284: SMG Addin : Incorrect sharing policy applied durin
+2026-02-04 10:17:30 |   Estimations: Frontend=5.0d
+2026-02-04 10:17:30 |   Child Tasks: 1
+2026-02-04 10:17:30 |   SKIP Task 5546: Already has originalEstimate: 5.0
+2026-02-04 10:17:30 | 
+[10/204] Bug 2431: Files Failing to Open in WOPI with "item not found
+2026-02-04 10:17:30 |   Estimations: Backend=3.0d, QA=2.0d
+2026-02-04 10:17:30 |   Child Tasks: 3
+2026-02-04 10:17:30 |   SKIP Task 3126: Already has originalEstimate: 1.5
+2026-02-04 10:17:30 |   SKIP Task 5498: Already has originalEstimate: 1.5
+2026-02-04 10:17:30 |   SKIP Task 4907: Already has originalEstimate: 2.0
+2026-02-04 10:17:30 | 
+[11/204] Bug 2699: Informational Email Notifications are not being De
+2026-02-04 10:17:30 |   Estimations: Backend=2.0d, QA=2.0d
+2026-02-04 10:17:30 |   Child Tasks: 2
+2026-02-04 10:17:30 |   UPDATE Task 3059 (Backend): originalEstimate = 2.00d
+2026-02-04 10:17:31 |   UPDATE Task 2782 (QA): originalEstimate = 2.00d
+2026-02-04 10:17:31 | 
+[12/204] Bug 2717: .hidden file is displayed in newly created folder 
+2026-02-04 10:17:31 |   Estimations: QA=1.0d
+2026-02-04 10:17:31 |   Child Tasks: 2
+2026-02-04 10:17:31 |   UPDATE Task 4874 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:31 | 
+[13/204] Bug 2731: A server error occurred when user downloads multip
+2026-02-04 10:17:31 |   Estimations: QA=1.0d
+2026-02-04 10:17:31 |   Child Tasks: 2
+2026-02-04 10:17:31 |   UPDATE Task 4872 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:31 | 
+[14/204] Bug 2744: Deleting any item (other than files in the root fo
+2026-02-04 10:17:31 |   Estimations: Backend=1.0d, QA=3.0d
+2026-02-04 10:17:31 |   Child Tasks: 2
+2026-02-04 10:17:31 |   UPDATE Task 3152 (Backend): originalEstimate = 1.00d
+2026-02-04 10:17:32 |   UPDATE Task 4875 (QA): originalEstimate = 3.00d
+2026-02-04 10:17:32 | 
+[15/204] Bug 2745: Uploaded to a newly created folder files have been
+2026-02-04 10:17:32 |   Estimations: QA=1.5d
+2026-02-04 10:17:32 |   Child Tasks: 2
+2026-02-04 10:17:32 |   UPDATE Task 3276 (QA): originalEstimate = 1.50d
+2026-02-04 10:17:32 | 
+[16/204] Bug 2757: Item not found when recipient tries to open or dow
+2026-02-04 10:17:32 |   Estimations: QA=1.5d
+2026-02-04 10:17:32 |   Child Tasks: 2
+2026-02-04 10:17:32 |   UPDATE Task 4873 (QA): originalEstimate = 1.50d
+2026-02-04 10:17:32 | 
+[17/204] Bug 2789: Search in Blob cloud provider returns different re
+2026-02-04 10:17:32 |   Estimations: Backend=1.0d, QA=2.0d
+2026-02-04 10:17:32 |   Child Tasks: 2
+2026-02-04 10:17:32 |   UPDATE Task 3147 (Backend): originalEstimate = 1.00d
+2026-02-04 10:17:33 |   UPDATE Task 3277 (QA): originalEstimate = 2.00d
+2026-02-04 10:17:33 | 
+[18/204] Bug 2797: Failed to create folder within a TS created from B
+2026-02-04 10:17:33 |   Estimations: Backend=1.5d, QA=1.0d
+2026-02-04 10:17:33 |   Child Tasks: 2
+2026-02-04 10:17:33 |   UPDATE Task 3148 (Backend): originalEstimate = 1.50d
+2026-02-04 10:17:33 |   UPDATE Task 3275 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:33 | 
+[19/204] Bug 2823: Copy/move is not working within a TS created from 
+2026-02-04 10:17:33 |   Estimations: Backend=3.0d, QA=1.0d
+2026-02-04 10:17:33 |   Child Tasks: 1
+2026-02-04 10:17:33 |   UPDATE Task 5214 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:34 |   CREATE Task for Backend: areaPath=eShare\Backend, originalEstimate=3.00d
+2026-02-04 10:17:34 |     Created Task 5549: [Backend] Copy/move is not working within a TS created from Blob cloud provider
+2026-02-04 10:17:34 | 
+[20/204] Bug 2825: A server error occurred when rename a file/folder 
+2026-02-04 10:17:34 |   Estimations: Backend=1.0d, QA=1.5d
+2026-02-04 10:17:34 |   Child Tasks: 3
+2026-02-04 10:17:34 |   UPDATE Task 5315 (Backend): originalEstimate = 1.00d
+2026-02-04 10:17:34 |   UPDATE Task 5212 (QA): originalEstimate = 0.75d
+2026-02-04 10:17:35 |   UPDATE Task 4386 (QA): originalEstimate = 0.75d
+2026-02-04 10:17:35 | 
+[21/204] Bug 2831: Failed to create folder and the 500 error in conso
+2026-02-04 10:17:35 |   Estimations: Backend=2.0d, QA=1.5d
+2026-02-04 10:17:35 |   Child Tasks: 2
+2026-02-04 10:17:35 |   UPDATE Task 3149 (Backend): originalEstimate = 2.00d
+2026-02-04 10:17:35 |   UPDATE Task 3278 (QA): originalEstimate = 1.50d
+2026-02-04 10:17:35 | 
+[22/204] Bug 2837: Pinning items in m365 app does not move them to th
+2026-02-04 10:17:35 |   Estimations: Backend=1.5d, Frontend=1.0d, QA=1.0d
+2026-02-04 10:17:35 |   Child Tasks: 5
+2026-02-04 10:17:35 |   UPDATE Task 4507 (Backend): originalEstimate = 1.50d
+2026-02-04 10:17:36 |   UPDATE Task 3892 (Frontend): originalEstimate = 0.33d
+2026-02-04 10:17:36 |   UPDATE Task 5534 (Frontend): originalEstimate = 0.33d
+2026-02-04 10:17:36 |   UPDATE Task 2840 (Frontend): originalEstimate = 0.33d
+2026-02-04 10:17:36 |   UPDATE Task 5257 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:37 | 
+[23/204] Bug 2841: Form fields highlight container issue
+2026-02-04 10:17:37 |   Estimations: Frontend=1.0d, QA=1.0d
+2026-02-04 10:17:37 |   Child Tasks: 2
+2026-02-04 10:17:37 |   UPDATE Task 5164 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:17:37 |   UPDATE Task 5429 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:37 | 
+[24/204] Bug 2950: Emojis not show properly in Gov Environment
+2026-02-04 10:17:37 |   Estimations: Frontend=3.0d
+2026-02-04 10:17:37 |   Child Tasks: 2
+2026-02-04 10:17:37 |   UPDATE Task 3061 (Frontend): originalEstimate = 1.50d
+2026-02-04 10:17:37 |   UPDATE Task 3897 (Frontend): originalEstimate = 1.50d
+2026-02-04 10:17:38 | 
+[25/204] Bug 3003: SWML is not configured properly for gofortio tenan
+2026-02-04 10:17:38 |   Estimations: QA=1.0d
+2026-02-04 10:17:38 |   Child Tasks: 2
+2026-02-04 10:17:38 |   UPDATE Task 3486 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:38 | 
+[26/204] Bug 3007: WOPI is not configured for the gofortio tenant
+2026-02-04 10:17:38 |   Estimations: QA=0.5d, Staff=0.5d
+2026-02-04 10:17:38 |   Child Tasks: 1
+2026-02-04 10:17:38 |   UPDATE Task 3367 (Staff): originalEstimate = 0.50d
+2026-02-04 10:17:38 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.50d
+2026-02-04 10:17:38 |     Created Task 5550: [QA] WOPI is not configured for the gofortio tenant
+2026-02-04 10:17:38 | 
+[27/204] Bug 3008: My Shares page fails to open for default gofortio 
+2026-02-04 10:17:38 |   Estimations: QA=0.25d, Staff=0.5d
+2026-02-04 10:17:38 |   Child Tasks: 0
+2026-02-04 10:17:38 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.25d
+2026-02-04 10:17:39 |     Created Task 5551: [QA] My Shares page fails to open for default gofortio account
+2026-02-04 10:17:39 |   CREATE Task for Staff: areaPath=eShare\Staff, originalEstimate=0.50d
+2026-02-04 10:17:39 |     Created Task 5552: [Staff] My Shares page fails to open for default gofortio account
+2026-02-04 10:17:39 | 
+[28/204] Bug 3095: [Gofortio] Download as ZIP fails with 500 server e
+2026-02-04 10:17:39 |   Estimations: QA=0.1d, Staff=0.5d
+2026-02-04 10:17:39 |   Child Tasks: 1
+2026-02-04 10:17:39 |   UPDATE Task 3290 (Staff): originalEstimate = 0.50d
+2026-02-04 10:17:39 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:40 |     Created Task 5553: [QA] [Gofortio] Download as ZIP fails with 500 server error
+2026-02-04 10:17:40 | 
+[29/204] Bug 3096: [Gofortio] 500 server error to GET api/3.1/shares/
+2026-02-04 10:17:40 |   Estimations: QA=0.1d, Staff=1.0d
+2026-02-04 10:17:40 |   Child Tasks: 1
+2026-02-04 10:17:40 |   UPDATE Task 3295 (Staff): originalEstimate = 1.00d
+2026-02-04 10:17:40 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:40 |     Created Task 5554: [QA] [Gofortio] 500 server error to GET api/3.1/shares/{id}/messages
+2026-02-04 10:17:40 | 
+[30/204] Bug 3099: [Gofortio] Shareable link scenarios fail with 500 
+2026-02-04 10:17:40 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:17:40 |   Child Tasks: 1
+2026-02-04 10:17:40 |   UPDATE Task 3297 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:40 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:41 |     Created Task 5555: [QA] [Gofortio] Shareable link scenarios fail with 500 error on preview
+2026-02-04 10:17:41 | 
+[31/204] Bug 3102: [Gofortio] Wrong display name for admin role
+2026-02-04 10:17:41 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:17:41 |   Child Tasks: 1
+2026-02-04 10:17:41 |   UPDATE Task 3289 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:41 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:41 |     Created Task 5556: [QA] [Gofortio] Wrong display name for admin role
+2026-02-04 10:17:41 | 
+[32/204] Bug 3118: [Gofortio] GET events request fails with 500 error
+2026-02-04 10:17:41 |   Estimations: QA=0.1d
+2026-02-04 10:17:41 |   Child Tasks: 1
+2026-02-04 10:17:41 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:42 |     Created Task 5557: [QA] [Gofortio] GET events request fails with 500 error
+2026-02-04 10:17:42 | 
+[33/204] Bug 3120: [Gofortio] Content is missing in Reply to Secure C
+2026-02-04 10:17:42 |   Estimations: QA=0.1d, Staff=0.35d
+2026-02-04 10:17:42 |   Child Tasks: 3
+2026-02-04 10:17:42 |   UPDATE Task 3484 (QA): originalEstimate = 0.10d
+2026-02-04 10:17:42 |   UPDATE Task 3399 (Staff): originalEstimate = 0.17d
+2026-02-04 10:17:42 |   UPDATE Task 3404 (Staff): originalEstimate = 0.17d
+2026-02-04 10:17:42 | 
+[34/204] Bug 3171: [Gofortio] Replying with mentions in Secure Conver
+2026-02-04 10:17:42 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:17:42 |   Child Tasks: 1
+2026-02-04 10:17:42 |   UPDATE Task 3296 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:43 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:43 |     Created Task 5558: [QA] [Gofortio] Replying with mentions in Secure Conversation Thread scenario fails w
+2026-02-04 10:17:43 | 
+[35/204] Bug 3174: [Gofortio] The branding watermark icon is not show
+2026-02-04 10:17:43 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:17:43 |   Child Tasks: 1
+2026-02-04 10:17:43 |   UPDATE Task 3294 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:43 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:43 |     Created Task 5559: [QA] [Gofortio] The branding watermark icon is not shown in the admin page
+2026-02-04 10:17:43 | 
+[36/204] Bug 3210: Upload Permissions are not respected when uploadin
+2026-02-04 10:17:43 |   Estimations: QA=0.5d
+2026-02-04 10:17:43 |   Child Tasks: 2
+2026-02-04 10:17:43 |   UPDATE Task 3537 (QA): originalEstimate = 0.50d
+2026-02-04 10:17:44 | 
+[37/204] Bug 3211: [Gofortio] No cloud provider for ciara.o'malley ac
+2026-02-04 10:17:44 |   Estimations: QA=0.1d, Staff=0.5d
+2026-02-04 10:17:44 |   Child Tasks: 1
+2026-02-04 10:17:44 |   UPDATE Task 3291 (Staff): originalEstimate = 0.50d
+2026-02-04 10:17:44 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:44 |     Created Task 5560: [QA] [Gofortio] No cloud provider for ciara.o'malley account
+2026-02-04 10:17:44 | 
+[38/204] Bug 3247: Communication Autocomplete API
+2026-02-04 10:17:44 |   Estimations: QA=2.0d
+2026-02-04 10:17:44 |   Child Tasks: 2
+2026-02-04 10:17:44 |   UPDATE Task 4276 (QA): originalEstimate = 2.00d
+2026-02-04 10:17:45 | 
+[39/204] Bug 3252: Owner/Co-Owner are affected from the Upload Permis
+2026-02-04 10:17:45 |   Estimations: Frontend=1.0d
+2026-02-04 10:17:45 |   Child Tasks: 2
+2026-02-04 10:17:45 |   UPDATE Task 3371 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:17:45 |   UPDATE Task 3887 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:17:45 | 
+[40/204] Bug 3300: Error message is displayed when trying to override
+2026-02-04 10:17:45 |   Estimations: QA=1.0d
+2026-02-04 10:17:45 |   Child Tasks: 2
+2026-02-04 10:17:45 |   UPDATE Task 3315 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:45 | 
+[41/204] Bug 3309: Trusted domains: After editing an option and click
+2026-02-04 10:17:45 |   Estimations: Backend=3.0d
+2026-02-04 10:17:45 |   Child Tasks: 1
+2026-02-04 10:17:45 |   UPDATE Task 3630 (Backend): originalEstimate = 3.00d
+2026-02-04 10:17:46 | 
+[42/204] Bug 3358: [Gofortio] User-Agent is requires in the request t
+2026-02-04 10:17:46 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:17:46 |   Child Tasks: 1
+2026-02-04 10:17:46 |   UPDATE Task 3398 (Staff): originalEstimate = 0.12d
+2026-02-04 10:17:46 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:46 |     Created Task 5561: [QA] [Gofortio] User-Agent is requires in the request to make it works
+2026-02-04 10:17:46 | 
+[43/204] Bug 3364: Audit Event error when creating folders in blob
+2026-02-04 10:17:46 |   Estimations: QA=1.0d
+2026-02-04 10:17:46 |   Child Tasks: 2
+2026-02-04 10:17:46 |   UPDATE Task 4871 (QA): originalEstimate = 1.00d
+2026-02-04 10:17:46 | 
+[44/204] Bug 3372: [Customer Issue] Expired Share with Me trusted sha
+2026-02-04 10:17:46 |   Estimations: Backend=4.0d, QA=0.5d
+2026-02-04 10:17:46 |   Child Tasks: 2
+2026-02-04 10:17:46 |   UPDATE Task 3389 (Backend): originalEstimate = 4.00d
+2026-02-04 10:17:47 |   UPDATE Task 4349 (QA): originalEstimate = 0.50d
+2026-02-04 10:17:47 | 
+[45/204] Bug 3373: [Customer Issue] SharePoint Sites with Spaces in t
+2026-02-04 10:17:47 |   Estimations: QA=1.5d, Staff=0.5d
+2026-02-04 10:17:47 |   Child Tasks: 2
+2026-02-04 10:17:47 |   UPDATE Task 4273 (QA): originalEstimate = 1.50d
+2026-02-04 10:17:47 |   CREATE Task for Staff: areaPath=eShare\Staff, originalEstimate=0.50d
+2026-02-04 10:17:47 |     Created Task 5562: [Staff] [Customer Issue] SharePoint Sites with Spaces in the URL Cannot be linked
+2026-02-04 10:17:47 | 
+[46/204] Bug 3374: [Customer Issue] SharePoint sites with an '&' cann
+2026-02-04 10:17:47 |   Estimations: Frontend=2.0d
+2026-02-04 10:17:47 |   Child Tasks: 3
+2026-02-04 10:17:47 |   UPDATE Task 3900 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:17:48 |   UPDATE Task 3388 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:17:48 | 
+[47/204] Bug 3403: [Gofortio] Server does not return 400 error for up
+2026-02-04 10:17:48 |   Estimations: QA=0.5d
+2026-02-04 10:17:48 |   Child Tasks: 2
+2026-02-04 10:17:48 |   UPDATE Task 3485 (QA): originalEstimate = 0.50d
+2026-02-04 10:17:48 | 
+[48/204] Bug 3412: Intermittent incorrect user email displayed for Fi
+2026-02-04 10:17:48 |   Estimations: Frontend=3.0d
+2026-02-04 10:17:48 |   Child Tasks: 4
+2026-02-04 10:17:48 |   UPDATE Task 3847 (Frontend): originalEstimate = 0.75d
+2026-02-04 10:17:48 |   UPDATE Task 3778 (Frontend): originalEstimate = 0.75d
+2026-02-04 10:17:49 |   UPDATE Task 3777 (Frontend): originalEstimate = 0.75d
+2026-02-04 10:17:49 |   UPDATE Task 3901 (Frontend): originalEstimate = 0.75d
+2026-02-04 10:17:49 | 
+[49/204] Bug 3414: Cannot disable an expired user from a trusted shar
+2026-02-04 10:17:49 |   Estimations: Backend=1.5d, QA=1.0d
+2026-02-04 10:17:49 |   Child Tasks: 2
+2026-02-04 10:17:49 |   SKIP Task 4275: Already has originalEstimate: 1.0
+2026-02-04 10:17:49 |   UPDATE Task 3420 (Backend): originalEstimate = 1.50d
+2026-02-04 10:17:50 | 
+[50/204] Bug 3421: HTTP/400 for /api/3.0/shares on Overridden Recipie
+2026-02-04 10:17:50 |   Estimations: QA=1.5d
+2026-02-04 10:17:50 |   Child Tasks: 2
+2026-02-04 10:17:50 |   UPDATE Task 4172 (QA): originalEstimate = 1.50d
+2026-02-04 10:17:50 | 
+[51/204] Bug 3424: [Stage-01] 500 error from server on get request to
+2026-02-04 10:17:50 |   Estimations: QA=0.2d, Staff=0.25d
+2026-02-04 10:17:50 |   Child Tasks: 2
+2026-02-04 10:17:50 |   UPDATE Task 3472 (QA): originalEstimate = 0.20d
+2026-02-04 10:17:50 |   UPDATE Task 3491 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:50 | 
+[52/204] Bug 3425: [Stage-01] Error while polling the copy/move task 
+2026-02-04 10:17:50 |   Estimations: QA=0.25d, Staff=0.25d
+2026-02-04 10:17:50 |   Child Tasks: 2
+2026-02-04 10:17:50 |   UPDATE Task 3482 (QA): originalEstimate = 0.25d
+2026-02-04 10:17:51 |   UPDATE Task 3507 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:51 | 
+[53/204] Bug 3429: [Stage-01] Unable to open items from Blob cloud pr
+2026-02-04 10:17:51 |   Estimations: QA=0.2d, Staff=0.5d
+2026-02-04 10:17:51 |   Child Tasks: 2
+2026-02-04 10:17:51 |   UPDATE Task 3474 (QA): originalEstimate = 0.20d
+2026-02-04 10:17:51 |   UPDATE Task 3446 (Staff): originalEstimate = 0.50d
+2026-02-04 10:17:51 | 
+[54/204] Bug 3431: [Stage-01] Upload to google drive and dropbox does
+2026-02-04 10:17:51 |   Estimations: QA=0.2d
+2026-02-04 10:17:51 |   Child Tasks: 2
+2026-02-04 10:17:51 |   UPDATE Task 3473 (QA): originalEstimate = 0.20d
+2026-02-04 10:17:52 | 
+[55/204] Bug 3437: [Stage-01] <html><body> tags are missed in the GET
+2026-02-04 10:17:52 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:17:52 |   Child Tasks: 2
+2026-02-04 10:17:52 |   UPDATE Task 3480 (QA): originalEstimate = 0.10d
+2026-02-04 10:17:52 |   UPDATE Task 3562 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:52 | 
+[56/204] Bug 3441: [Customer] Shell unable to use "External Link" on 
+2026-02-04 10:17:52 |   Estimations: Backend=1.0d, Frontend=0.5d, QA=2.0d
+2026-02-04 10:17:52 |   Child Tasks: 4
+2026-02-04 10:17:52 |   UPDATE Task 3531 (Backend): originalEstimate = 1.00d
+2026-02-04 10:17:52 |   UPDATE Task 3532 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:17:53 |   UPDATE Task 4084 (QA): originalEstimate = 2.00d
+2026-02-04 10:17:53 | 
+[57/204] Bug 3442: [Stage-01] The delete/rename/duplicate fails with 
+2026-02-04 10:17:53 |   Estimations: QA=0.25d, Staff=0.25d
+2026-02-04 10:17:53 |   Child Tasks: 3
+2026-02-04 10:17:53 |   UPDATE Task 3478 (QA): originalEstimate = 0.25d
+2026-02-04 10:17:53 |   UPDATE Task 3466 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:53 | 
+[58/204] Bug 3447: [Stage-01] SWML form cannot be submitted (eshareit
+2026-02-04 10:17:53 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:17:53 |   Child Tasks: 2
+2026-02-04 10:17:53 |   UPDATE Task 3483 (QA): originalEstimate = 0.10d
+2026-02-04 10:17:54 |   UPDATE Task 3754 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:54 | 
+[59/204] Bug 3454: [Stage-01] Allow/block list via uploading CSV scen
+2026-02-04 10:17:54 |   Estimations: QA=0.25d, Staff=0.25d
+2026-02-04 10:17:54 |   Child Tasks: 2
+2026-02-04 10:17:54 |   UPDATE Task 3481 (QA): originalEstimate = 0.25d
+2026-02-04 10:17:54 |   UPDATE Task 3503 (Staff): originalEstimate = 0.25d
+2026-02-04 10:17:54 | 
+[60/204] Bug 3455: When a co-owner is revoked on an expired Trusted s
+2026-02-04 10:17:54 |   Estimations: Frontend=0.5d
+2026-02-04 10:17:54 |   Child Tasks: 1
+2026-02-04 10:17:54 |   UPDATE Task 5192 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:17:55 | 
+[61/204] Bug 3464: [Stage-01] Cannot create new folder in Dropbox
+2026-02-04 10:17:55 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:17:55 |   Child Tasks: 2
+2026-02-04 10:17:55 |   UPDATE Task 3476 (QA): originalEstimate = 0.10d
+2026-02-04 10:17:55 |   UPDATE Task 3506 (Staff): originalEstimate = 0.12d
+2026-02-04 10:17:55 | 
+[62/204] Bug 3465: [Stage-01] Large file fails to upload to google dr
+2026-02-04 10:17:55 |   Estimations: QA=0.1d
+2026-02-04 10:17:55 |   Child Tasks: 1
+2026-02-04 10:17:55 |   UPDATE Task 3477 (QA): originalEstimate = 0.10d
+2026-02-04 10:17:56 | 
+[63/204] Bug 3479: Endpoint does not retrieve blob corporate provider
+2026-02-04 10:17:56 |   Estimations: Backend=1.0d, QA=0.5d
+2026-02-04 10:17:56 |   Child Tasks: 2
+2026-02-04 10:17:56 |   UPDATE Task 3629 (Backend): originalEstimate = 1.00d
+2026-02-04 10:17:56 |   UPDATE Task 4397 (QA): originalEstimate = 0.50d
+2026-02-04 10:17:56 | 
+[64/204] Bug 3492: In Folder rename inside a TS we get 404 error
+2026-02-04 10:17:56 |   Estimations: Frontend=0.5d
+2026-02-04 10:17:56 |   Child Tasks: 2
+2026-02-04 10:17:56 |   UPDATE Task 3890 (Frontend): originalEstimate = 0.25d
+2026-02-04 10:17:56 |   UPDATE Task 3583 (Frontend): originalEstimate = 0.25d
+2026-02-04 10:17:56 | 
+[65/204] Bug 3498: Can not add new graph provider
+2026-02-04 10:17:56 |   Estimations: QA=0.1d
+2026-02-04 10:17:56 |   Child Tasks: 1
+2026-02-04 10:17:56 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:57 |     Created Task 5563: [QA] Can not add new graph provider
+2026-02-04 10:17:57 | 
+[66/204] Bug 3523: [Stage-01] Other section on the top of CWP email n
+2026-02-04 10:17:57 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:17:57 |   Child Tasks: 2
+2026-02-04 10:17:57 |   UPDATE Task 3646 (QA): originalEstimate = 0.10d
+2026-02-04 10:17:57 |   UPDATE Task 3529 (Staff): originalEstimate = 0.12d
+2026-02-04 10:17:57 | 
+[67/204] Bug 3527: Toggle for "Assign parent label when sublabel appl
+2026-02-04 10:17:57 |   Estimations: QA=0.25d
+2026-02-04 10:17:57 |   Child Tasks: 1
+2026-02-04 10:17:57 |   UPDATE Task 5253 (QA): originalEstimate = 0.25d
+2026-02-04 10:17:58 | 
+[68/204] Bug 3528: Wrong Option name in Device Policy for Trusted Dom
+2026-02-04 10:17:58 |   Estimations: Backend=0.2d, QA=0.25d
+2026-02-04 10:17:58 |   Child Tasks: 2
+2026-02-04 10:17:58 |   UPDATE Task 3785 (Backend): originalEstimate = 0.20d
+2026-02-04 10:17:58 |   UPDATE Task 4077 (QA): originalEstimate = 0.25d
+2026-02-04 10:17:58 | 
+[69/204] Bug 3543: Downgrade from python3 to python2 webapp
+2026-02-04 10:17:58 |   Estimations: QA=0.1d, Staff=1.0d
+2026-02-04 10:17:58 |   Child Tasks: 1
+2026-02-04 10:17:58 |   UPDATE Task 3544 (Staff): originalEstimate = 1.00d
+2026-02-04 10:17:58 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:17:59 |     Created Task 5564: [QA] Downgrade from python3 to python2 webapp
+2026-02-04 10:17:59 | 
+[70/204] Bug 3555: If an Excel file has markings, then they are overl
+2026-02-04 10:17:59 |   Estimations: Frontend=2.0d
+2026-02-04 10:17:59 |   Child Tasks: 1
+2026-02-04 10:17:59 |   UPDATE Task 5182 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:17:59 | 
+[71/204] Bug 3558: When a user changes the label of a file and clicks
+2026-02-04 10:17:59 |   Estimations: Frontend=5.0d
+2026-02-04 10:17:59 |   Child Tasks: 2
+2026-02-04 10:17:59 |   UPDATE Task 4915 (Frontend): originalEstimate = 2.50d
+2026-02-04 10:17:59 |   UPDATE Task 4475 (Frontend): originalEstimate = 2.50d
+2026-02-04 10:18:00 | 
+[72/204] Bug 3559: "My recents" field is not retrieving data inside T
+2026-02-04 10:18:00 |   Estimations: QA=0.25d
+2026-02-04 10:18:00 |   Child Tasks: 1
+2026-02-04 10:18:00 |   UPDATE Task 5254 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:00 | 
+[73/204] Bug 3560: Blocked recipient is prompted for access despite A
+2026-02-04 10:18:00 |   Estimations: Backend=0.3d, QA=1.0d
+2026-02-04 10:18:00 |   Child Tasks: 3
+2026-02-04 10:18:00 |   UPDATE Task 5089 (Backend): originalEstimate = 0.30d
+2026-02-04 10:18:00 |   UPDATE Task 5135 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:01 | 
+[74/204] Bug 3580: Fix is datalake calculation
+2026-02-04 10:18:01 |   Estimations: Backend=0.5d, QA=3.0d
+2026-02-04 10:18:01 |   Child Tasks: 2
+2026-02-04 10:18:01 |   UPDATE Task 3594 (Backend): originalEstimate = 0.50d
+2026-02-04 10:18:01 |   UPDATE Task 4387 (QA): originalEstimate = 3.00d
+2026-02-04 10:18:01 | 
+[75/204] Bug 3584: Blocked recipients excluded from Trusted Share des
+2026-02-04 10:18:01 |   Estimations: QA=0.125d
+2026-02-04 10:18:01 |   Child Tasks: 1
+2026-02-04 10:18:01 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.12d
+2026-02-04 10:18:01 |     Created Task 5565: [QA] Blocked recipients excluded from Trusted Share despite Add-in override
+2026-02-04 10:18:01 | 
+[76/204] Bug 3598: SMG-TS with native link: Native link file doesn't 
+2026-02-04 10:18:01 |   Estimations: Backend=2.0d, QA=2.0d
+2026-02-04 10:18:01 |   Child Tasks: 5
+2026-02-04 10:18:01 |   UPDATE Task 3710 (Backend): originalEstimate = 0.67d
+2026-02-04 10:18:02 |   UPDATE Task 4657 (Backend): originalEstimate = 0.67d
+2026-02-04 10:18:02 |   UPDATE Task 4159 (Backend): originalEstimate = 0.67d
+2026-02-04 10:18:02 |   UPDATE Task 3768 (QA): originalEstimate = 2.00d
+2026-02-04 10:18:02 | 
+[77/204] Bug 3600: If a native link is pasted into a secure conversat
+2026-02-04 10:18:02 |   Estimations: Frontend=1.0d
+2026-02-04 10:18:02 |   Child Tasks: 1
+2026-02-04 10:18:02 |   UPDATE Task 5191 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:18:03 | 
+[78/204] Bug 3602: (Data Migration) File Versions are not copied to d
+2026-02-04 10:18:03 |   Estimations: Govern=10.0d
+2026-02-04 10:18:03 |   Child Tasks: 1
+2026-02-04 10:18:03 |   UPDATE Task 4780 (Govern): originalEstimate = 10.00d
+2026-02-04 10:18:03 | 
+[79/204] Bug 3604: Failed to retrieve messages error when opening VTT
+2026-02-04 10:18:03 |   Estimations: Govern=2.0d
+2026-02-04 10:18:03 |   Child Tasks: 1
+2026-02-04 10:18:03 |   CREATE Task for Govern: areaPath=eShare\Govern, originalEstimate=2.00d
+2026-02-04 10:18:03 |     Created Task 5566: [Govern] Failed to retrieve messages error when opening VTTS Share
+2026-02-04 10:18:03 | 
+[80/204] Bug 3625: JSON parsing failure when retrieving parent metada
+2026-02-04 10:18:03 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:18:03 |   Child Tasks: 1
+2026-02-04 10:18:03 |   UPDATE Task 3637 (Staff): originalEstimate = 0.25d
+2026-02-04 10:18:03 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:04 |     Created Task 5567: [QA] JSON parsing failure when retrieving parent metadata in get_parent
+2026-02-04 10:18:04 | 
+[81/204] Bug 3626: TypeError raised when calculating option differenc
+2026-02-04 10:18:04 |   Estimations: QA=0.1d, Staff=0.25d
+2026-02-04 10:18:04 |   Child Tasks: 1
+2026-02-04 10:18:04 |   UPDATE Task 3640 (Staff): originalEstimate = 0.25d
+2026-02-04 10:18:04 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:04 |     Created Task 5568: [QA] TypeError raised when calculating option differences due to invalid list subtrac
+2026-02-04 10:18:04 | 
+[82/204] Bug 3627: Missing provider causes AttributeError when buildi
+2026-02-04 10:18:04 |   Estimations: Staff=0.125d
+2026-02-04 10:18:04 |   Child Tasks: 1
+2026-02-04 10:18:04 |   UPDATE Task 3643 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:04 | 
+[83/204] Bug 3638: Last Access column is not updated when TS is acces
+2026-02-04 10:18:04 |   Estimations: Backend=2.0d, Frontend=0.5d, QA=0.75d
+2026-02-04 10:18:04 |   Child Tasks: 4
+2026-02-04 10:18:04 |   UPDATE Task 5335 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:05 |   UPDATE Task 5328 (Frontend): originalEstimate = 0.25d
+2026-02-04 10:18:05 |   UPDATE Task 4096 (Frontend): originalEstimate = 0.25d
+2026-02-04 10:18:05 |   UPDATE Task 5431 (QA): originalEstimate = 0.75d
+2026-02-04 10:18:05 | 
+[84/204] Bug 3642: “Inactive Shares”, "Locked Recipients" and “Disabl
+2026-02-04 10:18:05 |   Estimations: Backend=3.0d, Frontend=0.5d
+2026-02-04 10:18:05 |   Child Tasks: 2
+2026-02-04 10:18:05 |   UPDATE Task 4564 (Backend): originalEstimate = 3.00d
+2026-02-04 10:18:06 |   UPDATE Task 4095 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:06 | 
+[85/204] Bug 3644: BE Fix b64encode related str vs bytes issues
+2026-02-04 10:18:06 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:06 |   Child Tasks: 1
+2026-02-04 10:18:06 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:06 |     Created Task 5569: [QA] BE Fix b64encode related str vs bytes issues
+2026-02-04 10:18:06 |   CREATE Task for Staff: areaPath=eShare\Staff, originalEstimate=0.12d
+2026-02-04 10:18:06 |     Created Task 5570: [Staff] BE Fix b64encode related str vs bytes issues
+2026-02-04 10:18:06 | 
+[86/204] Bug 3671: Label is missing from overrides/Wrap token data un
+2026-02-04 10:18:06 |   Estimations: Backend=1.5d, SCG=2.0d, QA=1.0d
+2026-02-04 10:18:06 |   Child Tasks: 4
+2026-02-04 10:18:06 |   UPDATE Task 3673 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:07 |   UPDATE Task 3674 (SCG): originalEstimate = 2.00d
+2026-02-04 10:18:07 |   UPDATE Task 4274 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:07 | 
+[87/204] Bug 3688: BE string argument expected, got 'bytes'
+2026-02-04 10:18:07 |   Estimations: QA=0.25d
+2026-02-04 10:18:07 |   Child Tasks: 2
+2026-02-04 10:18:07 |   UPDATE Task 4047 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:07 | 
+[88/204] Bug 3704: 500 error message when clicking to open a file wit
+2026-02-04 10:18:07 |   Estimations: QA=1.0d, Staff=0.25d
+2026-02-04 10:18:07 |   Child Tasks: 2
+2026-02-04 10:18:07 |   UPDATE Task 3719 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:08 |   UPDATE Task 3712 (Staff): originalEstimate = 0.25d
+2026-02-04 10:18:08 | 
+[89/204] Bug 3708: Internal server error appears when I create a TS f
+2026-02-04 10:18:08 |   Estimations: QA=0.5d
+2026-02-04 10:18:08 |   Child Tasks: 2
+2026-02-04 10:18:08 |   UPDATE Task 3720 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:08 | 
+[90/204] Bug 3716: 400 error code/"Invalid object identifier 'undefin
+2026-02-04 10:18:08 |   Estimations: QA=0.5d, Staff=0.25d
+2026-02-04 10:18:08 |   Child Tasks: 2
+2026-02-04 10:18:08 |   UPDATE Task 3721 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:08 |   UPDATE Task 3723 (Staff): originalEstimate = 0.25d
+2026-02-04 10:18:09 | 
+[91/204] Bug 3750: Emojis are not being displayed correctly
+2026-02-04 10:18:09 |   Estimations: QA=1.0d
+2026-02-04 10:18:09 |   Child Tasks: 2
+2026-02-04 10:18:09 |   UPDATE Task 3753 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:09 | 
+[92/204] Bug 3765: When user tries to view a native link file, "This 
+2026-02-04 10:18:09 |   Estimations: QA=0.25d, Staff=0.25d
+2026-02-04 10:18:09 |   Child Tasks: 2
+2026-02-04 10:18:09 |   UPDATE Task 3766 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:09 |   UPDATE Task 3774 (Staff): originalEstimate = 0.25d
+2026-02-04 10:18:09 | 
+[93/204] Bug 3794: [Customer] Humana users not able to enter OTP
+2026-02-04 10:18:09 |   Estimations: Backend=0.2d, Frontend=4.0d, QA=7.0d
+2026-02-04 10:18:09 |   Child Tasks: 7
+2026-02-04 10:18:09 |   UPDATE Task 4079 (Backend): originalEstimate = 0.20d
+2026-02-04 10:18:10 |   UPDATE Task 3903 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:10 |   UPDATE Task 4078 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:10 |   UPDATE Task 4083 (QA): originalEstimate = 1.75d
+2026-02-04 10:18:10 |   UPDATE Task 4271 (QA): originalEstimate = 1.75d
+2026-02-04 10:18:11 |   UPDATE Task 4422 (QA): originalEstimate = 1.75d
+2026-02-04 10:18:11 |   UPDATE Task 4421 (QA): originalEstimate = 1.75d
+2026-02-04 10:18:11 | 
+[94/204] Bug 3796: [Customer] Cannot enable a expired & disabled reci
+2026-02-04 10:18:11 |   Estimations: Backend=1.0d, QA=0.5d
+2026-02-04 10:18:11 |   Child Tasks: 2
+2026-02-04 10:18:11 |   UPDATE Task 4269 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:11 |   UPDATE Task 4351 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:12 | 
+[95/204] Bug 3797: [Customer] Terms of Use Accept button invisible
+2026-02-04 10:18:12 |   Estimations: Frontend=1.0d
+2026-02-04 10:18:12 |   Child Tasks: 2
+2026-02-04 10:18:12 |   UPDATE Task 5165 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:12 |   UPDATE Task 5321 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:12 | 
+[96/204] Bug 3798: On Access ABAC Checks not Performed if TOU is disa
+2026-02-04 10:18:12 |   Estimations: Backend=5.0d, QA=3.0d
+2026-02-04 10:18:12 |   Child Tasks: 3
+2026-02-04 10:18:12 |   UPDATE Task 4222 (Backend): originalEstimate = 2.50d
+2026-02-04 10:18:12 |   UPDATE Task 4245 (Backend): originalEstimate = 2.50d
+2026-02-04 10:18:13 |   UPDATE Task 4587 (QA): originalEstimate = 3.00d
+2026-02-04 10:18:13 | 
+[97/204] Bug 3799: When viewing a native link on Secure conversation 
+2026-02-04 10:18:13 |   Estimations: Backend=1.0d
+2026-02-04 10:18:13 |   Child Tasks: 2
+2026-02-04 10:18:13 |   UPDATE Task 3904 (Backend): originalEstimate = 0.50d
+2026-02-04 10:18:13 |   UPDATE Task 3906 (Backend): originalEstimate = 0.50d
+2026-02-04 10:18:13 | 
+[98/204] Bug 3808: Activity Section in M365 App: Unread notifications
+2026-02-04 10:18:13 |   Estimations: Frontend=0.5d
+2026-02-04 10:18:13 |   Child Tasks: 1
+2026-02-04 10:18:13 |   UPDATE Task 4085 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:14 | 
+[99/204] Bug 3827: Validate users against abac on create share/add re
+2026-02-04 10:18:14 |   Estimations: Backend=1.0d, QA=1.0d
+2026-02-04 10:18:14 |   Child Tasks: 2
+2026-02-04 10:18:14 |   UPDATE Task 3828 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:14 |   UPDATE Task 3830 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:14 | 
+[100/204] Bug 3837: ISE for URL link When Open in a new tab
+2026-02-04 10:18:14 |   Estimations: Backend=1.0d, QA=0.5d
+2026-02-04 10:18:14 |   Child Tasks: 2
+2026-02-04 10:18:14 |   UPDATE Task 3840 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:15 |   UPDATE Task 3838 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:15 | 
+[101/204] Bug 3912: Internal server error occurred when I preview any 
+2026-02-04 10:18:15 |   Estimations: QA=0.25d
+2026-02-04 10:18:15 |   Child Tasks: 1
+2026-02-04 10:18:15 |   UPDATE Task 3920 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:15 | 
+[102/204] Bug 3915: A server error occurred when create a TS using nat
+2026-02-04 10:18:15 |   Estimations: QA=1.0d
+2026-02-04 10:18:15 |   Child Tasks: 2
+2026-02-04 10:18:15 |   UPDATE Task 3919 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:15 | 
+[103/204] Bug 3917: Cannot upload file in to the TS using M365 app
+2026-02-04 10:18:15 |   Estimations: QA=0.25d
+2026-02-04 10:18:15 |   Child Tasks: 2
+2026-02-04 10:18:15 |   UPDATE Task 3918 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:15 | 
+[104/204] Bug 4044: Cannot create secure view
+2026-02-04 10:18:15 |   Estimations: QA=0.25d, Staff=0.125d
+2026-02-04 10:18:15 |   Child Tasks: 2
+2026-02-04 10:18:15 |   UPDATE Task 4046 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:16 |   UPDATE Task 4045 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:16 | 
+[105/204] Bug 4094: Organization page>View shares: Three dots menu doe
+2026-02-04 10:18:16 |   Estimations: Frontend=4.0d
+2026-02-04 10:18:16 |   Child Tasks: 1
+2026-02-04 10:18:16 |   UPDATE Task 5238 (Frontend): originalEstimate = 4.00d
+2026-02-04 10:18:16 | 
+[106/204] Bug 4099: Search does not work for TS with name with greek, 
+2026-02-04 10:18:16 |   Estimations: QA=1.0d, Staff=0.75d
+2026-02-04 10:18:16 |   Child Tasks: 2
+2026-02-04 10:18:16 |   UPDATE Task 4102 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:17 |   UPDATE Task 4136 (Staff): originalEstimate = 0.75d
+2026-02-04 10:18:17 | 
+[107/204] Bug 4100: Dropdowns misbehave in teams fat client
+2026-02-04 10:18:17 |   Estimations: Frontend=1.5d, QA=1.0d
+2026-02-04 10:18:17 |   Child Tasks: 3
+2026-02-04 10:18:17 |   UPDATE Task 5324 (Frontend): originalEstimate = 0.75d
+2026-02-04 10:18:17 |   UPDATE Task 4101 (Frontend): originalEstimate = 0.75d
+2026-02-04 10:18:17 |   UPDATE Task 4831 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:18 | 
+[108/204] Bug 4103: 500 error code when adding a user with apostrophe 
+2026-02-04 10:18:18 |   Estimations: QA=0.25d
+2026-02-04 10:18:18 |   Child Tasks: 2
+2026-02-04 10:18:18 |   UPDATE Task 4105 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:18 | 
+[109/204] Bug 4124: Correctly format OTP codes for Apple Mac OS/iOS
+2026-02-04 10:18:18 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:18 |   Child Tasks: 1
+2026-02-04 10:18:18 |   UPDATE Task 5190 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:18 | 
+[110/204] Bug 4138: Selecting Delete permission displays additional op
+2026-02-04 10:18:18 |   Estimations: Frontend=1.0d
+2026-02-04 10:18:18 |   Child Tasks: 1
+2026-02-04 10:18:18 |   UPDATE Task 5003 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:18:18 | 
+[111/204] Bug 4139: Trusted Shares are not sorted correctly across mul
+2026-02-04 10:18:18 |   Estimations: Frontend=0.3d, QA=0.5d
+2026-02-04 10:18:18 |   Child Tasks: 3
+2026-02-04 10:18:18 |   UPDATE Task 4855 (Frontend): originalEstimate = 0.30d
+2026-02-04 10:18:19 |   UPDATE Task 5258 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:19 | 
+[112/204] Bug 4149: 'Collaboration_name' is displayed instead of 'Name
+2026-02-04 10:18:19 |   Estimations: Frontend=1.0d, QA=2.0d
+2026-02-04 10:18:19 |   Child Tasks: 3
+2026-02-04 10:18:19 |   UPDATE Task 5325 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:19 |   UPDATE Task 4859 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:19 |   UPDATE Task 5252 (QA): originalEstimate = 2.00d
+2026-02-04 10:18:20 | 
+[113/204] Bug 4150: Cloudflare is blocking us from creating a VTTS in 
+2026-02-04 10:18:20 |   Estimations: QA=0.1d
+2026-02-04 10:18:20 |   Child Tasks: 0
+2026-02-04 10:18:20 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:20 |     Created Task 5571: [QA] Cloudflare is blocking us from creating a VTTS in stage 1 environment
+2026-02-04 10:18:20 | 
+[114/204] Bug 4154: Not all the files are being uploaded (403 error in
+2026-02-04 10:18:20 |   Estimations: QA=0.25d
+2026-02-04 10:18:20 |   Child Tasks: 1
+2026-02-04 10:18:20 |   UPDATE Task 4156 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:20 | 
+[115/204] Bug 4157: A file that is already in favourites, if its title
+2026-02-04 10:18:20 |   Estimations: Backend=2.0d, QA=1.5d
+2026-02-04 10:18:20 |   Child Tasks: 3
+2026-02-04 10:18:20 |   SKIP Task 5255: Already has originalEstimate: 1.5
+2026-02-04 10:18:20 |   UPDATE Task 4508 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:20 |   UPDATE Task 4868 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:21 | 
+[116/204] Bug 4163: UI freezes when typing a value for “Max upload fil
+2026-02-04 10:18:21 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:21 |   Child Tasks: 1
+2026-02-04 10:18:21 |   UPDATE Task 5183 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:21 | 
+[117/204] Bug 4164: Filter dropdown is not aligned with Share type fie
+2026-02-04 10:18:21 |   Estimations: Frontend=1.0d
+2026-02-04 10:18:21 |   Child Tasks: 1
+2026-02-04 10:18:21 |   UPDATE Task 5184 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:18:21 | 
+[118/204] Bug 4165: Table columns are cut off on tablet when more than
+2026-02-04 10:18:21 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:21 |   Child Tasks: 1
+2026-02-04 10:18:21 |   UPDATE Task 5171 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:21 | 
+[119/204] Bug 4177: When uploading a roster on a VTTS, the roster's co
+2026-02-04 10:18:21 |   Estimations: QA=1.0d, Staff=0.25d
+2026-02-04 10:18:21 |   Child Tasks: 2
+2026-02-04 10:18:21 |   UPDATE Task 4196 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:22 |   UPDATE Task 4184 (Staff): originalEstimate = 0.25d
+2026-02-04 10:18:22 | 
+[120/204] Bug 4183: Auditing table columns are cut off on tablet when 
+2026-02-04 10:18:22 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:22 |   Child Tasks: 1
+2026-02-04 10:18:22 |   UPDATE Task 5185 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:22 | 
+[121/204] Bug 4193: Search a file/folder with special characters only 
+2026-02-04 10:18:22 |   Estimations: Backend=1.5d, QA=0.2d
+2026-02-04 10:18:22 |   Child Tasks: 1
+2026-02-04 10:18:22 |   UPDATE Task 4506 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:22 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.20d
+2026-02-04 10:18:23 |     Created Task 5572: [QA] Search a file/folder with special characters only return empty list in MS Teams
+2026-02-04 10:18:23 | 
+[122/204] Bug 4194: Search a file/folder with numbers in the file name
+2026-02-04 10:18:23 |   Estimations: Backend=1.5d
+2026-02-04 10:18:23 |   Child Tasks: 1
+2026-02-04 10:18:23 |   UPDATE Task 4504 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:23 | 
+[123/204] Bug 4198: Copy/Move modal content not visible after window m
+2026-02-04 10:18:23 |   Estimations: Frontend=1.0d
+2026-02-04 10:18:23 |   Child Tasks: 2
+2026-02-04 10:18:23 |   UPDATE Task 5326 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:23 |   UPDATE Task 4857 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:23 | 
+[124/204] Bug 4199: 'Your native link cannot be verified' error appear
+2026-02-04 10:18:23 |   Estimations: Backend=1.5d, QA=0.5d
+2026-02-04 10:18:23 |   Child Tasks: 2
+2026-02-04 10:18:23 |   UPDATE Task 4505 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:24 |   UPDATE Task 5256 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:24 | 
+[125/204] Bug 4202: Copy/Move action messages not updated without page
+2026-02-04 10:18:24 |   Estimations: Frontend=0.5d
+2026-02-04 10:18:24 |   Child Tasks: 2
+2026-02-04 10:18:24 |   UPDATE Task 4858 (Frontend): originalEstimate = 0.25d
+2026-02-04 10:18:24 |   UPDATE Task 5327 (Frontend): originalEstimate = 0.25d
+2026-02-04 10:18:24 | 
+[126/204] Bug 4203: Cannot download folder with a specific structure i
+2026-02-04 10:18:24 |   Estimations: Frontend=1.0d, QA=0.1d
+2026-02-04 10:18:24 |   Child Tasks: 1
+2026-02-04 10:18:24 |   UPDATE Task 4635 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:18:25 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:25 |     Created Task 5573: [QA] Cannot download folder with a specific structure in MS Teams(owner/co-owner)
+2026-02-04 10:18:25 | 
+[127/204] Bug 4204: Sequential move/copy operations show cumulative it
+2026-02-04 10:18:25 |   Estimations: Frontend=0.1d
+2026-02-04 10:18:25 |   Child Tasks: 0
+2026-02-04 10:18:25 |   CREATE Task for Frontend: areaPath=eShare\Frontend, originalEstimate=0.10d
+2026-02-04 10:18:25 |     Created Task 5574: [Frontend] Sequential move/copy operations show cumulative item count instead of individual
+2026-02-04 10:18:25 | 
+[128/204] Bug 4220: Gcchdev - Images cannot be pasted on secure messag
+2026-02-04 10:18:25 |   Estimations: Frontend=0.3d
+2026-02-04 10:18:25 |   Child Tasks: 3
+2026-02-04 10:18:25 |   UPDATE Task 4837 (Frontend): originalEstimate = 0.30d
+2026-02-04 10:18:25 | 
+[129/204] Bug 4221: SMG equinix-gov sentry errors
+2026-02-04 10:18:25 |   Estimations: Backend=2.0d
+2026-02-04 10:18:25 |   Child Tasks: 3
+2026-02-04 10:18:25 |   UPDATE Task 4998 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:26 |   UPDATE Task 5169 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:26 | 
+[130/204] Bug 4227: Folder upload not supported on tablet for any user
+2026-02-04 10:18:26 |   Estimations: Frontend=3.0d
+2026-02-04 10:18:26 |   Child Tasks: 1
+2026-02-04 10:18:26 |   UPDATE Task 5186 (Frontend): originalEstimate = 3.00d
+2026-02-04 10:18:26 | 
+[131/204] Bug 4229: Mentions not working in secure conversation on tab
+2026-02-04 10:18:26 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:26 |   Child Tasks: 2
+2026-02-04 10:18:26 |   UPDATE Task 5329 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:18:27 |   UPDATE Task 4755 (Frontend): originalEstimate = 1.00d
+2026-02-04 10:18:27 | 
+[132/204] Bug 4230: Secure Conversation export on tablet does not down
+2026-02-04 10:18:27 |   Estimations: Frontend=3.0d
+2026-02-04 10:18:27 |   Child Tasks: 1
+2026-02-04 10:18:27 |   UPDATE Task 5187 (Frontend): originalEstimate = 3.00d
+2026-02-04 10:18:27 | 
+[133/204] Bug 4232: Direct Link not displayed in file/folder Details f
+2026-02-04 10:18:27 |   Estimations: Frontend=1.0d, QA=1.0d
+2026-02-04 10:18:27 |   Child Tasks: 3
+2026-02-04 10:18:27 |   UPDATE Task 5330 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:27 |   UPDATE Task 4586 (Frontend): originalEstimate = 0.50d
+2026-02-04 10:18:28 |   UPDATE Task 4830 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:28 | 
+[134/204] Bug 4238: Teams bot fail to create TS
+2026-02-04 10:18:28 |   Estimations: Staff=0.125d
+2026-02-04 10:18:28 |   Child Tasks: 1
+2026-02-04 10:18:28 |   UPDATE Task 4239 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:28 | 
+[135/204] Bug 4242: Communication extra_data MySQL Encoding Error
+2026-02-04 10:18:28 |   Estimations: Staff=0.125d
+2026-02-04 10:18:28 |   Child Tasks: 1
+2026-02-04 10:18:28 |   UPDATE Task 4243 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:29 | 
+[136/204] Bug 4244: In MS Teams when I select to move a folder to an u
+2026-02-04 10:18:29 |   Estimations: Frontend=0.2d
+2026-02-04 10:18:29 |   Child Tasks: 1
+2026-02-04 10:18:29 |   UPDATE Task 4595 (Frontend): originalEstimate = 0.20d
+2026-02-04 10:18:29 | 
+[137/204] Bug 4248: Download shows success notification but file/folde
+2026-02-04 10:18:29 |   Estimations: Frontend=3.0d
+2026-02-04 10:18:29 |   Child Tasks: 1
+2026-02-04 10:18:29 |   UPDATE Task 5188 (Frontend): originalEstimate = 3.00d
+2026-02-04 10:18:30 | 
+[138/204] Bug 4253: OpenID Account Not Recognized for GSuite
+2026-02-04 10:18:30 |   Estimations: QA=0.25d, Staff=0.125d
+2026-02-04 10:18:30 |   Child Tasks: 2
+2026-02-04 10:18:30 |   UPDATE Task 4268 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:30 |   UPDATE Task 4260 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:30 | 
+[139/204] Bug 4256: SMG orchestrator bytes issue after python 3
+2026-02-04 10:18:30 |   Estimations: Staff=0.125d
+2026-02-04 10:18:30 |   Child Tasks: 1
+2026-02-04 10:18:30 |   UPDATE Task 4257 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:31 | 
+[140/204] Bug 4343: [Email Risk Report] - Add tenant name to env setti
+2026-02-04 10:18:31 |   Estimations: Govern=2.0d, QA=0.1d
+2026-02-04 10:18:31 |   Child Tasks: 1
+2026-02-04 10:18:31 |   UPDATE Task 4782 (Govern): originalEstimate = 2.00d
+2026-02-04 10:18:31 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:31 |     Created Task 5575: [QA] [Email Risk Report] - Add tenant name to env settings
+2026-02-04 10:18:31 | 
+[141/204] Bug 4350: Encrypted Mount Point Decryption Failure
+2026-02-04 10:18:31 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:31 |   Child Tasks: 1
+2026-02-04 10:18:31 |   UPDATE Task 4352 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:31 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:32 |     Created Task 5576: [QA] Encrypted Mount Point Decryption Failure
+2026-02-04 10:18:32 | 
+[142/204] Bug 4353: Dict Unpacking - TypeError on dict_items Addition
+2026-02-04 10:18:32 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:32 |   Child Tasks: 1
+2026-02-04 10:18:32 |   UPDATE Task 4354 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:32 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:32 |     Created Task 5577: [QA] Dict Unpacking - TypeError on dict_items Addition
+2026-02-04 10:18:32 | 
+[143/204] Bug 4355: SysLog Handler Socket Failure After Celery Fork
+2026-02-04 10:18:32 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:32 |   Child Tasks: 1
+2026-02-04 10:18:32 |   UPDATE Task 4356 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:32 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:33 |     Created Task 5578: [QA] SysLog Handler Socket Failure After Celery Fork
+2026-02-04 10:18:33 | 
+[144/204] Bug 4357: SAML Error Reporting String Concatenation Failure
+2026-02-04 10:18:33 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:33 |   Child Tasks: 1
+2026-02-04 10:18:33 |   UPDATE Task 4358 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:33 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:33 |     Created Task 5579: [QA] SAML Error Reporting String Concatenation Failure
+2026-02-04 10:18:33 | 
+[145/204] Bug 4359: Data Transfer Exception - UnboundLocalError on 'la
+2026-02-04 10:18:33 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:33 |   Child Tasks: 1
+2026-02-04 10:18:33 |   UPDATE Task 4360 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:34 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:34 |     Created Task 5580: [QA] Data Transfer Exception - UnboundLocalError on 'last_exc'
+2026-02-04 10:18:34 | 
+[146/204] Bug 4362: MongoDB Failsafe - Write Failure on Binary File Mo
+2026-02-04 10:18:34 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:34 |   Child Tasks: 1
+2026-02-04 10:18:34 |   UPDATE Task 4363 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:34 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:34 |     Created Task 5581: [QA] MongoDB Failsafe - Write Failure on Binary File Mode
+2026-02-04 10:18:34 | 
+[147/204] Bug 4367: Watermark Exception Handling - Non-BaseException C
+2026-02-04 10:18:34 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:34 |   Child Tasks: 1
+2026-02-04 10:18:34 |   UPDATE Task 4368 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:35 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:35 |     Created Task 5582: [QA] Watermark Exception Handling - Non-BaseException Class
+2026-02-04 10:18:35 | 
+[148/204] Bug 4369: TypeError in b64encode - String vs Bytes Type Mism
+2026-02-04 10:18:35 |   Estimations: QA=0.25d
+2026-02-04 10:18:35 |   Child Tasks: 2
+2026-02-04 10:18:35 |   UPDATE Task 4405 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:35 | 
+[149/204] Bug 4381: AttributeError on organization.get_policy_value() 
+2026-02-04 10:18:35 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:35 |   Child Tasks: 1
+2026-02-04 10:18:35 |   UPDATE Task 4382 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:35 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:36 |     Created Task 5583: [QA] AttributeError on organization.get_policy_value() - Missing None Check
+2026-02-04 10:18:36 | 
+[150/204] Bug 4383: Non registered user can access a file with sensiti
+2026-02-04 10:18:36 |   Estimations: Backend=1.5d
+2026-02-04 10:18:36 |   Child Tasks: 1
+2026-02-04 10:18:36 |   UPDATE Task 5400 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:36 | 
+[151/204] Bug 4384: Invalid Base64 Mount Hash - Frontend Passes "undef
+2026-02-04 10:18:36 |   Estimations: Staff=0.125d
+2026-02-04 10:18:36 |   Child Tasks: 1
+2026-02-04 10:18:36 |   UPDATE Task 4385 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:36 | 
+[152/204] Bug 4389: TypeError in Custom Auditing
+2026-02-04 10:18:36 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:36 |   Child Tasks: 1
+2026-02-04 10:18:36 |   UPDATE Task 4391 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:36 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:37 |     Created Task 5584: [QA] TypeError in Custom Auditing
+2026-02-04 10:18:37 | 
+[153/204] Bug 4399: When I try to enter the code received via SMS I ge
+2026-02-04 10:18:37 |   Estimations: Backend=0.5d, QA=0.25d
+2026-02-04 10:18:37 |   Child Tasks: 3
+2026-02-04 10:18:37 |   UPDATE Task 4453 (Backend): originalEstimate = 0.25d
+2026-02-04 10:18:37 |   UPDATE Task 4516 (Backend): originalEstimate = 0.25d
+2026-02-04 10:18:37 |   UPDATE Task 4448 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:37 | 
+[154/204] Bug 4400: Base64 URL Decoding - Incorrect Padding and Type E
+2026-02-04 10:18:37 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:37 |   Child Tasks: 1
+2026-02-04 10:18:37 |   UPDATE Task 4401 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:38 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:38 |     Created Task 5585: [QA] Base64 URL Decoding - Incorrect Padding and Type Errors
+2026-02-04 10:18:38 | 
+[155/204] Bug 4402: DLP Rules Refresh - JSON Decode Error on Empty Res
+2026-02-04 10:18:38 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:38 |   Child Tasks: 1
+2026-02-04 10:18:38 |   UPDATE Task 4403 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:38 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:39 |     Created Task 5586: [QA] DLP Rules Refresh - JSON Decode Error on Empty Response
+2026-02-04 10:18:39 | 
+[156/204] Bug 4416: Collaboration Decode ValueError - Invalid Literal 
+2026-02-04 10:18:39 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:39 |   Child Tasks: 1
+2026-02-04 10:18:39 |   UPDATE Task 4417 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:39 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:39 |     Created Task 5587: [QA] Collaboration Decode ValueError - Invalid Literal for int()
+2026-02-04 10:18:39 | 
+[157/204] Bug 4418: SES ClientError AttributeError - Missing 'message'
+2026-02-04 10:18:39 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:39 |   Child Tasks: 1
+2026-02-04 10:18:39 |   UPDATE Task 4419 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:39 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:40 |     Created Task 5588: [QA] SES ClientError AttributeError - Missing 'message' Attribute
+2026-02-04 10:18:40 | 
+[158/204] Bug 4473: Access Control Notification email is never sent in
+2026-02-04 10:18:40 |   Estimations: Govern=2.0d
+2026-02-04 10:18:40 |   Child Tasks: 0
+2026-02-04 10:18:40 |   CREATE Task for Govern: areaPath=eShare\Govern, originalEstimate=2.00d
+2026-02-04 10:18:40 |     Created Task 5589: [Govern] Access Control Notification email is never sent in GCCHDev tenant when user is r
+2026-02-04 10:18:40 | 
+[159/204] Bug 4500: Lock timer in file access with sensitivity label s
+2026-02-04 10:18:40 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:40 |   Child Tasks: 1
+2026-02-04 10:18:40 |   UPDATE Task 4502 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:40 | 
+[160/204] Bug 4509: Watermarking fails with `AttributeError: 'FreeType
+2026-02-04 10:18:40 |   Estimations: QA=0.5d, Staff=0.125d
+2026-02-04 10:18:40 |   Child Tasks: 2
+2026-02-04 10:18:40 |   UPDATE Task 4515 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:41 |   UPDATE Task 4514 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:41 | 
+[161/204] Bug 4512: When I set my device into the sleep mode, OTP/lock
+2026-02-04 10:18:41 |   Estimations: Frontend=2.0d
+2026-02-04 10:18:41 |   Child Tasks: 1
+2026-02-04 10:18:41 |   UPDATE Task 5189 (Frontend): originalEstimate = 2.00d
+2026-02-04 10:18:41 | 
+[162/204] Bug 4518: TypeError in XML Parser - replace() Bytes vs Strin
+2026-02-04 10:18:41 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:41 |   Child Tasks: 1
+2026-02-04 10:18:41 |   UPDATE Task 4521 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:41 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:42 |     Created Task 5590: [QA] TypeError in XML Parser - replace() Bytes vs String Type Mismatch
+2026-02-04 10:18:42 | 
+[163/204] Bug 4519: I get access in a trusted share with OTP after the
+2026-02-04 10:18:42 |   Estimations: Backend=1.5d, QA=0.75d
+2026-02-04 10:18:42 |   Child Tasks: 2
+2026-02-04 10:18:42 |   UPDATE Task 5217 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:42 |   UPDATE Task 5260 (QA): originalEstimate = 0.75d
+2026-02-04 10:18:42 | 
+[164/204] Bug 4526: When persistence is disabled in device policy the 
+2026-02-04 10:18:42 |   Estimations: Backend=2.0d
+2026-02-04 10:18:42 |   Child Tasks: 2
+2026-02-04 10:18:42 |   UPDATE Task 5353 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:42 |   UPDATE Task 5399 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:43 | 
+[165/204] Bug 4542: Issue when enabling consent for personal graph tok
+2026-02-04 10:18:43 |   Estimations: Staff=1.0d
+2026-02-04 10:18:43 |   Child Tasks: 1
+2026-02-04 10:18:43 |   CREATE Task for Staff: areaPath=eShare\Staff, originalEstimate=1.00d
+2026-02-04 10:18:43 |     Created Task 5591: [Staff] Issue when enabling consent for personal graph tokens
+2026-02-04 10:18:43 | 
+[166/204] Bug 4565: JSON Write Bug After Python 2 to 3 Migration for M
+2026-02-04 10:18:43 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:43 |   Child Tasks: 1
+2026-02-04 10:18:43 |   UPDATE Task 4566 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:43 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:43 |     Created Task 5592: [QA] JSON Write Bug After Python 2 to 3 Migration for Mongo and Kafka
+2026-02-04 10:18:43 | 
+[167/204] Bug 4602: AWS SES Key Field Discrepency
+2026-02-04 10:18:43 |   Estimations: Backend=1.0d
+2026-02-04 10:18:43 |   Child Tasks: 1
+2026-02-04 10:18:43 |   UPDATE Task 4616 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:44 | 
+[168/204] Bug 4605: AttributeError - module 'time' has no attribute 'c
+2026-02-04 10:18:44 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:44 |   Child Tasks: 1
+2026-02-04 10:18:44 |   UPDATE Task 4606 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:44 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:44 |     Created Task 5593: [QA] AttributeError - module 'time' has no attribute 'clock'
+2026-02-04 10:18:44 | 
+[169/204] Bug 4607: KeyError - 'accepted' in Mailgun Webhook
+2026-02-04 10:18:44 |   Estimations: QA=0.1d
+2026-02-04 10:18:44 |   Child Tasks: 1
+2026-02-04 10:18:44 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:44 |     Created Task 5594: [QA] KeyError - 'accepted' in Mailgun Webhook
+2026-02-04 10:18:44 | 
+[170/204] Bug 4612: New Users receiving "Missing User Registration" wh
+2026-02-04 10:18:44 |   Estimations: Backend=3.0d, QA=1.5d
+2026-02-04 10:18:44 |   Child Tasks: 2
+2026-02-04 10:18:44 |   UPDATE Task 5232 (Backend): originalEstimate = 3.00d
+2026-02-04 10:18:45 |   UPDATE Task 5246 (QA): originalEstimate = 1.50d
+2026-02-04 10:18:45 | 
+[171/204] Bug 4614: Corporate Branding in Admin console gives internal
+2026-02-04 10:18:45 |   Estimations: Backend=0.5d, QA=2.5d, Staff=0.375d
+2026-02-04 10:18:45 |   Child Tasks: 2
+2026-02-04 10:18:45 |   UPDATE Task 4634 (QA): originalEstimate = 2.50d
+2026-02-04 10:18:45 |   UPDATE Task 4623 (Staff): originalEstimate = 0.38d
+2026-02-04 10:18:45 |   CREATE Task for Backend: areaPath=eShare\Backend, originalEstimate=0.50d
+2026-02-04 10:18:46 |     Created Task 5595: [Backend] Corporate Branding in Admin console gives internal server error
+2026-02-04 10:18:46 | 
+[172/204] Bug 4615: Issue in adding new recipients to an expired share
+2026-02-04 10:18:46 |   Estimations: Backend=2.0d
+2026-02-04 10:18:46 |   Child Tasks: 1
+2026-02-04 10:18:46 |   UPDATE Task 4852 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:46 | 
+[173/204] Bug 4632: When a folder Trusted share is created AND a membe
+2026-02-04 10:18:46 |   Estimations: Frontend=0.2d
+2026-02-04 10:18:46 |   Child Tasks: 2
+2026-02-04 10:18:46 |   UPDATE Task 5167 (Frontend): originalEstimate = 0.20d
+2026-02-04 10:18:46 | 
+[174/204] Bug 4641: [PROD] Delete request to api/3.1/sharing-policies/
+2026-02-04 10:18:46 |   Estimations: QA=0.1d
+2026-02-04 10:18:46 |   Child Tasks: 0
+2026-02-04 10:18:46 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:47 |     Created Task 5596: [QA] [PROD] Delete request to api/3.1/sharing-policies/{policy_id} fails with 403 err
+2026-02-04 10:18:47 | 
+[175/204] Bug 4668: Breadcrumbs are not working correctly on refresh
+2026-02-04 10:18:47 |   Estimations: Backend=4.0d, QA=3.0d
+2026-02-04 10:18:47 |   Child Tasks: 2
+2026-02-04 10:18:47 |   UPDATE Task 5001 (Backend): originalEstimate = 4.00d
+2026-02-04 10:18:47 |   UPDATE Task 5213 (QA): originalEstimate = 3.00d
+2026-02-04 10:18:47 | 
+[176/204] Bug 4669: Blob TSing broken after python3 update
+2026-02-04 10:18:47 |   Estimations: Backend=3.0d
+2026-02-04 10:18:47 |   Child Tasks: 1
+2026-02-04 10:18:47 |   UPDATE Task 4671 (Backend): originalEstimate = 3.00d
+2026-02-04 10:18:47 | 
+[177/204] Bug 4674: Images are not uploaded when a new corporate brand
+2026-02-04 10:18:47 |   Estimations: QA=1.0d, Staff=0.125d
+2026-02-04 10:18:47 |   Child Tasks: 2
+2026-02-04 10:18:47 |   UPDATE Task 4675 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:48 |   UPDATE Task 4757 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:48 | 
+[178/204] Bug 4684: 'Internal Server Error' when creating a new corpor
+2026-02-04 10:18:48 |   Estimations: QA=0.5d, Staff=0.125d
+2026-02-04 10:18:48 |   Child Tasks: 1
+2026-02-04 10:18:48 |   UPDATE Task 4685 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:48 |   CREATE Task for Staff: areaPath=eShare\Staff, originalEstimate=0.12d
+2026-02-04 10:18:48 |     Created Task 5597: [Staff] 'Internal Server Error' when creating a new corporate branding and changing defa
+2026-02-04 10:18:48 | 
+[179/204] Bug 4689: Internal Branding not working for new users when m
+2026-02-04 10:18:48 |   Estimations: Backend=2.0d, QA=1.5d
+2026-02-04 10:18:48 |   Child Tasks: 2
+2026-02-04 10:18:48 |   SKIP Task 5247: Already has originalEstimate: 1.5
+2026-02-04 10:18:48 |   UPDATE Task 5234 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:49 | 
+[180/204] Bug 4747: Kafka events are not generated when TS action is p
+2026-02-04 10:18:49 |   Estimations: Backend=6.0d
+2026-02-04 10:18:49 |   Child Tasks: 3
+2026-02-04 10:18:49 |   UPDATE Task 4444 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:49 |   UPDATE Task 5021 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:49 |   UPDATE Task 5059 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:49 | 
+[181/204] Bug 4798: CWP file listing auto update on secure conversatio
+2026-02-04 10:18:49 |   Estimations: Frontend=4.0d
+2026-02-04 10:18:49 |   Child Tasks: 1
+2026-02-04 10:18:49 |   UPDATE Task 5166 (Frontend): originalEstimate = 4.00d
+2026-02-04 10:18:50 | 
+[182/204] Bug 4803: File Access ABAC requests are not occuring when ac
+2026-02-04 10:18:50 |   Estimations: QA=1.5d, Staff=1.0d
+2026-02-04 10:18:50 |   Child Tasks: 2
+2026-02-04 10:18:50 |   UPDATE Task 4814 (QA): originalEstimate = 1.50d
+2026-02-04 10:18:50 |   UPDATE Task 4805 (Staff): originalEstimate = 1.00d
+2026-02-04 10:18:50 | 
+[183/204] Bug 4823: An unexpected error occurred when I search for a f
+2026-02-04 10:18:50 |   Estimations: Backend=2.0d, QA=1.5d
+2026-02-04 10:18:50 |   Child Tasks: 2
+2026-02-04 10:18:50 |   UPDATE Task 4834 (Backend): originalEstimate = 2.00d
+2026-02-04 10:18:50 |   UPDATE Task 5433 (QA): originalEstimate = 1.50d
+2026-02-04 10:18:51 | 
+[184/204] Bug 4846: File Handler doesn't open in Teams (One Drive)
+2026-02-04 10:18:51 |   Estimations: QA=0.5d
+2026-02-04 10:18:51 |   Child Tasks: 1
+2026-02-04 10:18:51 |   UPDATE Task 5248 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:51 | 
+[185/204] Bug 4851: Cannot download a 0 Byte File
+2026-02-04 10:18:51 |   Estimations: Backend=1.5d, QA=2.0d
+2026-02-04 10:18:51 |   Child Tasks: 3
+2026-02-04 10:18:51 |   UPDATE Task 5413 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:51 |   UPDATE Task 5204 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:51 |   UPDATE Task 5203 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:52 | 
+[186/204] Bug 4864: [Stage-02] 500 error on GET request to api/3.0/mou
+2026-02-04 10:18:52 |   Estimations: QA=0.5d, Staff=0.5d
+2026-02-04 10:18:52 |   Child Tasks: 2
+2026-02-04 10:18:52 |   UPDATE Task 4865 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:52 |   UPDATE Task 4888 (QA): originalEstimate = 0.25d
+2026-02-04 10:18:52 |   CREATE Task for Staff: areaPath=eShare\Staff, originalEstimate=0.50d
+2026-02-04 10:18:52 |     Created Task 5598: [Staff] [Stage-02] 500 error on GET request to api/3.0/mounts/4/items...
+2026-02-04 10:18:52 | 
+[187/204] Bug 4889: Non Registered Users are automatically registered 
+2026-02-04 10:18:52 |   Estimations: QA=0.5d
+2026-02-04 10:18:52 |   Child Tasks: 0
+2026-02-04 10:18:52 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.50d
+2026-02-04 10:18:53 |     Created Task 5599: [QA] Non Registered Users are automatically registered to organization
+2026-02-04 10:18:53 | 
+[188/204] Bug 4895: Mailgun Email Accepted Audit Event Missing
+2026-02-04 10:18:53 |   Estimations: QA=0.1d, Staff=0.125d
+2026-02-04 10:18:53 |   Child Tasks: 1
+2026-02-04 10:18:53 |   UPDATE Task 4896 (Staff): originalEstimate = 0.12d
+2026-02-04 10:18:53 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:53 |     Created Task 5600: [QA] Mailgun Email Accepted Audit Event Missing
+2026-02-04 10:18:53 | 
+[189/204] Bug 4897: Endpoint returns different value in is_folder fiel
+2026-02-04 10:18:53 |   Estimations: Backend=1.5d, QA=1.0d
+2026-02-04 10:18:53 |   Child Tasks: 2
+2026-02-04 10:18:53 |   UPDATE Task 4930 (Backend): originalEstimate = 1.50d
+2026-02-04 10:18:54 |   UPDATE Task 4931 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:54 | 
+[190/204] Bug 4899: Cryptonite ZCLib Password Encoding Error After Pyt
+2026-02-04 10:18:54 |   Estimations: QA=0.1d
+2026-02-04 10:18:54 |   Child Tasks: 1
+2026-02-04 10:18:54 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.10d
+2026-02-04 10:18:54 |     Created Task 5601: [QA] Cryptonite ZCLib Password Encoding Error After Python 3 Migration
+2026-02-04 10:18:54 | 
+[191/204] Bug 5048: Word document content not saved when created in CW
+2026-02-04 10:18:54 |   Estimations: Backend=3.0d, QA=1.0d
+2026-02-04 10:18:54 |   Child Tasks: 2
+2026-02-04 10:18:54 |   UPDATE Task 5322 (Backend): originalEstimate = 3.00d
+2026-02-04 10:18:54 |   UPDATE Task 5224 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:55 | 
+[192/204] Bug 5049: “Modified” field shows “almost NaN years ago” for 
+2026-02-04 10:18:55 |   Estimations: Backend=1.0d, QA=0.5d
+2026-02-04 10:18:55 |   Child Tasks: 2
+2026-02-04 10:18:55 |   UPDATE Task 5323 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:55 |   UPDATE Task 5211 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:55 | 
+[193/204] Bug 5061: SFTP access is not revoked from the recipient afte
+2026-02-04 10:18:55 |   Estimations: QA=1.5d
+2026-02-04 10:18:55 |   Child Tasks: 1
+2026-02-04 10:18:55 |   UPDATE Task 5249 (QA): originalEstimate = 1.50d
+2026-02-04 10:18:55 | 
+[194/204] Bug 5064: Error when uploading a folder that already exists 
+2026-02-04 10:18:55 |   Estimations: Backend=3.0d, QA=1.0d
+2026-02-04 10:18:55 |   Child Tasks: 2
+2026-02-04 10:18:55 |   UPDATE Task 5317 (Backend): originalEstimate = 3.00d
+2026-02-04 10:18:56 |   UPDATE Task 5218 (QA): originalEstimate = 1.00d
+2026-02-04 10:18:56 | 
+[195/204] Bug 5065: "Enable SFTP Access" button is displayed under act
+2026-02-04 10:18:56 |   Estimations: QA=1.5d
+2026-02-04 10:18:56 |   Child Tasks: 1
+2026-02-04 10:18:56 |   UPDATE Task 5250 (QA): originalEstimate = 1.50d
+2026-02-04 10:18:56 | 
+[196/204] Bug 5111: MaybeEncodingError - Custom Exception Classes Cann
+2026-02-04 10:18:56 |   Estimations: Staff=1.0d
+2026-02-04 10:18:56 |   Child Tasks: 1
+2026-02-04 10:18:56 |   UPDATE Task 5148 (Staff): originalEstimate = 1.00d
+2026-02-04 10:18:56 | 
+[197/204] Bug 5136: Delete item endpoint returns "item": null for blob
+2026-02-04 10:18:56 |   Estimations: Backend=1.0d, QA=0.5d
+2026-02-04 10:18:56 |   Child Tasks: 2
+2026-02-04 10:18:56 |   UPDATE Task 5314 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:57 |   UPDATE Task 5215 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:57 | 
+[198/204] Bug 5145: GET task endpoint returns "ready": false after 30 
+2026-02-04 10:18:57 |   Estimations: QA=0.5d
+2026-02-04 10:18:57 |   Child Tasks: 2
+2026-02-04 10:18:57 |   UPDATE Task 5219 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:57 | 
+[199/204] Bug 5149: MS files can not be open in hierarchical blob prov
+2026-02-04 10:18:57 |   Estimations: Backend=3.0d, QA=0.5d
+2026-02-04 10:18:57 |   Child Tasks: 2
+2026-02-04 10:18:57 |   UPDATE Task 5320 (Backend): originalEstimate = 3.00d
+2026-02-04 10:18:57 |   UPDATE Task 5220 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:58 | 
+[200/204] Bug 5177: Syncing is not working
+2026-02-04 10:18:58 |   Estimations: Backend=1.0d, QA=0.5d
+2026-02-04 10:18:58 |   Child Tasks: 2
+2026-02-04 10:18:58 |   UPDATE Task 5178 (Backend): originalEstimate = 1.00d
+2026-02-04 10:18:58 |   UPDATE Task 5251 (QA): originalEstimate = 0.50d
+2026-02-04 10:18:58 | 
+[201/204] Bug 5244: User has two entries in production DB
+2026-02-04 10:18:58 |   Estimations: Staff=1.0d
+2026-02-04 10:18:58 |   Child Tasks: 1
+2026-02-04 10:18:58 |   UPDATE Task 5245 (Staff): originalEstimate = 1.00d
+2026-02-04 10:18:59 | 
+[202/204] Bug 5409: TXT/TIFF files can not be viewed in the root folde
+2026-02-04 10:18:59 |   Estimations: QA=0.25d
+2026-02-04 10:18:59 |   Child Tasks: 0
+2026-02-04 10:18:59 |   CREATE Task for QA: areaPath=eShare\QA, originalEstimate=0.25d
+2026-02-04 10:18:59 |     Created Task 5602: [QA] TXT/TIFF files can not be viewed in the root folder of cloud provider
+2026-02-04 10:18:59 | 
+[203/204] Bug 5446: In CWP Users Denied by ABAC hyperlink to Deny reas
+2026-02-04 10:18:59 |   Estimations: Backend=0.2d
+2026-02-04 10:18:59 |   Child Tasks: 2
+2026-02-04 10:18:59 |   UPDATE Task 5447 (Backend): originalEstimate = 0.20d
+2026-02-04 10:18:59 | 
+[204/204] Bug 5497: Validate sharing policy when creating a TS
+2026-02-04 10:18:59 |   Estimations: Backend=1.0d
+2026-02-04 10:18:59 |   Child Tasks: 2
+2026-02-04 10:18:59 |   UPDATE Task 5499 (Backend): originalEstimate = 1.00d
+2026-02-04 10:19:00 | 
+======================================================================
+2026-02-04 10:19:00 | SUMMARY
+2026-02-04 10:19:00 | ======================================================================
+2026-02-04 10:19:00 | Bugs processed: 204
+2026-02-04 10:19:00 | Tasks updated: 282
+2026-02-04 10:19:00 | Tasks created: 54
+2026-02-04 10:19:00 | Tasks skipped (already have estimate): 23
+2026-02-04 10:19:00 | 
+Log saved to: /Users/tonythem/GitHub/eSHARE/eSHARE-DevOps-Dashboard/ADO Python Scripts/migration_log_20260204_101730.txt
